@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>TypeScript Dom Manipulation</title>
+  <style>
+    body {
+      margin: 0;
+    }
+
+    #app {    
+      width: 100%;
+      height: 500px;
+    }
+
+    #code-editor {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 50%;
+      height: 100%;
+    }
+
+    .myMarker {
+      position: absolute;
+      background: rgba(100, 200, 100, 0.5);
+      z-index: 20
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div id="code-editor" style="height: 500px;">function insertion_sort(A) {
+      var len = A.length;
+      var i = 1;
+      while (i < len) {
+          var x = A[i];
+          var j = i - 1;
+          while (j >= 0 && A[j] > x) {
+              A[j + 1] = A[j];
+              console.log(j);
+              j = j - 1;
+          }
+          A[j+1] = x;
+          i = i + 1;
+      }
+  }
+    </div>
+  </div>
+
+  <script>var exports = {};</script>
+  <script src="https://unpkg.com/mustache@latest"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.5/ace.min.js" type="text/javascript"
+    charset="utf-8"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.5/theme-monokai.min.js" type="text/javascript"
+    charset="utf-8"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.5/mode-javascript.min.js" type="text/javascript"
+    charset="utf-8"></script>
+
+  <script src="main.js" type="module"></script>
+</body>
+
+</html>
