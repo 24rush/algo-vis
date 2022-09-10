@@ -1,14 +1,14 @@
+
 export class CodeRenderer {
-    private editor : any;
-    private marker : any;
+    private editor: any;
+    private marker: any;
     private Range = ace.require('ace/range').Range;
 
-    constructor(private elementId: string)
-    {
-        this.editor = ace.edit(this.elementId);        
+    constructor(private elementId: string) {
+        this.editor = ace.edit(this.elementId);
         this.editor.setOptions({ useWorker: false });
         this.editor.setTheme("ace/theme/monokai");
-        this.editor.session.setMode("ace/mode/javascript");                    
+        this.editor.session.setMode("ace/mode/javascript");
     }
 
     public highlightLine(lineNo: number) {
@@ -19,5 +19,9 @@ export class CodeRenderer {
     public unhighlightLine() {
         this.editor.session.removeMarker(this.marker);
         this.marker = undefined;
+    }
+
+    public getSourceCode() : string {
+        return this.editor.getValue();
     }
 }

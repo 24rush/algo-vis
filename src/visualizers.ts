@@ -30,13 +30,16 @@ export class BaseVisualizer {
 
     public draw(startXY: DOMRect, layout: Layout) { };
 
-    public fitText(text: SVGTextElement, textValue: string, maxWidth: number, maxHeight: number) {
-        text.textContent = textValue;
+    public fitText(text: SVGTextElement, objectToPrint: any, maxWidth: number, maxHeight: number) {
+        if (objectToPrint == undefined)
+            return;
+        
+        text.textContent = objectToPrint.toString();
 
         if (text.textContent == "")
             return;
 
-        let fontSizeForNewValue = FontSizeCache.getFontSize(text.id, textValue);
+        let fontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
         let currentFontSize = Number.parseInt(text.getAttribute('font-size') ?? '14');
 
         if (fontSizeForNewValue > 0 && fontSizeForNewValue == currentFontSize) {
@@ -126,7 +129,7 @@ export class PrimitiveTypeVisualizer<Type> extends BaseVisualizer implements Pri
         super();
     }
     onSet(observable: ObservablePrimitiveType<Type>, value: Type, newValue: Type): void {
-        this.fitText(this.text, newValue.toString(), this.width, this.height);
+        this.fitText(this.text, newValue, this.width, this.height);
         this.animWrite.beginElement();
     }
     onGet(): void {
@@ -159,7 +162,7 @@ export class PrimitiveTypeVisualizer<Type> extends BaseVisualizer implements Pri
         layout.requestAppend(this.svgElement);
 
         this.text = DOMmanipulator.elementStartsWithId<SVGTextElement>(this.svgElement, 'var-value');
-        this.fitText(this.text, this.observable.getValue().toString(), this.width, this.height);
+        this.fitText(this.text, this.observable.getValue(), this.width, this.height);
 
         this.animRead = DOMmanipulator.elementStartsWithId<SVGAnimateElement>(this.svgElement, "var-anim-read");
         this.animWrite = DOMmanipulator.elementStartsWithId<SVGAnimateElement>(this.svgElement, "var-anim-write");
@@ -206,7 +209,7 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
         super();
     }
     onSetAtIndex(observable: ObservableArrayType<Type>, oldValue: Type, newValue: Type, index: number): void {
-        this.fitText(this.textValueElements[index], newValue.toString(), this.width, this.height);
+        this.fitText(this.textValueElements[index], newValue, this.width, this.height);
         this.animWrite[index].beginElement();
     }
     onGetAtIndex(observable: ObservableArrayType<Type>, value: Type, index: number): void {
@@ -263,7 +266,7 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
         // Fit array values to rect boxes
         index = 0;
         for (let elem of this.textValueElements) {
-            this.fitText(elem, this.observable.getAtIndex(index++).toString(), this.width, this.height);
+            this.fitText(elem, this.observable.getAtIndex(index++), this.width, this.height);
         }
         this.observable.registerObserver(this);
     }

@@ -35,24 +35,26 @@ export class BaseObservableType<NotifyCbkType>
 
 export class ObservablePrimitiveType<Type> extends BaseObservableType<PrimitiveTypeChangeCbk<Type>>
 {
-    protected value : Type;
-    public name : string;
+    protected initValue : Type;
 
-    constructor(name : string, value: Type) {
+    constructor(public name : string, protected value: Type) {
         super();
 
-        this.value = value;
-        this.name = name;
+        this.initValue = value;
     }
 
-    setValue(newValue: Type) {
+    public reset() {
+        this.setValue(this.initValue);
+    }
+
+    public setValue(newValue: Type) {
         for (let observer of this.observers) {
             observer.onSet(this, this.value, newValue);
         }
         this.value = newValue;
     }
 
-    getValue(): Type {
+    public getValue(): Type {
         for (let observer of this.observers) {
             observer.onGet(this, this.value);
         }
@@ -62,8 +64,16 @@ export class ObservablePrimitiveType<Type> extends BaseObservableType<PrimitiveT
 
 export class ObservableArrayType<Type> extends BaseObservableType<ArrayTypeChangeCbk<Type>>
 {
+    protected initValues: Type[];
+
     constructor(public name : string, protected values: Type[]) {
         super();
+
+        this.initValues = values;
+    }
+
+    public reset() {
+        this.setValues(this.initValues);
     }
 
     getValues() : Type[] { return this.values }
@@ -104,3 +114,5 @@ export class ObservableDictionaryType<DictionaryKeyType, Value>
         return this.value[key];
     }
 }
+
+export type ObservableTypes = ObservablePrimitiveType<any> | ObservableArrayType<any>;
