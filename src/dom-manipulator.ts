@@ -26,7 +26,7 @@ export class DOMmanipulator
     static createElementSvgNS(type : string, props : any = undefined) : SVGElement
     {
         let newElem = document.createElementNS("http://www.w3.org/2000/svg", type);
-        this.setSvgElementAttr(newElem, props);
+        this.setElementAttr(newElem, props);
 
         return newElem;
     }
@@ -34,15 +34,25 @@ export class DOMmanipulator
     static createSvg(props: any = undefined) : SVGSVGElement
     {
         const svg = this.createElementSvgNS("svg") as SVGSVGElement;
-        this.setSvgElementAttr(svg, props);
+        this.setElementAttr(svg, props);
 
         return svg;
+    }
+
+    static createDiv(props: any = undefined) : HTMLElement
+    {
+        return this.createElement('div', props);
+    }
+
+    static createSpan(props: any = undefined) : HTMLElement
+    {
+        return this.createElement('span', props);
     }
 
     static createCircle(props: any = undefined) : SVGCircleElement
     {
         const circle = this.createElementSvgNS("circle") as SVGCircleElement;
-        this.setSvgElementAttr(circle, props);
+        this.setElementAttr(circle, props);
          
         return circle;
     }
@@ -50,7 +60,7 @@ export class DOMmanipulator
     static createRect(props: any = undefined) : SVGRectElement
     {
         const rect = this.createElementSvgNS("rect") as SVGRectElement;
-        this.setSvgElementAttr(rect, props);
+        this.setElementAttr(rect, props);
          
         return rect;
     }
@@ -58,7 +68,7 @@ export class DOMmanipulator
     static createText(text : string, props: any = undefined) : SVGTextElement
     {
         let newElem = this.createElementSvgNS("text") as SVGTextElement;
-        this.setSvgElementAttr(newElem, props);
+        this.setElementAttr(newElem, props);
 
         newElem.textContent = text;
 
@@ -77,17 +87,17 @@ export class DOMmanipulator
     }
 
     // SETTERS
-    static setSvgElementAttr(svgElement : Element, props : any = undefined)
+    static setElementAttr(htmlElement : Element, props : any = undefined)
     {
         if (!props)
             return;
 
         for (let prop in props)
         {
-            svgElement.setAttribute(prop, props[prop]);
+            htmlElement.setAttribute(prop, props[prop]);
         }
 
-        return svgElement;
+        return htmlElement;
     }
 
     static setElementIdAttr(id : string, props : any = undefined)
@@ -108,12 +118,20 @@ export class DOMmanipulator
         return svgElement;
     }
 
-    static fromTemplate(templateStr: string) : SVGSVGElement
+    static svgFromTemplate(templateStr: string) : SVGSVGElement
     {
         let templateElement = this.createSvg();
         templateElement.innerHTML = templateStr;
 
         return templateElement;
+    }
+
+    static fromTemplate(templateStr: string) : HTMLElement 
+    {
+        let templateElement = document.createElement('div');
+        templateElement.innerHTML = templateStr.trim();
+
+        return templateElement.firstChild as HTMLElement;
     }
 
     static generatedElement_Index: number = 0;
@@ -139,12 +157,12 @@ export class DOMmanipulator
         return svgElement;
     }
 
-    static elementStartsWithId<Type>(parent: SVGSVGElement, id: string) : Type 
+    static elementStartsWithId<Type>(parent: HTMLElement, id: string) : Type 
     {
         return this.elementsStartsWithId<Type>(parent, id)[0];
     }
 
-    static elementsStartsWithId<Type>(parent: SVGSVGElement, id: string) : Type[] 
+    static elementsStartsWithId<Type>(parent: HTMLElement, id: string) : Type[] 
     {
         let elements = [];
         for (let element of parent.querySelectorAll("[id^=" + id + "]"))

@@ -1,10 +1,11 @@
-import { DOMmanipulator, PropCreator } from "./dom-manipulator.js";
+import { DOMmanipulator } from "./dom-manipulator.js";
 import { Layout } from "./layout.js";
+import { MustacheIt } from "../main.js"
+
 import { ObservablePrimitiveType, ObservableArrayType, PrimitiveTypeChangeCbk, ArrayTypeChangeCbk } from "./observable-type.js"
 
 class FontSizeCache {
-    // elementId: { textLength : fontSize }
-    public static cache: any = {};
+    private static cache: any = {}; // elementId: { textLength : fontSize }
 
     public static getFontSize(id: string, text: string): number {
         if (id in this.cache && text.length in this.cache[id])
@@ -22,32 +23,48 @@ class FontSizeCache {
 }
 
 export class BaseVisualizer {
-    protected svgElement: SVGSVGElement = undefined;
+    protected htmlElement: HTMLElement = undefined;
 
-    public getBBox(): DOMRect {
-        return this.svgElement.getBoundingClientRect();
+    public draw() { };
+    public getHTMLElement() : HTMLElement { return this.htmlElement; }
+
+    public textWidth(text: HTMLElement): { w: number, h: number } {
+        let fontFamily = window.getComputedStyle(text, null).getPropertyValue('font-family');
+        let fontSize = window.getComputedStyle(text, null).getPropertyValue('font-size');
+
+        let textContent = text.textContent;
+
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext("2d");
+        ctx.font = fontSize + " " + fontFamily;
+
+        let metrics = ctx.measureText(textContent);
+        let fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+        //let actualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+
+        let w = metrics.width, h = fontHeight;
+
+        return { w, h };
     }
 
-    public draw(startXY: DOMRect, layout: Layout) { };
-
-    public fitText(text: SVGTextElement, objectToPrint: any, maxWidth: number, maxHeight: number) {
+    public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number) {
         if (objectToPrint == undefined)
             return;
-        
+
         text.textContent = objectToPrint.toString();
 
         if (text.textContent == "")
             return;
 
-        let fontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
-        let currentFontSize = Number.parseInt(text.getAttribute('font-size') ?? '14');
+        let cachedFontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
+        let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
 
-        if (fontSizeForNewValue > 0 && fontSizeForNewValue == currentFontSize) {
+        if (cachedFontSizeForNewValue > 0 && cachedFontSizeForNewValue == currentFontSize) {
             return;
         }
 
         let directionToBounds = (w: number, h: number) => {
-            let paddingPercent = 1.2;
+            let paddingPercent = 1.1;
             w *= paddingPercent; h *= paddingPercent;
 
             if (w > maxWidth || h > maxHeight)
@@ -58,8 +75,8 @@ export class BaseVisualizer {
             return 0;
         };
 
-        let currBbox = text.getBBox();
-        let currDirectionToBounds = directionToBounds(currBbox.width, currBbox.height);
+        let wh = this.textWidth(text);
+        let currDirectionToBounds = directionToBounds(wh.w, wh.h);
 
         if (currDirectionToBounds == 0) {
             return;
@@ -68,104 +85,50 @@ export class BaseVisualizer {
         let newFontSize = currentFontSize;
 
         do {
-            DOMmanipulator.setSvgElementAttr(text, PropCreator.fontSize(newFontSize += currDirectionToBounds));
-            currBbox = text.getBBox();
-        } while (directionToBounds(currBbox.width, currBbox.height) == currDirectionToBounds);
+            newFontSize += currDirectionToBounds
+            text.style.fontSize = newFontSize + "px";
+
+            wh = this.textWidth(text);
+        } while (directionToBounds(wh.w, wh.h) == currDirectionToBounds);
 
         FontSizeCache.setFontSize(text.id, text.textContent, newFontSize);
-    }
-
-    public MustacheIt(textTemplate: string, props: any = undefined) : string {
-        //@ts-ignore
-        return Mustache.render(textTemplate, props);
-    }
-
-    public getTextLength(textTemplate: string, layout: Layout, props: any = undefined): number {
-        let svg = DOMmanipulator.fromTemplate(this.MustacheIt(textTemplate, props));
-        svg.setAttribute('x', '10000');
-        layout.requestAppend(svg);
-
-        let textLength = svg.getBBox().width;
-        layout.requestRemove(svg);
-
-        return textLength;
     }
 }
 
 export class PrimitiveTypeVisualizer<Type> extends BaseVisualizer implements PrimitiveTypeChangeCbk<Type>{
-    protected readonly height: number = 40;
-    protected readonly width: number = 40;
-    protected x: number = 0
-    protected y: number = 0;
+    protected readonly height: number = 35;
+    protected readonly width: number = 35;
 
-    protected text: SVGTextElement = undefined;
-    protected animRead: SVGAnimateElement = undefined;
-    protected animWrite: SVGAnimateElement = undefined;
-
+    protected text: HTMLElement = undefined;
     protected templateDOM: SVGSVGElement = undefined;
 
-    private readonly template: string = '<text id="var-name" x="0" y="{{p_name_y}}" {{&nametext_style}}>{{name}}:</text> \
-                                         <svg x="{{p_value_x}}" y="{{p_value_y}}" width="{{width}}" height="{{height}}"> \
-                                            <rect {{&valuerect_style}}> \
-                                            <animate id="var-anim-read" \
-                                            attributeName="fill"\
-                                            values="#0C4;#0C4;#0E4;#0E4"\
-                                            dur="0.2s"\
-                                            repeatCount="3"/>\
-                                            <animate id="var-anim-write" \
-                                            attributeName="fill"\
-                                            values="#C24;#C24;#C54;#C54"\
-                                            dur="0.2s"\
-                                            repeatCount="3"/>\
-                                            </rect> \
-                                            <text id="var-value" {{&valuetext_style}}></text> \
-                                         </svg>';
+    private readonly template: string = '<div class="var-box" style="display: table;"> \
+                                           <span id="var-name" class="var-name">{{name}}:</span> \
+                                            <span id="var-value" class="var-value" style="width: {{width}}px; height:{{height}}px;"></span> \
+                                         </div>';
 
-    protected nameText_style: string = 'text-anchor="left" dominant-baseline="middle" font-size="20"';
-    protected valueRect_style: any = 'width="100%" height="100%" stroke="black" fill="none"';
-    protected valueText_style: any = 'x="50%" y="50%" text-anchor="middle" dominant-baseline="central"';
-
-    constructor(protected observable: ObservablePrimitiveType<Type>) {
+    constructor(protected observable: ObservablePrimitiveType<Type>, protected layout: Layout) {
         super();
     }
-    onSet(observable: ObservablePrimitiveType<Type>, value: Type, newValue: Type): void {
+    onSet(_observable: ObservablePrimitiveType<Type>, _currValue: Type, newValue: Type): void {
         this.fitText(this.text, newValue, this.width, this.height);
-        this.animWrite.beginElement();
     }
     onGet(): void {
-        this.animRead.beginElement();
     }
 
-    draw(startXY: DOMRect, layout: Layout): void {
-        let textElementStr = DOMmanipulator.extractElementFromTemplateStr(this.template, "var-name");
-        let nameTextOffset = this.getTextLength(textElementStr, layout, {
+    draw() {
+        let rendered = MustacheIt(this.template, {
             name: this.observable.name,
-            nametext_style: this.nameText_style,
-        }) + 5;
-
-        let rendered = this.MustacheIt(this.template, {
-            name: this.observable.name,
-
-            p_name_x: startXY.x, p_name_y: startXY.y + this.height / 2,
-            p_value_x: nameTextOffset, p_value_y: startXY.y,
-
-            width: this.width, height: this.height, font_size: this.height,
-
-            nametext_style: this.nameText_style,
-            valuerect_style: this.valueRect_style,
-            valuetext_style: this.valueText_style,
+            width: this.width, height: this.height
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        this.svgElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
-        layout.requestAppend(this.svgElement);
+        this.layout.requestAppend(this.htmlElement);
 
-        this.text = DOMmanipulator.elementStartsWithId<SVGTextElement>(this.svgElement, 'var-value');
-        this.fitText(this.text, this.observable.getValue(), this.width, this.height);
-
-        this.animRead = DOMmanipulator.elementStartsWithId<SVGAnimateElement>(this.svgElement, "var-anim-read");
-        this.animWrite = DOMmanipulator.elementStartsWithId<SVGAnimateElement>(this.svgElement, "var-anim-write");
+        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(this.htmlElement, 'var-value');
+        this.fitText(this.text, this.observable.getValue(), this.text.clientWidth, this.text.clientHeight);
 
         this.observable.registerObserver(this);
     }
@@ -175,99 +138,66 @@ export class PrimitiveTypeVisualizer<Type> extends BaseVisualizer implements Pri
 export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTypeChangeCbk<Type> {
     protected readonly height: number = 40;
     protected readonly width: number = 40;
-    private textValueElements: SVGTextElement[] = [];
-    protected animRead: SVGAnimateElement[] =[];
-    protected animWrite: SVGAnimateElement[] = [];
 
-    protected readonly padding: number = -1;
+    private textValueElements: HTMLElement[] = [];
 
-    private readonly template = '<text id="var-name" x="0" y="{{p_name_y}}" {{&nametext_style}}>{{name}}:</text> \
-                                 {{#data}} \
-                                 <text x="{{index_x}}" y="{{index_y}}" {{&indextext_style}}>{{index}}</text> \
-                                 <svg x="{{x}}" y="{{y}}" width="{{width}}" height="{{height}}"> \
-                                    <rect {{&valuerect_style}}> \
-                                    <animate id="var-anim-read" \
-                                            attributeName="fill"\
-                                            values="#0C4;#0C4;#0E4;#0E4"\
-                                            dur="0.2s"\
-                                            repeatCount="3"/>\
-                                    <animate id="var-anim-write" \
-                                            attributeName="fill"\
-                                            values="#C24;#C24;#C54;#C54"\
-                                            dur="0.2s"\
-                                            repeatCount="3"/>\</rect> \
-                                    <text id="var-value" {{&valuetext_style}}"></text> \
-                                 </svg> \
-                                 {{/data}}';
+    private readonly template = '<div class="var-box" style="display: table;"> \
+                                    <span id="var-name" class="var-name">{{name}}:</span> \
+                                    {{#data}} \
+                                    <div style="padding-right: 3px; display: table-cell;"> \
+                                        <span id="var-value" class="var-value" style="width: {{width}}px; height:{{height}}px;"></span> \
+                                        <span style="display: table; margin: 0 auto;">{{index}}</span> \
+                                    </div> \
+                                    {{/data}} \
+                                </div>';
 
-    protected indexText_style: string = 'text-anchor="middle" dominant-baseline="hanging" font-size="10" font-style="italic"';
-    protected nameText_style: string = 'text-anchor="left" dominant-baseline="middle" font-size="20"';
-    protected valueRect_style: any = 'width="100%" height="100%" stroke="black" fill="none"';
-    protected valueText_style: any = 'x="50%" y="50%" text-anchor="middle" dominant-baseline="central"';
-
-    constructor(protected observable: ObservableArrayType<Type>) {
+    constructor(protected observable: ObservableArrayType<Type>, protected layout: Layout) {
         super();
-    }
-    onSetAtIndex(observable: ObservableArrayType<Type>, oldValue: Type, newValue: Type, index: number): void {
-        this.fitText(this.textValueElements[index], newValue, this.width, this.height);
-        this.animWrite[index].beginElement();
-    }
-    onGetAtIndex(observable: ObservableArrayType<Type>, value: Type, index: number): void {
-        this.animRead[index].beginElement();
+    }    
+
+    onSetValues(observable: ObservableArrayType<Type>, value: Type[], newValue: Type[]): void {
+        this.redraw();
     }
 
-    draw(startXY: DOMRect, layout: Layout) {
-        let textElement = DOMmanipulator.extractElementFromTemplateStr(this.template, "var-name");
-        let nameTextOffset = this.getTextLength(textElement, layout, {
-            name: this.observable.name,
-            nametext_style: this.nameText_style,
-        }) + 5;
-
-        let array_context_data = [];
-        let index = 0;
-        for (let element of this.observable.getValues()) {
-            let context_data = {
-                x: nameTextOffset + (this.padding + this.width) * index, y: startXY.y,
-
-                width: this.width, height: this.height,
-
-                index_x: nameTextOffset + this.width / 2 + (this.padding + this.width) * index,
-                index_y: startXY.y + 3 + this.height,
-
-                indextext_style: this.indexText_style,
-                valuerect_style: this.valueRect_style,
-                valuetext_style: this.valueText_style,
-
-                index: index
-            };
-
-            array_context_data.push(context_data);
-
-            index++;
+    onSetAtIndex(_observable: ObservableArrayType<Type>, _oldValue: Type, newValue: Type, index: number): void {
+        if (index < this.textValueElements.length) {
+            this.fitText(this.textValueElements[index], newValue, this.width, this.height);
+        } else {
+            this.redraw();
         }
+    }
+    onGetAtIndex(_observable: ObservableArrayType<Type>, _value: Type, _index: number): void {
+    }
 
-        let rendered = this.MustacheIt(this.template, {
+    private redraw() {
+        this.layout.requestRemove(this.htmlElement);
+        this.textValueElements = [];
+        this.observable.unregisterObserver(this);
+
+        this.draw();
+    }
+
+    public draw() {
+        let rendered = MustacheIt(this.template, {
             name: this.observable.name,
-            p_name_x: startXY.x, p_name_y: startXY.y + this.height / 2,
-            nametext_style: this.nameText_style,
-            data: array_context_data,
+            data: this.observable.getValues().map((_v, index) => {
+                return {
+                    width: this.width, height: this.height,
+                    index: index
+                };
+            }),
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        this.svgElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
-        this.textValueElements = this.textValueElements.concat(DOMmanipulator.elementsStartsWithId<SVGTextElement>(this.svgElement, 'var-value'));
+        this.layout.requestAppend(this.htmlElement);
 
-        this.animRead = this.animRead.concat(DOMmanipulator.elementsStartsWithId<SVGAnimateElement>(this.svgElement, "var-anim-read"));
-        this.animWrite = this.animWrite.concat(DOMmanipulator.elementsStartsWithId<SVGAnimateElement>(this.svgElement, "var-anim-write"));
+        this.textValueElements = this.textValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(this.htmlElement, 'var-value'));
+        this.textValueElements.forEach((textElement, index) =>
+            this.fitText(textElement, this.observable.getAtIndex(index), this.width, this.height)
+        );
 
-        layout.requestAppend(this.svgElement);
-
-        // Fit array values to rect boxes
-        index = 0;
-        for (let elem of this.textValueElements) {
-            this.fitText(elem, this.observable.getAtIndex(index++), this.width, this.height);
-        }
         this.observable.registerObserver(this);
     }
 }

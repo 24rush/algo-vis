@@ -28,6 +28,10 @@ export function strformat() {
   return arguments[0].format(...newArgs);
 }
 
+export function MustacheIt(textTemplate, props) {
+  return Mustache.render(textTemplate, props);
+}
+
 export var esprima = exports.esprima;
 
 new Scene("app", "code-editor");

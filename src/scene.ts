@@ -14,58 +14,28 @@ export class Scene {
         if (!parent)
             return;
 
-        let width = parent.getBoundingClientRect().width / 2;
-        let height = parent.getBoundingClientRect().height;
-
         this.codeRenderer = new CodeRenderer(this.codeEditorId);
 
         let oprec = new OperationRecorder();
         oprec.setSourceCode(this.codeRenderer.getSourceCode());
 
-        oprec.startRecording();
-
-        // oprec.markStartCodeLine(2); len.setValue(A.getValues().length);
-        // oprec.markStartCodeLine(3); i.setValue(1);
-        // while (oprec.markStartCodeLine(4) && i.getValue() < len.getValue()) {
-        //     oprec.markStartCodeLine(5); x.setValue(A.getAtIndex(i.getValue()));
-        //     oprec.markStartCodeLine(6); j.setValue(i.getValue() - 1);
-        //     while (oprec.markStartCodeLine(7) && j.getValue() >= 0 && A.getAtIndex(j.getValue()) > x.getValue()) {
-        //         oprec.markStartCodeLine(8); A.setValueAtIndex(A.getAtIndex(j.getValue()), j.getValue() + 1);
-        //         oprec.markStartCodeLine(10); j.setValue(j.getValue() - 1);
-        //     }
-        //     oprec.markStartCodeLine(12); A.setValueAtIndex(x.getValue(), j.getValue() + 1);
-        //     oprec.markStartCodeLine(13); i.setValue(i.getValue() + 1);
-        // }
+        oprec.startRecording();       
         oprec.stopRecording();
 
         oprec.startReplay();
 
-        let paddingWithCode = 5;
-        let scene = DOMmanipulator.createSvg({
-            "width": width, "height": height,
-            "viewBox": "0 0 " + (width + paddingWithCode) + " " + height,
-            "transform": "translate(" + (width + paddingWithCode) + " 0)"
+        let scene = DOMmanipulator.createSpan({
+            "class": "halfScreen"      
         });
         let layout = new Layout(0, 0, scene);
         parent.append(scene);
 
-        window.addEventListener('resize', (event) => {
-            let parent = document.getElementById(this.appId);
-            let width = parent.getBoundingClientRect().width / 2;
-
-            DOMmanipulator.setSvgElementAttr(scene, { "transform": "translate(" + (width + paddingWithCode) + " 0)" });
-        });
-
         oprec.registerVariableScopeNotifier({
             onEnterScopeVariable: function (scopeName: string, observable: ObservableTypes) {
-                //logd(scopeName, 'enter');
-                if (observable instanceof ObservablePrimitiveType)
-                    layout.below(new PrimitiveTypeVisualizer(observable));
-                if (observable instanceof ObservableArrayType)
-                    layout.below(new ArrayTypeVisualizer(observable));
+               layout.add(scopeName, observable);
             },
             onExitScopeVariable: function (scopeName: string, observable: ObservableTypes) {
-
+                layout.remove(scopeName, observable);
             }
         });
 

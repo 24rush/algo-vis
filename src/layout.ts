@@ -1,37 +1,42 @@
-import { BaseVisualizer, PrimitiveTypeVisualizer } from "./visualizers";
+import { ObservableArrayType, ObservablePrimitiveType, ObservableTypes } from "./observable-type.js";
+import { ArrayTypeVisualizer, BaseVisualizer, PrimitiveTypeVisualizer } from "./visualizers.js";
 
-export class Layout
-{
-    protected currentDomRect : DOMRect = undefined;
-
-    constructor(protected x: number, protected y: number, protected scene : SVGSVGElement) {
-        this.currentDomRect = new DOMRect(x, y, 0, 0);
+export class Layout {
+    constructor(protected x: number, protected y: number, protected scene: HTMLElement) {
     }
 
-    requestAppend(element : SVGElement) {
+    private observableToPrimitive: any = {}; // {key = scope.varname, {Visualizer, HTMLElement}}
+
+    requestAppend(element: HTMLElement) {
         this.scene.append(element);
     }
 
-    requestRemove(element: SVGElement) {
+    requestRemove(element: HTMLElement) {
         this.scene.removeChild(element);
     }
 
-    first(visualizer : BaseVisualizer) {        
-        visualizer.draw(this.currentDomRect, this);
-        this.currentDomRect = visualizer.getBBox();    
+    public add(scopeName: string, observable: any) {
+        let key = scopeName + "." + observable.name;
+
+        if (key in this.observableToPrimitive)
+            return;
+
+        let visualizer;
+        if (observable instanceof ObservablePrimitiveType)
+            visualizer = new PrimitiveTypeVisualizer(observable, this);
+        if (observable instanceof ObservableArrayType)
+            visualizer = new ArrayTypeVisualizer(observable, this);
+
+        this.observableToPrimitive[key] = visualizer;
+        visualizer.draw();
     }
 
-    below(visualizer : BaseVisualizer) {        
-        this.currentDomRect.y = (this.currentDomRect.bottom);
-
-        visualizer.draw(this.currentDomRect, this);
-        this.currentDomRect = visualizer.getBBox();
-    }
-
-    right(visualizer : BaseVisualizer) {
-        this.currentDomRect.x = (this.currentDomRect.right);        
-
-        visualizer.draw(this.currentDomRect, this);
-        this.currentDomRect = visualizer.getBBox();
+    public remove(scopeName: string, observable: any) {
+        let key = scopeName + "." + observable.name;
+        if (!(key in this.observableToPrimitive))
+            return;
+            
+        let visualizer = this.observableToPrimitive[key];        
+        this.requestRemove(visualizer.getHTMLElement());
     }
 }

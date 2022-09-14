@@ -4,6 +4,7 @@ export interface PrimitiveTypeChangeCbk<Type> {
 }
 
 export interface ArrayTypeChangeCbk<Type> {
+    onSetValues(observable: ObservableArrayType<Type>, value: Type[], newValue: Type[]) : void;
     onSetAtIndex(observable: ObservableArrayType<Type>, value: Type, newValue: Type, index: number): void;
     onGetAtIndex(observable: ObservableArrayType<Type>, value: Type, index: number): void;
 }
@@ -18,29 +19,33 @@ export interface ObjectTypeChangeCbk<Key, Value> {
 export class BaseObservableType<NotifyCbkType>
 {
     protected observers: NotifyCbkType[] = [];
-    protected name : string;
+    protected name: string;
 
     registerObserver(notifyCbk: NotifyCbkType) {
         this.observers.push(notifyCbk);
     }
 
-    unregisterObserver(notifyCbk: NotifyCbkType) {        
-        this.observers = this.observers.filter((elem) => elem != notifyCbk);        
+    unregisterObserver(notifyCbk: NotifyCbkType) {
+        this.observers = this.observers.filter((elem) => elem != notifyCbk);
     }
 
-    getName() : string {
+    getName(): string {
         return this.name.toString();
     }
 }
 
 export class ObservablePrimitiveType<Type> extends BaseObservableType<PrimitiveTypeChangeCbk<Type>>
 {
-    protected initValue : Type;
+    protected initValue: Type;
 
-    constructor(public name : string, protected value: Type) {
+    constructor(public name: string, protected value: Type) {
         super();
 
         this.initValue = value;
+    }
+
+    public empty() {
+        this.setValue(undefined);
     }
 
     public reset() {
@@ -66,22 +71,29 @@ export class ObservableArrayType<Type> extends BaseObservableType<ArrayTypeChang
 {
     protected initValues: Type[];
 
-    constructor(public name : string, protected values: Type[]) {
+    constructor(public name: string, protected values: Type[]) {
         super();
 
-        this.initValues = values;
+        this.initValues = [...values];
+    }
+
+    public empty() {
+        for (let i = 0; i < this.values.length; i++)
+            this.setValueAtIndex(undefined, i);
     }
 
     public reset() {
         this.setValues(this.initValues);
     }
 
-    getValues() : Type[] { return this.values }
-    setValues(values : Type[])
-    {
-        this.values = [];
-        for (let i = 0; i < values.length; i++)
-            this.setValueAtIndex(values[i], i);
+    getValues(): Type[] { return this.values }
+    setValues(values: Type[]) {
+        let oldValues = [...this.values];
+        this.values = [...values];
+
+        for (let observer of this.observers) {
+            observer.onSetValues(this, oldValues, this.values);
+        }        
     }
 
     setValueAtIndex(newValue: Type, index: number) {
