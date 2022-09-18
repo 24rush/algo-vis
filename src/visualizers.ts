@@ -26,7 +26,8 @@ export class BaseVisualizer {
     protected htmlElement: HTMLElement = undefined;
 
     public draw() { };
-    public getHTMLElement() : HTMLElement { return this.htmlElement; }
+    public getHTMLElement(): HTMLElement { return this.htmlElement; }
+    public detach() { };
 
     public textWidth(text: HTMLElement): { w: number, h: number } {
         let fontFamily = window.getComputedStyle(text, null).getPropertyValue('font-family');
@@ -47,14 +48,23 @@ export class BaseVisualizer {
         return { w, h };
     }
 
+    private resetAnimation(text: HTMLElement) {
+        text.style.animation = 'none'; text.offsetHeight; text.style.animation = null;
+        text.classList.remove('blink'); text.classList.add('blink');
+    }
+
     public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number) {
-        if (objectToPrint == undefined)
+        if (objectToPrint == undefined) {
+            text.textContent = '';
             return;
+        }            
 
         text.textContent = objectToPrint.toString();
 
         if (text.textContent == "")
             return;
+
+        this.resetAnimation(text);
 
         let cachedFontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
@@ -104,19 +114,26 @@ export class PrimitiveTypeVisualizer<Type> extends BaseVisualizer implements Pri
 
     private readonly template: string = '<div class="var-box" style="display: table;"> \
                                            <span id="var-name" class="var-name">{{name}}:</span> \
-                                            <span id="var-value" class="var-value" style="width: {{width}}px; height:{{height}}px;"></span> \
+                                            <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+                                                <span id="var-value"></span> \
+                                            </span> \
                                          </div>';
 
     constructor(protected observable: ObservablePrimitiveType<Type>, protected layout: Layout) {
         super();
     }
+
+    public detach(): void {
+        this.observable.unregisterObserver(this);
+    }
+
     onSet(_observable: ObservablePrimitiveType<Type>, _currValue: Type, newValue: Type): void {
         this.fitText(this.text, newValue, this.width, this.height);
     }
     onGet(): void {
     }
 
-    draw() {
+    draw() {        
         let rendered = MustacheIt(this.template, {
             name: this.observable.name,
             width: this.width, height: this.height
@@ -145,18 +162,32 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
                                     <span id="var-name" class="var-name">{{name}}:</span> \
                                     {{#data}} \
                                     <div style="padding-right: 3px; display: table-cell;"> \
-                                        <span id="var-value" class="var-value" style="width: {{width}}px; height:{{height}}px;"></span> \
-                                        <span style="display: table; margin: 0 auto;">{{index}}</span> \
+                                        <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+                                            <span id="var-value"></span> \ \
+                                        </span> \
+                                        <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
                                     </div> \
                                     {{/data}} \
                                 </div>';
 
     constructor(protected observable: ObservableArrayType<Type>, protected layout: Layout) {
         super();
-    }    
+    }
+    
+    public detach(): void {
+        this.observable.unregisterObserver(this);
+    }
 
     onSetValues(observable: ObservableArrayType<Type>, value: Type[], newValue: Type[]): void {
-        this.redraw();
+        if (value.length != newValue.length) {
+            this.redraw();
+        }
+        else {
+            newValue.forEach((v, i) => {
+                if (value[i] != newValue[i])
+                    this.onSetAtIndex(observable, v, v, i);
+            });
+        }
     }
 
     onSetAtIndex(_observable: ObservableArrayType<Type>, _oldValue: Type, newValue: Type, index: number): void {
@@ -170,9 +201,9 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
     }
 
     private redraw() {
-        this.layout.requestRemove(this.htmlElement);
-        this.textValueElements = [];
         this.observable.unregisterObserver(this);
+        this.layout.requestRemove(this.htmlElement);
+        this.textValueElements = [];        
 
         this.draw();
     }

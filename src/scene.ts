@@ -19,38 +19,38 @@ export class Scene {
         let oprec = new OperationRecorder();
         oprec.setSourceCode(this.codeRenderer.getSourceCode());
 
-        oprec.startRecording();       
-        oprec.stopRecording();
+        oprec.recordSourceCode();        
 
         oprec.startReplay();
 
-        let scene = DOMmanipulator.createSpan({
-            "class": "halfScreen"      
-        });
-        let layout = new Layout(0, 0, scene);
-        parent.append(scene);
+        let consoleTxt: HTMLElement = DOMmanipulator.elementStartsWithId(parent, "consoleTxt");
+
+        let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));       
 
         oprec.registerVariableScopeNotifier({
             onEnterScopeVariable: function (scopeName: string, observable: ObservableTypes) {
-               layout.add(scopeName, observable);
+                layout.add(scopeName, observable);
             },
             onExitScopeVariable: function (scopeName: string, observable: ObservableTypes) {
                 layout.remove(scopeName, observable);
             }
         });
 
+        oprec.registerTraceMessageNotifier({
+            onTraceMessage(message: string): void {
+                consoleTxt.textContent += message + '\r\n';
+                console.log(message);
+            }
+        });
+
         let advance = () => {
             oprec.advanceOneCodeLine();
             this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
-
-            //console.log('Current code line: ', oprec.getCurrentCodeLineNumber(), 'highlight: ', oprec.getNextCodeLineNumber());
         };
 
         let reverse = () => {
             oprec.reverseOneCodeLine();
             this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
-
-            //console.log('Current code line: ', oprec.getCurrentCodeLineNumber(), 'highlight: ', oprec.getNextCodeLineNumber());
         };
 
         this.codeRenderer.highlightLine(oprec.getFirstCodeLineNumber());
@@ -64,5 +64,28 @@ export class Scene {
                 evt.preventDefault();
             }
         };
+
+        let autoReplayInterval = 200;
+        let pause = false;
+
+        document.getElementById("btn-execute").addEventListener('click', () => advance());
+        document.getElementById("btn-autoplay").addEventListener('click', () => {
+            pause = false;
+            var autoplay = setInterval(() => {                
+                advance();
+
+                if (oprec.isReplayFinished() || pause) {
+                    clearInterval(autoplay);
+                }
+            }, autoReplayInterval);
+        });
+
+        document.getElementById("btn-pause").addEventListener('click', () => { pause = true; });
+        document.getElementById("btn-restart").addEventListener('click', () => {         
+            consoleTxt.textContent = "";
+            oprec.startReplay();
+            layout.clearAll();
+            this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
+        });        
     }
 }
