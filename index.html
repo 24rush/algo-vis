@@ -101,18 +101,22 @@
         </button>
       </div>
 
-      <div id="code-editor">function A() {
-        let needle = 2;
-        var arr = [1, 2];
-        for (let i = 0; i < arr.length; i++) { 
-          if (arr[i]==needle) { 
-            console.log("Found at", i); break; 
-          } 
+      <div id="code-editor">function pass(B, i, s) {
+          B[0] = 0;
+          i = 0;
+          s = "0";
+
+          obj['b'] = 1;
         }
-      }
-      console.log('Alin');
-      console.log('is');
-      A();A();    
+
+        let A = [1, 2, 3];
+        let obj = { 'a' : 0 };
+        let i = 7;
+        let s = "Alin";
+
+        pass(A, i, s, obj);
+        console.log(A + " " + i + " " + s + " " + obj['b']);
+
   </div>
   </div>
 

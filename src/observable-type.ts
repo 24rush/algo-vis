@@ -78,8 +78,7 @@ export class ObservableArrayType<Type> extends BaseObservableType<ArrayTypeChang
     }
 
     public empty() {
-        for (let i = 0; i < this.values.length; i++)
-            this.setValueAtIndex(undefined, i);
+        this.values = [];
     }
 
     public reset() {

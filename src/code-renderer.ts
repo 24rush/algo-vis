@@ -1,14 +1,34 @@
+export interface CodeRendererEventNotifier {
+    onSourceCodeUpdated(newCode: string) : void;
+}
 
 export class CodeRenderer {
     private editor: any;
     private marker: any;
     private Range = ace.require('ace/range').Range;
+    private eventListeners: CodeRendererEventNotifier[] = [];
 
     constructor(private elementId: string) {
         this.editor = ace.edit(this.elementId);
         this.editor.setOptions({ useWorker: false });
         this.editor.setTheme("ace/theme/monokai");
         this.editor.session.setMode("ace/mode/javascript");
+
+        this.editor.on('change', () => {            
+            this.eventListeners.forEach(notifier =>  {
+                setTimeout(() => notifier.onSourceCodeUpdated(this.editor.getSession().getValue()), 1000);                              
+            });
+        });
+    }
+
+    public registerEventNotifier(notifier: CodeRendererEventNotifier)
+    {
+        this.eventListeners.push(notifier);
+    }
+
+    public unRegisterEventNotifier(notifier: CodeRendererEventNotifier)
+    {
+        this.eventListeners = this.eventListeners.slice(this.eventListeners.indexOf(notifier), 1);
     }
 
     public highlightLine(lineNo: number) {

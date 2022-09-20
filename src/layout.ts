@@ -19,21 +19,19 @@ export class Layout {
         this.scene.append(element);
     }
 
-    requestRemove(element: HTMLElement) {        
-        for (let key of Object.keys(this.observableToPrimitive)) {
+    requestRemove(element: HTMLElement) {           
+        for (let key of Object.keys(this.observableToPrimitive)) {            
             let visualizer = this.observableToPrimitive[key];
             if (visualizer.getHTMLElement() == element) {
                 this.detachElement(visualizer);
-                delete this.observableToPrimitive[key];
-
                 break;
             }
         }
     }
 
-    private detachElement(visualizer: any) {
-        visualizer.detach();
+    private detachElement(visualizer: any) {    
         this.scene.removeChild(visualizer.getHTMLElement());
+        visualizer.detach();
     }
 
     public add(scopeName: string, observable: any) {
@@ -59,5 +57,6 @@ export class Layout {
             
         let visualizer = this.observableToPrimitive[key];        
         this.requestRemove(visualizer.getHTMLElement());
+        delete this.observableToPrimitive[key];
     }
 }

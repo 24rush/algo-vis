@@ -201,7 +201,7 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
     }
 
     private redraw() {
-        this.observable.unregisterObserver(this);
+        this.detach();
         this.layout.requestRemove(this.htmlElement);
         this.textValueElements = [];        
 

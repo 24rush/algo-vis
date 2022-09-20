@@ -158,12 +158,10 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
     private vars: any; // [scopeName][varname] = VariableDeclaration
     private scopes: any; // [scopeName] = ScopeDeclaration
     private emptyCodeLineNumbers: number[] = [];
-    private fcnReturns : number[] = [];
+    private fcnReturns: number[] = [];
 
     // Notifications
     private notificationEmitter: NotificationEmitter = new NotificationEmitter();
-
-    private activeScopes: string[] = [];
 
     protected primitiveTypeObservers: ObservablePrimitiveType<any>[] = [];
     protected arrayTypeObservers: ObservableArrayType<any>[] = [];
@@ -173,7 +171,6 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
     protected firstExecutedCodeLineNumber: number = -1;
     protected lastExecutedCodeLineNumber: number = -1;
     protected lastExecutedOperationIndex: number = -1;
-
     protected maxLineNumber: number = 0;
 
     protected consoleLogFcn: any = undefined;
@@ -186,7 +183,31 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
     }
 
     protected code: string;
+
+    private reset() {
+        this.code = "";
+
+        for (let primitiveObservers of this.primitiveTypeObservers) {
+            primitiveObservers.empty();
+        }
+        for (let arrayObservers of this.arrayTypeObservers) {
+            arrayObservers.empty();
+        }
+
+        this.nextOperationIndex = 0;
+        this.operations = [];
+        this.emptyCodeLineNumbers = [];
+        this.vars = {}; this.scopes = {}; this.fcnReturns = [];
+
+        this.maxLineNumber = 0;
+        this.firstExecutedCodeLineNumber = -1;
+        this.lastExecutedCodeLineNumber = -1;
+        this.lastExecutedOperationIndex = -1;
+    }
+
     public setSourceCode(code: string) {
+        this.reset();
+
         this.code = code;
         this.parseCode();
     }
@@ -218,16 +239,15 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         return this.getCurrentCodeLineNumber();
     }
 
-    public markStartCodeLine(lineNumber: number): boolean {
+    public markStartCodeLine(lineNumber: number) {
         if (this.isEmptyLine(lineNumber))
             return;
 
-        
         this.lastExecutedCodeLineNumber = lineNumber;
         if (this.firstExecutedCodeLineNumber == -1)
             this.firstExecutedCodeLineNumber = lineNumber;
 
-        return true;
+        this.addOperation(OperationType.NONE);
     }
 
     public startScope(scopeName: string) {
@@ -296,6 +316,31 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         }
 
         this.nextOperationIndex = 0;
+
+        let codeLine = this.getFirstCodeLineNumber();
+        let allSkipableOperations = true;
+
+        for (let opIdx in this.operations) {
+            let operation = this.operations[opIdx];
+
+            if (operation.type != OperationType.NONE && operation.type != OperationType.SCOPE_START) {
+                allSkipableOperations = false;
+                break;
+            }
+
+            if (operation.codeLineNumber != codeLine) {
+                if (allSkipableOperations) {
+                    codeLine = operation.codeLineNumber;
+                    this.firstExecutedCodeLineNumber = codeLine;
+                    this.executeOneCodeLine();
+
+                    allSkipableOperations = false;
+                } else {
+                    break;
+                }
+            }
+        }
+
         this.lastExecutedCodeLineNumber = this.getFirstCodeLineNumber();
         this.status = OperationRecorderStatus.Idle;
     }
@@ -400,12 +445,21 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             case OperationType.SCOPE_START:
             case OperationType.SCOPE_END:
                 {
-                    let operationAttributes = operation.attributes as ScopeOperationPayload;
+                    let operationAttributes = undefined;
+
                     let varTypeFilter = undefined;
                     if (operation.type != OperationType.SCOPE_END) // ending scope for all types of variables
                         varTypeFilter = (operation.type == OperationType.CREATE_VAR) ? VarType.let : VarType.var;
 
-                    let varsInScope = this.getVariableDeclarationInScope(operationAttributes.scopeName, varTypeFilter);
+                    let varName = undefined;
+                    if (operation.type == OperationType.CREATE_VAR) {
+                        operationAttributes = operation.attributes as VarCreationOperationPayload;
+                        varName = operationAttributes.varName;
+                    } else {
+                        operationAttributes = operation.attributes as ScopeOperationPayload;
+                    }
+
+                    let varsInScope = this.getVariableDeclarationInScope(operationAttributes.scopeName, varTypeFilter, varName);
 
                     if (varsInScope.length == 0)
                         break;
@@ -477,41 +531,41 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         let isArray = this.isObjectPropertyType(object);
 
         if (isArray) {
-            if (object.length > 0) {
+            if (object.length >= 0) {
                 type = typeof object[0];
             }
         } else {
             type = typeof object;
         }
 
-        if (type) {
-            if (!variable.observable) {
-                switch (type) {
-                    case 'number':
-                        variable.observable = isArray ? new ObservableArrayType<number>(varName, object) : new ObservablePrimitiveType<number>(varName, object);
-                        isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
-                        break;
-                    case 'string':
-                        variable.observable = isArray ? new ObservableArrayType<string>(varName, object) : new ObservablePrimitiveType<string>(varName, object);
-                        isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
-                        break;
-                }
-
-                this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
-            }
-
+        if (!variable.observable) {
             switch (type) {
                 case 'number':
+                    variable.observable = isArray ? new ObservableArrayType<number>(varName, object) : new ObservablePrimitiveType<number>(varName, object);
+                    isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
+                    break;
+                case 'undefined':
                 case 'string':
-                    {
-                        if (isArray)
-                            variable.observable.setValues(object);
-                        else
-                            variable.observable.setValue(object);
-                        break;
-                    }
+                    variable.observable = isArray ? new ObservableArrayType<string>(varName, object) : new ObservablePrimitiveType<string>(varName, object);
+                    isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
+                    break;
             }
+
+            this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
         }
+
+        switch (type) {
+            case 'number':
+            case 'string':
+                {
+                    if (isArray)
+                        variable.observable.setValues(object);
+                    else
+                        variable.observable.setValue(object);
+                    break;
+                }
+        }
+
     }
 
     private registerVarInScope(scopeName: string, varname: string, vardecl: VariableDeclaration) {
@@ -555,7 +609,7 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
     }
 
     private parseVariable(scopeName: string, vardata: any, declIndexOverwrite: number = -1) {
-        if (vardata.declarations.length == 0)
+        if (!('declarations' in vardata) || vardata.declarations.length == 0)
             return;
 
         for (let decl of vardata.declarations) {
@@ -585,8 +639,27 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                     }
                 case 'FunctionDeclaration':
                     {
-                        this.scopes[item.id.name] = new ScopeDeclaration(item.body.range[0] + 1, item.body.range[1] - 1);
-                        this.extractVariables(item.id.name, item);
+                        var funcScope = item.id.name; logd(item);
+                        for (let param of item.params) {
+                            this.createVariable(funcScope, param.name, VarType.var, item.body.range[0] + 1);
+                        }
+
+                        this.scopes[funcScope] = new ScopeDeclaration(item.body.range[0] + 1, item.body.range[1] - 1);
+                        this.extractVariables(funcScope, item);
+                        break;
+                    }
+                case "ReturnStatement":
+                    {
+                        let beginIndexReturn = item.range[0];
+                        for (let scope in this.scopes) {
+                            let scopeDecl = this.scopes[scope];
+                            if (scopeDecl.startOfDefinitionIndex < beginIndexReturn) {
+                                if (scope.indexOf("global") != -1)
+                                    continue;
+
+                                this.scopes[scope].endOfDefinitionIndex = beginIndexReturn;
+                            }
+                        }
                         break;
                     }
                 case "ForOfStatement":
@@ -599,24 +672,36 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                     }
                 case "ForStatement":
                     {
+                        this.fcnReturns.push(item.body.range[0] + 1);
+
                         this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0], item.range[1]);
                         this.parseVariable(scopeName + ".local", item.init, item.body.range[0] + 1);
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
+                case "IfStatement":
+                    {
+                        this.extractVariables(scopeName + ".local", item.consequent);
+                        break;
+                    }
                 case 'WhileStatement':
                 case 'BlockStatement':
                     {
-                        this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0] + 1, item.range[1] - 1);
+                        this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0] + 0, item.range[1] - 1);
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
                 case 'ExpressionStatement':
                     {
                         switch (item.expression.type) {
+                            case "UpdateExpression":
                             case "AssignmentExpression": {
-                                let isObject = item.expression.left.object != undefined;
-                                let varName = !isObject ? item.expression.left.name : item.expression.left.object.name;
+                                let varName = '';
+
+                                if (item.expression.type == "AssignmentExpression")
+                                    varName = !item.expression.left.object ? item.expression.left.name : item.expression.left.object.name;
+                                else
+                                    varName = item.expression.argument.object.name;
 
                                 let foundInScope = scopeName;
 
@@ -635,6 +720,7 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                             case "CallExpression":
                                 {
                                     this.fcnReturns.push(item.range[1]);
+
                                     break;
                                 }
                         }
@@ -704,6 +790,10 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             let trimmedLine = line.trim();
 
             if (trimmedLine.length == 0 || (trimmedLine.length == 1 && (skippedLineMarkers.indexOf(trimmedLine) != -1))) {
+                this.emptyCodeLineNumbers.push(lineNo);
+            }
+
+            if (trimmedLine.indexOf('//') != -1) {
                 this.emptyCodeLineNumbers.push(lineNo);
             }
 
