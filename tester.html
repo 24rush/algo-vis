@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-  <title>Algo Vis</title>
+  <title>TESTER Algo Vis</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <style>
@@ -82,20 +82,25 @@
 <body>
   <div id="app">
     <div class="halfScreen">
-      <div class="btn-group btn-group-sm">
-        <button id="btn-execute" type="button" class="btn">
+      <div class="btn-group">
+        <button id="btn-execute" type="button" class="btn btn-sm">
           <i class="bi bi-play-fill"></i>
           <span>Execute line</span>
         </button>
-        <button id="btn-autoplay" type="button" class="btn">
-          <i id="btn-autoplay-i" class="bi bi-fast-forward-fill"></i>
-          <span id="btn-autoplay-text">Autoplay</span>
-        </button>        
-        <button id="btn-restart" type="button" class="btn">
+        <button id="btn-autoplay" type="button" class="btn btn-sm">
+          <i class="bi bi-fast-forward-fill"></i>
+          <span>Autoplay</span>
+        </button>
+        <button id="btn-pause" type="button" class="btn btn-sm">
+          <i class="bi bi-pause-fill"></i>
+          <span >Pause</span>
+        </button>
+        <button id="btn-restart" type="button" class="btn btn-sm">
           <i class="bi bi-arrow-clockwise"></i>
           <span >Restart</span>
         </button>
       </div>
+
       <div id="code-editor">
         function fibonacci(n) {
           const fibSequence = [1];
@@ -120,16 +125,26 @@
         
           return fibSequence;
         }
+        
+        //let x = fibonacci(7);
 
-        fibonacci(7);
+        function bitLength(number) {
+            let bitsCounter = 0;
+          
+            while ((1 << bitsCounter) <= number) {
+              bitsCounter += 1;
+            }
+          
+            return bitsCounter;
+          }
+
+        let y = bitLength(234);
+        console.log(y);
   </div>
   </div>
 
   <div id="app-vis" class="halfScreen">
     <ul class="list-group list-group">
-      <li class="list-group-item fw-semibold">Compilation
-        <button id="btn-compilation-status" type="button" class="btn btn-success btn-sm" style="padding: 1px;">OK</button>
-      </li>
       <li class="list-group-item fw-semibold">Variables
         <div id="panelVariablesBody" class="accordion-body">
         </div>
@@ -143,7 +158,6 @@
   </div>
 </div>
 </body>
-
 <script>var exports = {};</script>
 <script src=" https://unpkg.com/mustache@latest">
 </script>
@@ -160,7 +174,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
   integrity="sha384-u1OknCvxWvY5kfmNBILK2hRnQC3Pr17a+RTT6rIHI7NnikvbZlHgTPOOmMi466C8" crossorigin="anonymous"></script>
-
 </body>
 
 </html>

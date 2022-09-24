@@ -37,22 +37,16 @@ class ScopeDeclaration {
     constructor(protected startOfDefinitionIndex: number, protected endOfDefinitionIndex: number) { }
 }
 
-/* ******************* */
-
 /*
  OPERATION PAYLOADS
  */
 
 class RWPrimitiveOperationPayload {
-    constructor(public observable: any, public oldValue: any, public newValue: any) {
-
-    }
+    constructor(public observable: any, public oldValue: any, public newValue: any) { }
 }
 
 class RWPropertyObjectOperationPayload {
-    constructor(public observable: any, public oldValue: any, public newValue: any, public property: any) {
-
-    }
+    constructor(public observable: any, public oldValue: any, public newValue: any, public property: any) { }
 }
 
 class ScopeOperationPayload {
@@ -68,8 +62,6 @@ class TraceOperationPayload {
 }
 
 type OperationAttributeType = RWPrimitiveOperationPayload | RWPropertyObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | TraceOperationPayload;
-
-/* ******************* */
 
 class Operation {
     constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationAttributeType) {
@@ -100,10 +92,15 @@ export interface TraceMessageNotification {
     onTraceMessage(message: string): void;
 }
 
-class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification {
+export interface CompilationStatusNotification {
+    onCompilationStatus(status: boolean, message: string): void;
+}
+
+class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification {
 
     private variableScopeObservers: VariableScopingNotification[] = [];
     private traceMessageObservers: TraceMessageNotification[] = [];
+    private compilationStatusObservers: CompilationStatusNotification[] = [];
 
     public registerVarScopeNotifier(notifier: VariableScopingNotification) {
         this.variableScopeObservers.push(notifier);
@@ -111,6 +108,10 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
 
     public registerTraceNotifier(notifier: TraceMessageNotification) {
         this.traceMessageObservers.push(notifier);
+    }
+
+    public registerCompilationStatusNotifier(notifier: CompilationStatusNotification) {
+        this.compilationStatusObservers.push(notifier);
     }
 
     onEnterScopeVariable(scopeName: string, observable: ObservableTypes): void {
@@ -129,9 +130,15 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
             notifier.onTraceMessage(message);
         });
     }
+
+    onCompilationStatus(status: boolean, message: string): void {
+        this.compilationStatusObservers.forEach(notifier => {
+            notifier.onCompilationStatus(status, message);
+        });
+    }
 }
 
-export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayTypeChangeCbk<any> {
+export class OperationRecorder extends NotificationEmitter implements PrimitiveTypeChangeCbk<any>, ArrayTypeChangeCbk<any> {
     onSetValues(observable: ObservableArrayType<any>, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, [...value], [...newValue]));
     }
@@ -149,23 +156,25 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
     }
 
     constructor() {
+        super();
         window["oprec"] = this;
-        this.scopes = {};
-        this.vars = {};
+        this.reset();
     }
 
     // CODE Parsing
     private vars: any; // [scopeName][varname] = VariableDeclaration
     private scopes: any; // [scopeName] = ScopeDeclaration
+    private refs: any; // [scopeName.varName] = [funcName.paramName]
+    private funcDefs: any; // [funcName] = [param...]
     private emptyCodeLineNumbers: number[] = [];
     private fcnReturns: number[] = [];
-
-    // Notifications
-    private notificationEmitter: NotificationEmitter = new NotificationEmitter();
+    private markLineOverrides: number[] = [];
 
     protected primitiveTypeObservers: ObservablePrimitiveType<any>[] = [];
     protected arrayTypeObservers: ObservableArrayType<any>[] = [];
 
+    protected code: string;
+    protected compilationStatus: boolean;
     protected operations: Operation[] = [];
     protected nextOperationIndex: number = 0;
     protected firstExecutedCodeLineNumber: number = -1;
@@ -182,10 +191,9 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         this.operations.push(new Operation(type, this.lastExecutedCodeLineNumber, attributes));
     }
 
-    protected code: string;
-
     private reset() {
         this.code = "";
+        this.compilationStatus = true;
 
         for (let primitiveObservers of this.primitiveTypeObservers) {
             primitiveObservers.empty();
@@ -198,6 +206,7 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         this.operations = [];
         this.emptyCodeLineNumbers = [];
         this.vars = {}; this.scopes = {}; this.fcnReturns = [];
+        this.refs = {}; this.funcDefs = {}; this.markLineOverrides = [];
 
         this.maxLineNumber = 0;
         this.firstExecutedCodeLineNumber = -1;
@@ -209,53 +218,9 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         this.reset();
 
         this.code = code;
-        this.parseCode();
-    }
-
-    public registerVariableScopeNotifier(notifier: VariableScopingNotification) {
-        this.notificationEmitter.registerVarScopeNotifier(notifier);
-    }
-
-    public registerTraceMessageNotifier(notifier: TraceMessageNotification) {
-        this.notificationEmitter.registerTraceNotifier(notifier);
-    }
-
-    public getFirstCodeLineNumber(): number {
-        return this.firstExecutedCodeLineNumber;
-    }
-
-    public getLastCodeLineNumber(): number {
-        if (this.operations.length == 0) return 0;
-
-        return this.operations[this.operations.length - 1].codeLineNumber;
-    }
-
-    public getCurrentCodeLineNumber(): number { return this.lastExecutedCodeLineNumber; }
-    public getNextCodeLineNumber(): number {
-        if (this.nextOperationIndex < this.operations.length && this.nextOperationIndex >= 0) {
-            return this.operations[this.nextOperationIndex].codeLineNumber;
+        if (this.parseCode()) {
+            this.recordSourceCode();
         }
-
-        return this.getCurrentCodeLineNumber();
-    }
-
-    public markStartCodeLine(lineNumber: number) {
-        if (this.isEmptyLine(lineNumber))
-            return;
-
-        this.lastExecutedCodeLineNumber = lineNumber;
-        if (this.firstExecutedCodeLineNumber == -1)
-            this.firstExecutedCodeLineNumber = lineNumber;
-
-        this.addOperation(OperationType.NONE);
-    }
-
-    public startScope(scopeName: string) {
-        this.addOperation(OperationType.SCOPE_START, new ScopeOperationPayload(scopeName));
-    }
-
-    public endScope(scopeName: string) {
-        this.addOperation(OperationType.SCOPE_END, new ScopeOperationPayload(scopeName));
     }
 
     public registerPrimitives<Type>(observables: ObservablePrimitiveType<Type>[]) {
@@ -284,15 +249,61 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         observable.registerObserver(this);
     }
 
-    public recordSourceCode() {
+    public getFirstCodeLineNumber(): number {
+        return this.firstExecutedCodeLineNumber;
+    }
+
+    public getNextCodeLineNumber(): number {
+        if (this.nextOperationIndex < this.operations.length && this.nextOperationIndex >= 0) {
+            return this.operations[this.nextOperationIndex].codeLineNumber;
+        }
+
+        return this.lastExecutedCodeLineNumber;
+    }
+
+    public markStartCodeLine(lineNumber: number) {
+        if (this.isEmptyLine(lineNumber))
+            return;
+
+        this.lastExecutedCodeLineNumber = lineNumber;
+        if (this.firstExecutedCodeLineNumber == -1)
+            this.firstExecutedCodeLineNumber = lineNumber;
+
+        this.addOperation(OperationType.NONE);
+    }
+
+    public startScope(scopeName: string) {
+        this.addOperation(OperationType.SCOPE_START, new ScopeOperationPayload(scopeName));
+    }
+
+    public endScope(scopeName: string) {
+        this.addOperation(OperationType.SCOPE_END, new ScopeOperationPayload(scopeName));
+    }
+
+    private recordSourceCode() {
         this.status = OperationRecorderStatus.Recording;
 
-        logd(this.vars); logd(this.scopes);
+        logd("VARS: "); logd(this.vars);
+        logd("SCOPES: "); logd(this.scopes);
+        logd("REFS: "); logd(this.refs);
+        logd("FUNCDEFS: "); logd(this.funcDefs);
+
         logd(this.code);
 
-        this.hookConsoleLog();
-        (1, eval)(this.code);
-        this.hookConsoleLog(false);
+        try {
+            this.hookConsoleLog();
+            (1, eval)(this.code);
+            this.hookConsoleLog(false);
+
+            this.compilationStatus = true;
+            this.onCompilationStatus(this.compilationStatus, "");
+
+        } catch (e) {
+            this.hookConsoleLog(false);
+            this.compilationStatus = false;
+
+            this.onCompilationStatus(this.compilationStatus, e.message);
+        }
 
         for (let primitiveObservers of this.primitiveTypeObservers) {
             primitiveObservers.unregisterObserver(this);
@@ -304,7 +315,7 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        console.log(this.operations);
+        logd("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -427,7 +438,7 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         while (codeLineToExecute == currentOperationToExecute.codeLineNumber);
     }
 
-    public executeCurrentOperation(reverse: boolean = false): void {
+    private executeCurrentOperation(reverse: boolean = false): void {
         let operation = this.getNextOperation();
 
         if (!operation) {
@@ -438,7 +449,7 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             case OperationType.TRACE:
                 {
                     let operationAttributes = operation.attributes as TraceOperationPayload;
-                    this.notificationEmitter.onTraceMessage(operationAttributes.message);
+                    this.onTraceMessage(operationAttributes.message);
                     break;
                 }
             case OperationType.CREATE_VAR:
@@ -465,13 +476,16 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                         break;
 
                     for (let variable of varsInScope) {
+                        if (!variable.observable)
+                            continue;
+
                         if (operation.type == OperationType.SCOPE_START) {
                             variable.observable.empty();
                         }
 
                         (operation.type == OperationType.SCOPE_START || operation.type == OperationType.CREATE_VAR) ?
-                            this.notificationEmitter.onEnterScopeVariable(operationAttributes.scopeName, variable.observable) :
-                            this.notificationEmitter.onExitScopeVariable(operationAttributes.scopeName, variable.observable);
+                            this.onEnterScopeVariable(operationAttributes.scopeName, variable.observable) :
+                            this.onExitScopeVariable(operationAttributes.scopeName, variable.observable);
                     }
                     break;
                 }
@@ -524,9 +538,23 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         return isArray;
     }
 
+    private isReferenceObject(object: any): boolean {
+        let variableType = Object.prototype.toString.call(object);
+        return (variableType == "[object Array]");
+    }
+
+    private getReferencedObject(scopeVarName: string): string {
+        for (let ref of Object.keys(this.refs)) {
+            if (this.refs[ref] == scopeVarName) {
+                return this.getReferencedObject(ref);
+            }
+        }
+
+        return scopeVarName;
+    }
+
     private setVar(scopeName: string, varName: string, object: any) {
-        var type;
-        let variable = this.vars[scopeName][varName];
+        var type: string;
 
         let isArray = this.isObjectPropertyType(object);
 
@@ -538,8 +566,24 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             type = typeof object;
         }
 
+        if (this.isReferenceObject(object)) {
+            let o = scopeName, m = varName;
+            let scopeVarName = this.getReferencedObject(scopeName + "." + varName);
+            if (scopeVarName != scopeName + "." + varName) { // source reference                
+                let indexDot = scopeVarName.lastIndexOf('.');
+                varName = scopeVarName.substring(indexDot + 1);
+                scopeName = scopeVarName.substring(0, indexDot);
+            }
+        }
+
+        let variable = this.vars[scopeName][varName];
+
         if (!variable.observable) {
             switch (type) {
+                case 'boolean':
+                    variable.observable = isArray ? new ObservableArrayType<boolean>(varName, object) : new ObservablePrimitiveType<boolean>(varName, object);
+                    isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
+                    break;
                 case 'number':
                     variable.observable = isArray ? new ObservableArrayType<number>(varName, object) : new ObservablePrimitiveType<number>(varName, object);
                     isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
@@ -550,11 +594,12 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                     isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
                     break;
             }
-
-            this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
         }
 
+        this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
+
         switch (type) {
+            case 'boolean':
             case 'number':
             case 'string':
                 {
@@ -601,6 +646,18 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         return foundVars;
     }
 
+    private searchScopeAndParent(startScope: string, varName: string): [string, any] {
+        let foundInScope = startScope;
+
+        let vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
+        if (vardeclaration.length == 0) {
+            foundInScope = startScope.split(".local").join("");
+            vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
+        }
+
+        return [foundInScope, vardeclaration];
+    };
+
     private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {
         let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex);
         this.registerVarInScope(scopeName, varName, varDecl);
@@ -621,14 +678,43 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             }
 
             this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite);
+
+            let funcName = decl.id.name;
+
+            if (decl.init) {
+                switch (decl.init.type) {
+                    case "CallExpression": {
+                        this.extractVariables(scopeName, decl.init);
+                        break;
+                    }
+                    case "ArrowFunctionExpression": {
+                        for (let param of decl.init.params) {
+                            if (!(funcName in this.funcDefs)) {
+                                this.funcDefs[funcName] = [];
+                            }
+
+                            this.funcDefs[funcName].push(param.name);
+                            this.createVariable(funcName, param.name, VarType.var, decl.init.body.range[0] + 1);
+                        }
+
+                        this.scopes[decl.id.name] = new ScopeDeclaration(decl.init.body.range[0] + 1, decl.init.body.range[1] - 1);
+                        this.extractVariables(decl.id.name, decl.init.body);
+
+                        break;
+                    }
+                }
+            }
         }
     }
 
     private extractVariables(scopeName: string, scope: any) {
-        if (!scope || !scope.body)
+        if (!scope)
             return;
 
-        let body = !(length in scope.body) ? scope.body.body : scope.body;
+        let body = [scope];
+
+        if (scope.body)
+            body = !(length in scope.body) && scope.body.body ? scope.body.body : (!(length in scope.body) ? [scope.body] : scope.body);
 
         for (let item of body) {
             switch (item.type) {
@@ -639,25 +725,38 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                     }
                 case 'FunctionDeclaration':
                     {
-                        var funcScope = item.id.name; logd(item);
+                        var funcName = item.id.name;
+
                         for (let param of item.params) {
-                            this.createVariable(funcScope, param.name, VarType.var, item.body.range[0] + 1);
+                            if (!(funcName in this.funcDefs)) {
+                                this.funcDefs[funcName] = [];
+                            }
+
+                            this.funcDefs[funcName].push(param.name);
+                            this.createVariable(funcName, param.name, VarType.var, item.body.range[0] + 1);
                         }
 
-                        this.scopes[funcScope] = new ScopeDeclaration(item.body.range[0] + 1, item.body.range[1] - 1);
-                        this.extractVariables(funcScope, item);
+                        this.scopes[funcName] = new ScopeDeclaration(item.body.range[0] + 1, item.body.range[1] - 1);
+                        this.extractVariables(funcName, item);
                         break;
                     }
                 case "ReturnStatement":
                     {
-                        let beginIndexReturn = item.range[0];
+                        let indexReturnStatement = item.range[0];
                         for (let scope in this.scopes) {
                             let scopeDecl = this.scopes[scope];
-                            if (scopeDecl.startOfDefinitionIndex < beginIndexReturn) {
+
+                            let parentScope = scope.split('.local').join('');
+
+                            if (parentScope != scopeName)
+                                continue;
+
+                            if (scopeDecl.startOfDefinitionIndex < indexReturnStatement &&
+                                scopeDecl.endOfDefinitionIndex > indexReturnStatement) {
                                 if (scope.indexOf("global") != -1)
                                     continue;
 
-                                this.scopes[scope].endOfDefinitionIndex = beginIndexReturn;
+                                this.scopes[scope].endOfDefinitionIndex = indexReturnStatement;
                             }
                         }
                         break;
@@ -682,59 +781,108 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
                 case "IfStatement":
                     {
                         this.extractVariables(scopeName + ".local", item.consequent);
+                        this.extractVariables(scopeName + ".local", item.alternate);
+
                         break;
                     }
                 case 'WhileStatement':
                 case 'BlockStatement':
                     {
+                        this.markLineOverrides.push(item.body.range[0] + 1);
                         this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0] + 0, item.range[1] - 1);
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
+                case 'SwitchStatement':
+                    {
+                        for (let caseStatement of item.cases) {
+                            if ('consequent' in caseStatement && caseStatement.consequent.length > 0) {
+                                let consq = caseStatement.consequent[0];
+
+                                if (consq.type == "BlockStatement")
+                                    this.markLineOverrides.push(caseStatement.consequent[0].range[0] + 1);
+                                else {
+                                    this.markLineOverrides.push(caseStatement.consequent[0].range[0]);
+                                }
+                            }
+
+                        }
+
+                        break;
+                    }
                 case 'ExpressionStatement':
                     {
-                        switch (item.expression.type) {
-                            case "UpdateExpression":
-                            case "AssignmentExpression": {
-                                let varName = '';
+                        this.extractVariables(scopeName, item.expression);
+                        break;
+                    }
 
-                                if (item.expression.type == "AssignmentExpression")
-                                    varName = !item.expression.left.object ? item.expression.left.name : item.expression.left.object.name;
-                                else
-                                    varName = item.expression.argument.object.name;
+                case "UpdateExpression":
+                case "AssignmentExpression": {
+                    let varName = '';
 
-                                let foundInScope = scopeName;
+                    if (item.type == "AssignmentExpression")
+                        varName = !item.left.object ? item.left.name : item.left.object.name;
+                    else
+                        varName = item.argument.object.name;
 
-                                let vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
-                                if (vardeclaration.length == 0) {
-                                    foundInScope = scopeName.split(".local").join("");
-                                    vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
-                                }
+                    let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
+
+                    if (vardeclaration.length > 0) {
+                        this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
+                    }
+
+                    break;
+                }
+                case "CallExpression":
+                    {
+                        this.fcnReturns.push(item.range[1]);
+
+                        if (item.callee && item.callee.object && item.callee.object.name) {
+                            let varName = item.callee.object.name;
+
+                            let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
+
+                            if (vardeclaration.length) {
+                                this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
+                            }
+                        }
+                        else {
+                            let calledFunc = item.callee.name;
+
+                            for (let i = 0; i < item.arguments.length; i++) {
+                                let argument = item.arguments[i];
+                                let paramName = argument.name;
+
+                                let vardeclaration = this.getVariableDeclarationInScope(scopeName, undefined, paramName);
 
                                 if (vardeclaration.length > 0) {
-                                    this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
+                                    if (calledFunc in this.funcDefs) { // TODO: Handled missing function decl
+                                        this.refs[scopeName + "." + paramName] = calledFunc + "." + this.funcDefs[calledFunc][i];
+                                    }
                                 }
 
-                                break;
                             }
-                            case "CallExpression":
-                                {
-                                    this.fcnReturns.push(item.range[1]);
-
-                                    break;
-                                }
                         }
+                        break;
                     }
             }
         }
     }
 
-    private parseCode() {
+    private parseCode() : boolean {
         if (!this.code)
-            return;
+            return false;
 
-        let syntax = esprima.parseScript(this.code, { range: true });
-        logd(syntax);
+        let syntax = undefined;
+
+        try {
+            syntax = esprima.parseScript(this.code, { range: true });
+            logd(syntax);
+
+        } catch (error) {
+            this.onCompilationStatus(false, "line " + error.lineNumber + "> " + error.description);
+            return false;                      
+        }
 
         this.vars = {};
         this.scopes['global'] = new ScopeDeclaration(syntax.range[0], syntax.range[1]);
@@ -751,11 +899,9 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
 
         // Scope setting
         Object.keys(this.scopes).forEach((scope) => {
-            let injectedCode = strformat("startScope('{0}');", scope);
+            let injectedCode = strformat(";startScope('{0}');", scope);
             addCodeInjection(this.scopes[scope].startOfDefinitionIndex, injectedCode);
 
-            injectedCode = strformat("endScope('{0}');", scope);
-            addCodeInjection(this.scopes[scope].endOfDefinitionIndex, injectedCode);
         });
 
         // Variable setting
@@ -763,10 +909,16 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             Object.keys(this.vars[scope]).forEach((index) => {
                 let vardata = this.vars[scope][index];
                 vardata.endOfDefinitionIndexes.forEach(endOfDefinitionIndex => {
-                    let injectedCode = strformat("setVar('{0}', '{1}', {2});", vardata.scopeName, vardata.name, vardata.name);
+                    let injectedCode = strformat(";setVar('{0}', '{1}', {2});", vardata.scopeName, vardata.name, vardata.name);
                     addCodeInjection(endOfDefinitionIndex, injectedCode);
                 });
             })
+        });
+
+        // Scope setting
+        Object.keys(this.scopes).forEach((scope) => {
+            let injectedCode = strformat(";endScope('{0}');", scope);
+            addCodeInjection(this.scopes[scope].endOfDefinitionIndex, injectedCode);
         });
 
         // Function returns
@@ -774,9 +926,14 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
             addCodeInjection(endOfDefinitionIndex, "<FCNRET>");
         });
 
+        // Mark line overrides
+        this.markLineOverrides.forEach(endOfDefinitionIndex => {
+            addCodeInjection(endOfDefinitionIndex, "<MARKLINE>");
+        });
+
         let skippedLineMarkers = ['{', '}'];
 
-        // Inject setVar
+        // Inject cookies
         Object.keys(injectAtIndex).reverse().forEach((indexEndOfDef) => {
             let index = parseInt(indexEndOfDef);
             this.code = this.code.slice(0, index) + injectAtIndex[index].join('') + this.code.slice(index);
@@ -804,27 +961,41 @@ export class OperationRecorder implements PrimitiveTypeChangeCbk<any>, ArrayType
         lineNo = 1;
         lineByLine = this.code.split('\n');
         this.code = "";
+        let prevLineEndsWithComma = false;
 
         for (let line of lineByLine) {
             let trimmedLine = line.trim();
-            if (trimmedLine.length && (skippedLineMarkers.indexOf(trimmedLine) == -1)) {
-                let codeLineMarker = strformat("markcl({0});", lineNo);
+            if (trimmedLine.length) {
+                if (skippedLineMarkers.indexOf(trimmedLine) == -1) {
+                    let codeLineMarker = strformat(";markcl({0});", lineNo);
 
-                if (trimmedLine[0] == '{') { // handles for loop with { on new line
-                    line = line.replace('{', '');
-                    line = strformat("\{{0}{1}", codeLineMarker, line);
+                    if (line.indexOf("<MARKLINE>") != -1) {
+                        line = line.split("<MARKLINE>").join(codeLineMarker);
+                    }
+                    else {
+                        if (!prevLineEndsWithComma && trimmedLine.indexOf("case") == -1) {
+                            if (trimmedLine[0] == '{') { // handles for loop with { on new line
+                                line = line.replace('{', '');
+                                line = strformat("\{{0}{1}", codeLineMarker, line);
+                            }
+                            else
+                                line = strformat("{0}{1}", codeLineMarker, line);
+                        }
+
+                        line = line.split("<FCNRET>").join(codeLineMarker);
+                    }
                 }
-                else
-                    line = strformat("{0}{1}", codeLineMarker, line);
 
-                line = line.split("<FCNRET>").join(codeLineMarker);
+                prevLineEndsWithComma = trimmedLine[trimmedLine.length - 1] == ',';
             }
 
             lineNo++;
             if (line.length)
                 this.code += line + '\n';
         }
-    }
+
+        return true;
+    }    
 }
 
 window['markcl'] = function (lineNo: number) {

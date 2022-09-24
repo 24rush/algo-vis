@@ -6,17 +6,21 @@ export class CodeRenderer {
     private editor: any;
     private marker: any;
     private Range = ace.require('ace/range').Range;
-    private eventListeners: CodeRendererEventNotifier[] = [];
-
+    private eventListeners: CodeRendererEventNotifier[] = [];    
+    
     constructor(private elementId: string) {
         this.editor = ace.edit(this.elementId);
         this.editor.setOptions({ useWorker: false });
         this.editor.setTheme("ace/theme/monokai");
         this.editor.session.setMode("ace/mode/javascript");
-
+    
+        let timeoutReloadCode = undefined;
         this.editor.on('change', () => {            
             this.eventListeners.forEach(notifier =>  {
-                setTimeout(() => notifier.onSourceCodeUpdated(this.editor.getSession().getValue()), 1000);                              
+                if (timeoutReloadCode)
+                    clearInterval(timeoutReloadCode);
+                    
+                timeoutReloadCode = setTimeout(() => notifier.onSourceCodeUpdated(this.editor.getSession().getValue()), 1000);                              
             });
         });
     }

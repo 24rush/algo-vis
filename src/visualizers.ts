@@ -178,7 +178,7 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
         this.observable.unregisterObserver(this);
     }
 
-    onSetValues(observable: ObservableArrayType<Type>, value: Type[], newValue: Type[]): void {
+    onSetValues(observable: ObservableArrayType<Type>, value: Type[], newValue: Type[]): void {        
         if (value.length != newValue.length) {
             this.redraw();
         }

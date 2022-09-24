@@ -1,6 +1,5 @@
 import { DOMmanipulator } from "./dom-manipulator.js"
-import { ObservablePrimitiveType, ObservableArrayType, ObservableTypes } from "./observable-type.js"
-import { ArrayTypeVisualizer, PrimitiveTypeVisualizer } from "./visualizers.js"
+import { ObservableTypes } from "./observable-type.js"
 import { Layout } from "./layout.js";
 import { OperationRecorder } from "./operation-recorder.js";
 import { CodeRenderer } from "./code-renderer.js";
@@ -14,15 +13,13 @@ export class Scene {
         if (!parent)
             return;
 
-        
         this.codeRenderer = new CodeRenderer(this.codeEditorId);
         let oprec = new OperationRecorder();
 
         oprec.setSourceCode(this.codeRenderer.getSourceCode());
-        oprec.recordSourceCode();        
 
         let consoleTxt: HTMLElement = DOMmanipulator.elementStartsWithId(parent, "consoleTxt");
-        let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));       
+        let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));
 
         let self = this;
         this.codeRenderer.registerEventNotifier({
@@ -31,14 +28,13 @@ export class Scene {
                 layout.clearAll();
 
                 oprec.setSourceCode(newCode);
-                oprec.recordSourceCode();  
-                
                 oprec.startReplay();
+
                 self.codeRenderer.highlightLine(oprec.getFirstCodeLineNumber());
             }
         });
 
-        oprec.registerVariableScopeNotifier({
+        oprec.registerVarScopeNotifier({
             onEnterScopeVariable: function (scopeName: string, observable: ObservableTypes) {
                 layout.add(scopeName, observable);
             },
@@ -47,14 +43,24 @@ export class Scene {
             }
         });
 
-        oprec.registerTraceMessageNotifier({
+        oprec.registerTraceNotifier({
             onTraceMessage(message: string): void {
                 consoleTxt.textContent += message + '\r\n';
                 console.log(message);
             }
         });
 
+        oprec.registerCompilationStatusNotifier({
+            onCompilationStatus(status: boolean, message: string) : void {
+                let btnCompilationStatus = document.getElementById("btn-compilation-status");
+                btnCompilationStatus.classList.remove("btn-success", "btn-danger");
+                btnCompilationStatus.classList.add(status ? "btn-success" : "btn-danger");
+                btnCompilationStatus.textContent = status ? "OK" : "error: " + message;
+            }    
+        });
+
         oprec.startReplay();
+
         this.codeRenderer.highlightLine(oprec.getFirstCodeLineNumber());
 
         let advance = () => {
@@ -68,36 +74,62 @@ export class Scene {
         };
 
         window.onkeydown = (evt) => {
-            if (evt.keyCode == 65) { // A (q=81)
-                advance();
-                evt.preventDefault();
-            } else if (evt.keyCode == 81) {
-                reverse();
+            if (evt.keyCode == 65 || evt.keyCode == 81) {
+                evt.keyCode == 65 ? advance() : reverse();
                 evt.preventDefault();
             }
         };
 
         let autoReplayInterval = 200;
-        let pause = false;
+        let paused = true;
+        let autoplay = undefined;
 
-        document.getElementById("btn-execute").addEventListener('click', () => advance());
+        let resetAutoPlayBtn = function (isPaused) {
+            document.getElementById("btn-autoplay-text").textContent = !paused ? "Pause" : "Autoplay";
+            let iElem = document.getElementById("btn-autoplay-i");
+            iElem.classList.remove("bi-fast-forward-fill", "bi-pause-fill");
+            iElem.classList.add(!paused ? "bi-pause-fill" : "bi-fast-forward-fill");
+        }
+
+        document.getElementById("btn-execute").addEventListener('click', () => {
+            if (paused == false)
+                return;
+            
+            advance();
+        });
         document.getElementById("btn-autoplay").addEventListener('click', () => {
-            pause = false;
-            var autoplay = setInterval(() => {                
-                advance();
+            if (oprec.isReplayFinished()) {
+                paused = true;
+                resetAutoPlayBtn(paused);
+                return;
+            }
 
-                if (oprec.isReplayFinished() || pause) {
-                    clearInterval(autoplay);
-                }
-            }, autoReplayInterval);
+            paused = !paused;
+            resetAutoPlayBtn(paused);
+
+            if (!paused) {
+                autoplay = setInterval(() => {
+                    advance();
+
+                    if (oprec.isReplayFinished() || paused) {
+                        clearInterval(autoplay);
+                    }
+                }, autoReplayInterval);
+            }
+            else {
+                clearInterval(autoplay);
+            }
         });
 
-        document.getElementById("btn-pause").addEventListener('click', () => { pause = true; });
-        document.getElementById("btn-restart").addEventListener('click', () => {         
+        document.getElementById("btn-restart").addEventListener('click', () => {
+            paused = true;
+            resetAutoPlayBtn(paused);
+            clearInterval(autoplay);
+
             consoleTxt.textContent = "";
             layout.clearAll();
-            oprec.startReplay();            
+            oprec.startReplay();
             this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
-        });        
+        });
     }
 }
