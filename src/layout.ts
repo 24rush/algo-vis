@@ -1,5 +1,5 @@
-import { ObservableArrayType, ObservablePrimitiveType, ObservableTypes } from "./observable-type.js";
-import { ArrayTypeVisualizer, BaseVisualizer, PrimitiveTypeVisualizer } from "./visualizers.js";
+import { ObservableArrayType, ObservablePrimitiveType, ObservableTypes } from "./observable-type";
+import { ArrayTypeVisualizer, BaseVisualizer, PrimitiveTypeVisualizer } from "./visualizers";
 
 export class Layout {
     constructor(protected scene: HTMLElement) {

@@ -1,6 +1,6 @@
-import { DOMmanipulator } from "./dom-manipulator.js";
-import { Layout } from "./layout.js";
-import { MustacheIt } from "../main.js"
+import { DOMmanipulator } from "./dom-manipulator";
+import { Layout } from "./layout";
+var MustacheIt = require('mustache');
 
 import { ObservablePrimitiveType, ObservableArrayType, PrimitiveTypeChangeCbk, ArrayTypeChangeCbk } from "./observable-type.js"
 
@@ -134,7 +134,7 @@ export class PrimitiveTypeVisualizer<Type> extends BaseVisualizer implements Pri
     }
 
     draw() {        
-        let rendered = MustacheIt(this.template, {
+        let rendered = MustacheIt.render(this.template, {
             name: this.observable.name,
             width: this.width, height: this.height
         });
@@ -209,7 +209,7 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
     }
 
     public draw() {
-        let rendered = MustacheIt(this.template, {
+        let rendered = MustacheIt.render(this.template, {
             name: this.observable.name,
             data: this.observable.getValues().map((_v, index) => {
                 return {

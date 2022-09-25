@@ -1,3 +1,12 @@
+/*var ace = require('ace-builds/src-min-noconflict/ace');
+var theme_monokai = require('ace-builds/src-min-noconflict/theme-monokai');
+require("ace-builds/src-min-noconflict/mode-javascript")
+*/
+var ace = require('ace-builds/src-min-noconflict/ace')
+require('ace-builds/src-min-noconflict/mode-javascript')
+
+var theme_monokai = require('ace-builds/src-min-noconflict/theme-monokai')
+
 export interface CodeRendererEventNotifier {
     onSourceCodeUpdated(newCode: string) : void;
 }
@@ -10,11 +19,12 @@ export class CodeRenderer {
     
     constructor(private elementId: string) {
         this.editor = ace.edit(this.elementId);
-        this.editor.setOptions({ useWorker: false });
-        this.editor.setTheme("ace/theme/monokai");
+        this.editor.setOptions({ useWorker: false });        
+        this.editor.setTheme(theme_monokai);
+
         this.editor.session.setMode("ace/mode/javascript");
     
-        let timeoutReloadCode = undefined;
+        let timeoutReloadCode : any;
         this.editor.on('change', () => {            
             this.eventListeners.forEach(notifier =>  {
                 if (timeoutReloadCode)
@@ -47,5 +57,9 @@ export class CodeRenderer {
 
     public getSourceCode() : string {
         return this.editor.getValue();
+    }
+
+    public setSourceCode(sourceCode: string) : void {
+        this.editor.setValue(sourceCode);
     }
 }

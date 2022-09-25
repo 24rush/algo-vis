@@ -1,5 +1,8 @@
-import { ArrayTypeChangeCbk, ObservableArrayType, ObservablePrimitiveType, ObservableTypes, PrimitiveTypeChangeCbk } from "./observable-type.js";
-import { logd, strformat, esprima } from "../main.js"
+import { ArrayTypeChangeCbk, ObservableArrayType, ObservablePrimitiveType, ObservableTypes, PrimitiveTypeChangeCbk } from "./observable-type";
+import { logd } from "./index"
+
+var MustacheIt = require('mustache');
+var esprima = require('esprima')
 
 enum OperationType {
     NONE,
@@ -50,15 +53,15 @@ class RWPropertyObjectOperationPayload {
 }
 
 class ScopeOperationPayload {
-    constructor(public scopeName) { }
+    constructor(public scopeName : string) { }
 }
 
 class VarCreationOperationPayload {
-    constructor(public scopeName, public varName) { }
+    constructor(public scopeName : string, public varName : string) { }
 }
 
 class TraceOperationPayload {
-    constructor(public message) { }
+    constructor(public message : string) { }
 }
 
 type OperationAttributeType = RWPrimitiveOperationPayload | RWPropertyObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | TraceOperationPayload;
@@ -156,8 +159,11 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }
 
     constructor() {
-        super();
-        window["oprec"] = this;
+        super();     
+        MustacheIt.escape = function(text: any) {return text;};
+
+        (<any>window).oprec = this;
+
         this.reset();
     }
 
@@ -553,7 +559,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         return scopeVarName;
     }
 
-    private setVar(scopeName: string, varName: string, object: any) {
+    public setVar(scopeName: string, varName: string, object: any) {
         var type: string;
 
         let isArray = this.isObjectPropertyType(object);
@@ -567,7 +573,6 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         }
 
         if (this.isReferenceObject(object)) {
-            let o = scopeName, m = varName;
             let scopeVarName = this.getReferencedObject(scopeName + "." + varName);
             if (scopeVarName != scopeName + "." + varName) { // source reference                
                 let indexDot = scopeVarName.lastIndexOf('.');
@@ -889,7 +894,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         this.extractVariables('global', syntax);
 
-        let injectAtIndex = {};
+        let injectAtIndex : any = [];
         let addCodeInjection = function (index: number, injectedCode: string) {
             if (!(index in injectAtIndex))
                 injectAtIndex[index] = [];
@@ -899,7 +904,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         // Scope setting
         Object.keys(this.scopes).forEach((scope) => {
-            let injectedCode = strformat(";startScope('{0}');", scope);
+            let injectedCode = MustacheIt.render(";startScope('{{scope}}');", {scope: scope});
             addCodeInjection(this.scopes[scope].startOfDefinitionIndex, injectedCode);
 
         });
@@ -908,8 +913,8 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         Object.keys(this.vars).forEach((scope) => {
             Object.keys(this.vars[scope]).forEach((index) => {
                 let vardata = this.vars[scope][index];
-                vardata.endOfDefinitionIndexes.forEach(endOfDefinitionIndex => {
-                    let injectedCode = strformat(";setVar('{0}', '{1}', {2});", vardata.scopeName, vardata.name, vardata.name);
+                vardata.endOfDefinitionIndexes.forEach((endOfDefinitionIndex: number) => {
+                    let injectedCode = MustacheIt.render(";setVar('{{scopeName}}', '{{name}}', {{name}});", {scopeName: vardata.scopeName, name: vardata.name});
                     addCodeInjection(endOfDefinitionIndex, injectedCode);
                 });
             })
@@ -917,7 +922,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         // Scope setting
         Object.keys(this.scopes).forEach((scope) => {
-            let injectedCode = strformat(";endScope('{0}');", scope);
+            let injectedCode = MustacheIt.render(";endScope('{{scope}}');", {scope: scope});
             addCodeInjection(this.scopes[scope].endOfDefinitionIndex, injectedCode);
         });
 
@@ -967,7 +972,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             let trimmedLine = line.trim();
             if (trimmedLine.length) {
                 if (skippedLineMarkers.indexOf(trimmedLine) == -1) {
-                    let codeLineMarker = strformat(";markcl({0});", lineNo);
+                    let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", {lineNo: lineNo});
 
                     if (line.indexOf("<MARKLINE>") != -1) {
                         line = line.split("<MARKLINE>").join(codeLineMarker);
@@ -976,10 +981,10 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                         if (!prevLineEndsWithComma && trimmedLine.indexOf("case") == -1) {
                             if (trimmedLine[0] == '{') { // handles for loop with { on new line
                                 line = line.replace('{', '');
-                                line = strformat("\{{0}{1}", codeLineMarker, line);
+                                line = MustacheIt.render("\{{marker}}{{line}}", {marker: codeLineMarker, line: line});
                             }
                             else
-                                line = strformat("{0}{1}", codeLineMarker, line);
+                                line = MustacheIt.render("{{marker}}{{line}}", {marker: codeLineMarker, line: line});
                         }
 
                         line = line.split("<FCNRET>").join(codeLineMarker);
@@ -998,18 +1003,18 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }    
 }
 
-window['markcl'] = function (lineNo: number) {
-    window['oprec'].markStartCodeLine(lineNo);
-}
+(<any>window)['markcl'] = function (lineNo: number) {    
+    (<any>window).oprec.markStartCodeLine(lineNo);
+};
 
-window['setVar'] = function (scopeName: string, varname: string, varobject: any) {
-    window['oprec'].setVar(scopeName, varname, varobject);
-}
+(<any>window)['setVar'] = function (scopeName: string, varname: string, varobject: any) {
+    (<any>window).oprec.setVar(scopeName, varname, varobject);
+};
 
-window['startScope'] = function (scopeName: string) {
-    window['oprec'].startScope(scopeName);
-}
+(<any>window)['startScope'] = function (scopeName: string) {
+    (<any>window).oprec.startScope(scopeName);
+};
 
-window['endScope'] = function (scopeName: string) {
-    window['oprec'].endScope(scopeName);
-}
+(<any>window)['endScope'] = function (scopeName: string) {
+    (<any>window).oprec.endScope(scopeName);
+};

@@ -1,14 +1,13 @@
-import { DOMmanipulator } from "./dom-manipulator.js"
-import { ObservableTypes } from "./observable-type.js"
-import { Layout } from "./layout.js";
-import { OperationRecorder } from "./operation-recorder.js";
-import { CodeRenderer } from "./code-renderer.js";
-import { logd, strformat } from "../main.js"
+import { DOMmanipulator } from "./dom-manipulator"
+import { ObservableTypes } from "./observable-type"
+import { Layout } from "./layout";
+import { OperationRecorder } from "./operation-recorder";
+import { CodeRenderer } from "./code-renderer";
 
 export class Scene {
     private codeRenderer: CodeRenderer;
 
-    constructor(private appId: string, private codeEditorId: string) {
+    constructor(private appId: string, private codeEditorId: string, private codeId: string) {
         let parent = document.getElementById(this.appId);
         if (!parent)
             return;
@@ -22,6 +21,16 @@ export class Scene {
         let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));
 
         let self = this;
+        fetch(codeId)            
+            .then(function (response) {
+                if (!response.ok)
+                    return;
+
+                response.text().then(function (code: string) {                    
+                    self.codeRenderer.setSourceCode(code);
+                });
+            });
+
         this.codeRenderer.registerEventNotifier({
             onSourceCodeUpdated(newCode: string) {
                 consoleTxt.textContent = "";
@@ -51,12 +60,12 @@ export class Scene {
         });
 
         oprec.registerCompilationStatusNotifier({
-            onCompilationStatus(status: boolean, message: string) : void {
+            onCompilationStatus(status: boolean, message: string): void {
                 let btnCompilationStatus = document.getElementById("btn-compilation-status");
                 btnCompilationStatus.classList.remove("btn-success", "btn-danger");
                 btnCompilationStatus.classList.add(status ? "btn-success" : "btn-danger");
                 btnCompilationStatus.textContent = status ? "OK" : "error: " + message;
-            }    
+            }
         });
 
         oprec.startReplay();
@@ -82,19 +91,19 @@ export class Scene {
 
         let autoReplayInterval = 200;
         let paused = true;
-        let autoplay = undefined;
+        let autoplay: NodeJS.Timer = undefined;
 
-        let resetAutoPlayBtn = function (isPaused) {
-            document.getElementById("btn-autoplay-text").textContent = !paused ? "Pause" : "Autoplay";
+        let resetAutoPlayBtn = function (isPaused: boolean) {
+            document.getElementById("btn-autoplay-text").textContent = !isPaused ? "Pause" : "Autoplay";
             let iElem = document.getElementById("btn-autoplay-i");
             iElem.classList.remove("bi-fast-forward-fill", "bi-pause-fill");
-            iElem.classList.add(!paused ? "bi-pause-fill" : "bi-fast-forward-fill");
+            iElem.classList.add(!isPaused ? "bi-pause-fill" : "bi-fast-forward-fill");
         }
 
         document.getElementById("btn-execute").addEventListener('click', () => {
             if (paused == false)
                 return;
-            
+
             advance();
         });
         document.getElementById("btn-autoplay").addEventListener('click', () => {
