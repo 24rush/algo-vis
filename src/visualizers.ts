@@ -60,6 +60,9 @@ export class BaseVisualizer {
         }            
 
         text.textContent = objectToPrint.toString();
+        
+        text.title = text.textContent;
+        text.parentElement.title = text.textContent;
 
         if (text.textContent == "")
             return;
@@ -183,10 +186,10 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
             this.redraw();
         }
         else {
-            newValue.forEach((v, i) => {
+            for (let [i, v] of newValue.entries()) {            
                 if (value[i] != newValue[i])
                     this.onSetAtIndex(observable, v, v, i);
-            });
+            };
         }
     }
 
@@ -225,9 +228,9 @@ export class ArrayTypeVisualizer<Type> extends BaseVisualizer implements ArrayTy
         this.layout.requestAppend(this.htmlElement);
 
         this.textValueElements = this.textValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(this.htmlElement, 'var-value'));
-        this.textValueElements.forEach((textElement, index) =>
-            this.fitText(textElement, this.observable.getAtIndex(index), this.width, this.height)
-        );
+        for (let [index, textElement] of this.textValueElements.entries()) {        
+            this.fitText(textElement, this.observable.getAtIndex(index), this.width, this.height);
+        }
 
         this.observable.registerObserver(this);
     }

@@ -24,6 +24,10 @@ enum VarType {
     var
 };
 
+class IndexRange {
+    constructor(public s: number, public e: number) { }
+}
+
 /*
 DATATYPES USED BY POST PREPROCESSOR
 */
@@ -53,15 +57,15 @@ class RWPropertyObjectOperationPayload {
 }
 
 class ScopeOperationPayload {
-    constructor(public scopeName : string) { }
+    constructor(public scopeName: string) { }
 }
 
 class VarCreationOperationPayload {
-    constructor(public scopeName : string, public varName : string) { }
+    constructor(public scopeName: string, public varName: string) { }
 }
 
 class TraceOperationPayload {
-    constructor(public message : string) { }
+    constructor(public message: string) { }
 }
 
 type OperationAttributeType = RWPrimitiveOperationPayload | RWPropertyObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | TraceOperationPayload;
@@ -96,7 +100,7 @@ export interface TraceMessageNotification {
 }
 
 export interface CompilationStatusNotification {
-    onCompilationStatus(status: boolean, message: string): void;
+    onCompilationStatus(status: boolean, message?: string): void;
 }
 
 class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification {
@@ -118,26 +122,26 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
     }
 
     onEnterScopeVariable(scopeName: string, observable: ObservableTypes): void {
-        this.variableScopeObservers.forEach(notifier => {
+        for (const notifier of this.variableScopeObservers) {
             notifier.onEnterScopeVariable(scopeName, observable);
-        });
+        }
     }
     onExitScopeVariable(scopeName: string, observable: ObservableTypes): void {
-        this.variableScopeObservers.forEach(notifier => {
+        for (const notifier of this.variableScopeObservers) {
             notifier.onExitScopeVariable(scopeName, observable);
-        });
+        };
     }
 
     onTraceMessage(message: string): void {
-        this.traceMessageObservers.forEach(notifier => {
+        for (const notifier of this.traceMessageObservers) {
             notifier.onTraceMessage(message);
-        });
+        };
     }
 
-    onCompilationStatus(status: boolean, message: string): void {
-        this.compilationStatusObservers.forEach(notifier => {
+    onCompilationStatus(status: boolean, message?: string): void {
+        for (const notifier of this.compilationStatusObservers) {
             notifier.onCompilationStatus(status, message);
-        });
+        };
     }
 }
 
@@ -159,9 +163,8 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }
 
     constructor() {
-        super();     
-        MustacheIt.escape = function(text: any) {return text;};
-
+        super();
+        MustacheIt.escape = (text: any) => { return text; };
         (<any>window).oprec = this;
 
         this.reset();
@@ -175,6 +178,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     private emptyCodeLineNumbers: number[] = [];
     private fcnReturns: number[] = [];
     private markLineOverrides: number[] = [];
+    private noMarkLineZone: IndexRange[] = [];    
 
     protected primitiveTypeObservers: ObservablePrimitiveType<any>[] = [];
     protected arrayTypeObservers: ObservableArrayType<any>[] = [];
@@ -212,7 +216,8 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         this.operations = [];
         this.emptyCodeLineNumbers = [];
         this.vars = {}; this.scopes = {}; this.fcnReturns = [];
-        this.refs = {}; this.funcDefs = {}; this.markLineOverrides = [];
+        this.refs = {}; this.funcDefs = {};
+        this.markLineOverrides = []; this.noMarkLineZone = [];
 
         this.maxLineNumber = 0;
         this.firstExecutedCodeLineNumber = -1;
@@ -378,15 +383,10 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         if (hook) {
             if (this.consoleLogFcn == undefined)
                 this.consoleLogFcn = console.log;
-
-            let self = this;
-            console.log = function (message) {
-                let strRepr = "";
-                for (let arg of arguments)
-                    strRepr += arg + ' ';
-
-                self.addOperation(OperationType.TRACE, new TraceOperationPayload(strRepr));
-                self.consoleLogFcn.apply(console, arguments);
+            
+            console.log = (message: any) => {
+                this.addOperation(OperationType.TRACE, new TraceOperationPayload(message));
+                this.consoleLogFcn.apply(console, [message] );
             };
         } else {
             console.log = this.consoleLogFcn;
@@ -688,6 +688,11 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
             if (decl.init) {
                 switch (decl.init.type) {
+                    case "ArrayExpression":
+                    case "ObjectExpression": {
+                        this.noMarkLineZone.push(new IndexRange(decl.range[0], decl.range[1]));
+                        break;
+                    }
                     case "CallExpression": {
                         this.extractVariables(scopeName, decl.init);
                         break;
@@ -826,7 +831,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                     let varName = '';
 
                     if (item.type == "AssignmentExpression")
-                        varName = !item.left.object ? item.left.name : item.left.object.name;
+                        varName = (!item.left.object || !item.left.object.name) ? item.left.name : item.left.object.name;
                     else
                         varName = item.argument.object.name;
 
@@ -836,11 +841,15 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                         this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
                     }
 
+                    if (item.right && item.right.type == "ObjectExpression") {console.log('hee');
+                        this.noMarkLineZone.push(new IndexRange(item.range[0], item.range[1]));
+                    }
+
                     break;
                 }
                 case "CallExpression":
                     {
-                        this.fcnReturns.push(item.range[1]);
+                        this.fcnReturns.push(item.range[1] + 1);
 
                         if (item.callee && item.callee.object && item.callee.object.name) {
                             let varName = item.callee.object.name;
@@ -848,7 +857,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                             let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
 
                             if (vardeclaration.length) {
-                                this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
+                                this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]+1);
                             }
                         }
                         else {
@@ -861,20 +870,94 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                                 let vardeclaration = this.getVariableDeclarationInScope(scopeName, undefined, paramName);
 
                                 if (vardeclaration.length > 0) {
-                                    if (calledFunc in this.funcDefs) { // TODO: Handled missing function decl
+                                    if (calledFunc in this.funcDefs) { // TODO: Handle missing function decl
                                         this.refs[scopeName + "." + paramName] = calledFunc + "." + this.funcDefs[calledFunc][i];
                                     }
                                 }
 
                             }
                         }
+
+                        if (item.arguments) {
+                            this.noMarkLineZone.push(new IndexRange(item.range[0], item.range[1]));
+                        }
+
                         break;
                     }
             }
         }
     }
 
-    private parseCode() : boolean {
+    private isInNoMarkLineZone(index: number) {
+        return undefined != this.noMarkLineZone.find((noMarkZoneRange) => index >= noMarkZoneRange.s && index <= noMarkZoneRange.e);
+    }
+
+    private updateNoMarkLineZone(injectionIndex: number, injectionSize: number) {
+        for (const noMarkZoneRange of this.noMarkLineZone) {
+            if (injectionIndex <= noMarkZoneRange.s)
+                noMarkZoneRange.s += injectionSize;
+
+            if (injectionIndex <= noMarkZoneRange.e)
+                noMarkZoneRange.e += injectionSize;                
+
+            //console.log('inject ' + injectionIndex + ' ' + injectionSize + ' ' + noMarkZoneRange.s + ' ' + noMarkZoneRange.e);
+        };        
+    }
+
+    private injectCookies() {
+        let injectAtIndex: any = {};
+        let addCodeInjection = (index: number, injectedCode: string) => {
+            if (!(index in injectAtIndex))
+                injectAtIndex[index] = [];
+
+            injectAtIndex[index].push(injectedCode);
+        };
+
+        // Scope start setting
+        for (const scope of Object.keys(this.scopes)) {
+            let injectedCode = MustacheIt.render(";startScope('{{scope}}');", { scope: scope });
+            addCodeInjection(this.scopes[scope].startOfDefinitionIndex, injectedCode);
+        };
+
+        // Variable setting
+        for (const scope of Object.keys(this.vars)) {
+            for (const index of Object.keys(this.vars[scope])) {            
+                let vardata = this.vars[scope][index];
+                for (const endOfDefinitionIndex of vardata.endOfDefinitionIndexes) {                
+                    let injectedCode = MustacheIt.render(";setVar('{{scopeName}}', '{{name}}', {{name}});", { scopeName: vardata.scopeName, name: vardata.name });
+                    addCodeInjection(endOfDefinitionIndex, injectedCode);
+                };
+            };
+        };
+
+        // Scope end setting
+        for (const scope of Object.keys(this.vars)) {
+            let injectedCode = MustacheIt.render(";endScope('{{scope}}');", { scope: scope });
+            addCodeInjection(this.scopes[scope].endOfDefinitionIndex, injectedCode);
+        };
+
+        // Function returns
+        for (const endOfDefinitionIndex of this.fcnReturns) {                        
+            addCodeInjection(endOfDefinitionIndex, "<FCNRET>");
+        };
+
+        // Mark line overrides
+        for (const endOfDefinitionIndex of this.markLineOverrides) {                        
+            addCodeInjection(endOfDefinitionIndex, "<MARKLINE>");
+        };
+console.log(this.noMarkLineZone);
+        // Inject cookies in code        
+        for (const indexEndOfDef of Object.keys(injectAtIndex).reverse()) {                                
+            let index = parseInt(indexEndOfDef);
+
+            let stringsToInject = injectAtIndex[index].join('');
+            this.code = this.code.slice(0, index) + stringsToInject + this.code.slice(index);
+
+            this.updateNoMarkLineZone(index, stringsToInject.length);
+        };
+    }
+
+    private parseCode(): boolean {
         if (!this.code)
             return false;
 
@@ -886,63 +969,20 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         } catch (error) {
             this.onCompilationStatus(false, "line " + error.lineNumber + "> " + error.description);
-            return false;                      
+            return false;
         }
 
         this.vars = {};
+        this.scopes = {};
+        this.fcnReturns = [];
+        this.markLineOverrides = [];
+
         this.scopes['global'] = new ScopeDeclaration(syntax.range[0], syntax.range[1]);
+        this.extractVariables('global', syntax);        
 
-        this.extractVariables('global', syntax);
+        this.injectCookies();
 
-        let injectAtIndex : any = [];
-        let addCodeInjection = function (index: number, injectedCode: string) {
-            if (!(index in injectAtIndex))
-                injectAtIndex[index] = [];
-
-            injectAtIndex[index].push(injectedCode);
-        };
-
-        // Scope setting
-        Object.keys(this.scopes).forEach((scope) => {
-            let injectedCode = MustacheIt.render(";startScope('{{scope}}');", {scope: scope});
-            addCodeInjection(this.scopes[scope].startOfDefinitionIndex, injectedCode);
-
-        });
-
-        // Variable setting
-        Object.keys(this.vars).forEach((scope) => {
-            Object.keys(this.vars[scope]).forEach((index) => {
-                let vardata = this.vars[scope][index];
-                vardata.endOfDefinitionIndexes.forEach((endOfDefinitionIndex: number) => {
-                    let injectedCode = MustacheIt.render(";setVar('{{scopeName}}', '{{name}}', {{name}});", {scopeName: vardata.scopeName, name: vardata.name});
-                    addCodeInjection(endOfDefinitionIndex, injectedCode);
-                });
-            })
-        });
-
-        // Scope setting
-        Object.keys(this.scopes).forEach((scope) => {
-            let injectedCode = MustacheIt.render(";endScope('{{scope}}');", {scope: scope});
-            addCodeInjection(this.scopes[scope].endOfDefinitionIndex, injectedCode);
-        });
-
-        // Function returns
-        this.fcnReturns.forEach(endOfDefinitionIndex => {
-            addCodeInjection(endOfDefinitionIndex, "<FCNRET>");
-        });
-
-        // Mark line overrides
-        this.markLineOverrides.forEach(endOfDefinitionIndex => {
-            addCodeInjection(endOfDefinitionIndex, "<MARKLINE>");
-        });
-
-        let skippedLineMarkers = ['{', '}'];
-
-        // Inject cookies
-        Object.keys(injectAtIndex).reverse().forEach((indexEndOfDef) => {
-            let index = parseInt(indexEndOfDef);
-            this.code = this.code.slice(0, index) + injectAtIndex[index].join('') + this.code.slice(index);
-        });
+        let skippedLineMarkers = ['{', '}', '/*', '*/'];
 
         // Mark lines with no code
         let lineNo = 1;
@@ -955,39 +995,70 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                 this.emptyCodeLineNumbers.push(lineNo);
             }
 
-            if (trimmedLine.indexOf('//') != -1) {
+            if (trimmedLine.indexOf('//') == 0) {
                 this.emptyCodeLineNumbers.push(lineNo);
             }
 
             lineNo++;
         }
 
+        let replaceTokens = (token: string, replacement: string, line: string, currIndexInCode: number): string => {
+            let replacedTokenStr = "";
+            let tokenizedLines = line.split(token);
+            let diffLen = replacement.length - token.length;
+
+            for (let indexLine = 0; indexLine < tokenizedLines.length - 1; indexLine++) {
+                let tokenizedLine = tokenizedLines[indexLine];
+                if (this.isInNoMarkLineZone(currIndexInCode + tokenizedLine.length)) {
+                    replacedTokenStr += tokenizedLine;
+                    this.updateNoMarkLineZone(currIndexInCode + replacedTokenStr.length, diffLen);
+                }
+                else {                    
+                    replacedTokenStr += (tokenizedLine + replacement);
+                    // MISTERY
+                    //let insertedSize = (tokenizedLine + replacement).length;
+                    // this.updateNoMarkLineZone(currIndexInCode + replacedTokenStr.length - insertedSize, diffLen);
+                }
+            }
+
+            return replacedTokenStr + (tokenizedLines.length > 1 ? tokenizedLines[tokenizedLines.length - 1] : line);
+        }
+
+        let insertInLine = (insertionStr: string, offsetInLine: number, line: string, currIndexInCode: number): string => {
+            if (this.isInNoMarkLineZone(currIndexInCode + offsetInLine))
+                return line;
+
+            this.updateNoMarkLineZone(currIndexInCode + offsetInLine, insertionStr.length);
+
+            return line.substring(0, offsetInLine) + insertionStr + line.substring(offsetInLine);
+        }
+
         // Start of line markers
         lineNo = 1;
         lineByLine = this.code.split('\n');
         this.code = "";
+        let currentIndexInCode = 0;
         let prevLineEndsWithComma = false;
 
         for (let line of lineByLine) {
             let trimmedLine = line.trim();
-            if (trimmedLine.length) {
-                if (skippedLineMarkers.indexOf(trimmedLine) == -1) {
-                    let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", {lineNo: lineNo});
+            if (trimmedLine.length) {                
+                if (skippedLineMarkers.indexOf(trimmedLine) == -1) {                    
+                    let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineNo });
 
                     if (line.indexOf("<MARKLINE>") != -1) {
-                        line = line.split("<MARKLINE>").join(codeLineMarker);
+                        line = replaceTokens("<MARKLINE>", codeLineMarker, line, currentIndexInCode);
                     }
                     else {
                         if (!prevLineEndsWithComma && trimmedLine.indexOf("case") == -1) {
-                            if (trimmedLine[0] == '{') { // handles for loop with { on new line
-                                line = line.replace('{', '');
-                                line = MustacheIt.render("\{{marker}}{{line}}", {marker: codeLineMarker, line: line});
+                            if (trimmedLine[0] == '{') { // handles for loop with { on new line                                                                
+                                line = insertInLine(codeLineMarker, 1, "{" + line.replace('{', ''), currentIndexInCode);
                             }
                             else
-                                line = MustacheIt.render("{{marker}}{{line}}", {marker: codeLineMarker, line: line});
+                                line = insertInLine(codeLineMarker, 0, line, currentIndexInCode);
                         }
 
-                        line = line.split("<FCNRET>").join(codeLineMarker);
+                        line = replaceTokens("<FCNRET>", codeLineMarker, line, currentIndexInCode);
                     }
                 }
 
@@ -997,24 +1068,26 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             lineNo++;
             if (line.length)
                 this.code += line + '\n';
+
+            currentIndexInCode += line.length;
         }
 
         return true;
-    }    
+    }
 }
 
-(<any>window)['markcl'] = function (lineNo: number) {    
+(<any>window)['markcl'] = (lineNo: number) => {
     (<any>window).oprec.markStartCodeLine(lineNo);
 };
 
-(<any>window)['setVar'] = function (scopeName: string, varname: string, varobject: any) {
+(<any>window)['setVar'] = (scopeName: string, varname: string, varobject: any) => {
     (<any>window).oprec.setVar(scopeName, varname, varobject);
 };
 
-(<any>window)['startScope'] = function (scopeName: string) {
+(<any>window)['startScope'] = (scopeName: string) => {
     (<any>window).oprec.startScope(scopeName);
 };
 
-(<any>window)['endScope'] = function (scopeName: string) {
+(<any>window)['endScope'] = (scopeName: string) => {
     (<any>window).oprec.endScope(scopeName);
 };

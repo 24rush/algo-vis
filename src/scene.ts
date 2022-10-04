@@ -3,11 +3,12 @@ import { ObservableTypes } from "./observable-type"
 import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
+var bootstrap = require('bootstrap')
 
 export class Scene {
     private codeRenderer: CodeRenderer;
 
-    constructor(private appId: string, private codeEditorId: string, private codeId: string) {
+    constructor(private appId: string, private codeEditorId: string, private codeId?: string) {
         let parent = document.getElementById(this.appId);
         if (!parent)
             return;
@@ -15,21 +16,22 @@ export class Scene {
         this.codeRenderer = new CodeRenderer(this.codeEditorId);
         let oprec = new OperationRecorder();
 
-        oprec.setSourceCode(this.codeRenderer.getSourceCode());
-
         let consoleTxt: HTMLElement = DOMmanipulator.elementStartsWithId(parent, "consoleTxt");
         let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));
 
         let self = this;
-        fetch(codeId)            
-            .then(function (response) {
-                if (!response.ok)
-                    return;
 
-                response.text().then(function (code: string) {                    
-                    self.codeRenderer.setSourceCode(code);
+        if (codeId) {
+            fetch(codeId)
+                .then((response) => {
+                    if (!response.ok)
+                        return;
+
+                    response.text().then((code: string) => {
+                        this.codeRenderer.setSourceCode(code);
+                    });
                 });
-            });
+        }
 
         this.codeRenderer.registerEventNotifier({
             onSourceCodeUpdated(newCode: string) {
@@ -44,18 +46,17 @@ export class Scene {
         });
 
         oprec.registerVarScopeNotifier({
-            onEnterScopeVariable: function (scopeName: string, observable: ObservableTypes) {
+            onEnterScopeVariable: (scopeName: string, observable: ObservableTypes) => {
                 layout.add(scopeName, observable);
             },
-            onExitScopeVariable: function (scopeName: string, observable: ObservableTypes) {
+            onExitScopeVariable: (scopeName: string, observable: ObservableTypes) => {
                 layout.remove(scopeName, observable);
             }
         });
 
         oprec.registerTraceNotifier({
             onTraceMessage(message: string): void {
-                consoleTxt.textContent += message + '\r\n';
-                console.log(message);
+                consoleTxt.textContent += message + '\r\n';                
             }
         });
 
@@ -68,45 +69,88 @@ export class Scene {
             }
         });
 
-        oprec.startReplay();
+        let showCommentsCheckbox = document.getElementById('showCommentsCheck-' + codeEditorId) as HTMLInputElement;
+        let showComments = showCommentsCheckbox.checked;
 
-        this.codeRenderer.highlightLine(oprec.getFirstCodeLineNumber());
+        showCommentsCheckbox.addEventListener('click', function(){
+            showComments = showCommentsCheckbox.checked;
+            if (showComments) {
+                highlightLine(oprec.getNextCodeLineNumber());
+            } else {
+                commentsPopover.dispose();
+                commentsPopover = undefined;
+            }
+        });
+
+        let commentsPopover: any = undefined;
+        var options = {
+            'content': "",
+        };
+
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutationRecord) {
+                let aceCursor = document.querySelector("[class=myMarker]") as HTMLElement;
+                if (!showComments || mutationRecord.target != aceCursor)
+                    return;
+
+                if (commentsPopover) commentsPopover.dispose();
+                let commentsElement = document.getElementById("comments-" + codeEditorId);
+
+                commentsElement.style['left'] = aceCursor.style['left'];
+                commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
+
+                commentsPopover = new bootstrap.Popover(commentsElement, options);
+                commentsPopover.show();
+            });
+        });
+
+        let highlightLine = (lineNo: number) => {
+            this.codeRenderer.highlightLine(lineNo);
+
+            let lineComment = this.codeRenderer.getLineComment(lineNo);
+
+            if (showComments && lineComment !== "") {
+                options.content = lineComment;
+                let checkerFunc = () => {
+                    let aceCursor = document.querySelector("[class=myMarker]") as HTMLElement;
+
+                    aceCursor ?
+                        observer.observe(aceCursor, { attributes: true, attributeFilter: ['style'] }) :
+                        setTimeout(checkerFunc, 200);
+                }
+
+                checkerFunc();
+            }
+        };
 
         let advance = () => {
             oprec.advanceOneCodeLine();
-            this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
+            highlightLine(oprec.getNextCodeLineNumber());
         };
 
-        let reverse = () => {
-            oprec.reverseOneCodeLine();
-            this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
-        };
-
-        window.onkeydown = (evt) => {
-            if (evt.keyCode == 65 || evt.keyCode == 81) {
-                evt.keyCode == 65 ? advance() : reverse();
-                evt.preventDefault();
-            }
-        };
+        oprec.setSourceCode(this.codeRenderer.getSourceCode());
+        oprec.startReplay();
+        highlightLine(oprec.getFirstCodeLineNumber());
 
         let autoReplayInterval = 200;
         let paused = true;
         let autoplay: NodeJS.Timer = undefined;
 
-        let resetAutoPlayBtn = function (isPaused: boolean) {
+        let resetAutoPlayBtn = (isPaused: boolean) => {
             document.getElementById("btn-autoplay-text").textContent = !isPaused ? "Pause" : "Autoplay";
             let iElem = document.getElementById("btn-autoplay-i");
             iElem.classList.remove("bi-fast-forward-fill", "bi-pause-fill");
             iElem.classList.add(!isPaused ? "bi-pause-fill" : "bi-fast-forward-fill");
         }
 
-        document.getElementById("btn-execute").addEventListener('click', () => {
+        document.getElementById("btn-execute-" + codeEditorId).addEventListener('click', () => {
             if (paused == false)
                 return;
 
             advance();
         });
-        document.getElementById("btn-autoplay").addEventListener('click', () => {
+
+        document.getElementById("btn-autoplay-" + codeEditorId).addEventListener('click', () => {
             if (oprec.isReplayFinished()) {
                 paused = true;
                 resetAutoPlayBtn(paused);
@@ -130,7 +174,7 @@ export class Scene {
             }
         });
 
-        document.getElementById("btn-restart").addEventListener('click', () => {
+        document.getElementById("btn-restart-" + codeEditorId).addEventListener('click', () => {
             paused = true;
             resetAutoPlayBtn(paused);
             clearInterval(autoplay);
@@ -138,7 +182,7 @@ export class Scene {
             consoleTxt.textContent = "";
             layout.clearAll();
             oprec.startReplay();
-            this.codeRenderer.highlightLine(oprec.getNextCodeLineNumber());
-        });
+            highlightLine(oprec.getFirstCodeLineNumber());
+        });        
     }
 }
