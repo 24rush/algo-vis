@@ -68,7 +68,7 @@ let cssStyle = `.algovis {
   }`;
 
 let htmlTemplate =
-    `<div class="halfScreen1">
+    `<div class="halfScreen">
         <div class="btn-group btn-group-sm">
             <button id="btn-execute-{{codeEditorId}}" type="button" class="btn btn-light btn-overrides">
                 <i class="bi bi-play-fill"></i>

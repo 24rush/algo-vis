@@ -1,19 +1,20 @@
-export interface PrimitiveTypeChangeCbk<Type> {
-    onSet(observable: ObservablePrimitiveType<Type>, value: Type, newValue: Type): void;
-    onGet(observable: ObservablePrimitiveType<Type>, value: Type): void;
+export interface PrimitiveTypeChangeCbk {
+    onSet(observable: ObservablePrimitiveType, value: any, newValue: any): void;
+    onGet(observable: ObservablePrimitiveType, value: any): void;
 }
 
-export interface ArrayTypeChangeCbk<Type> {
-    onSetValues(observable: ObservableArrayType<Type>, value: Type[], newValue: Type[]) : void;
-    onSetAtIndex(observable: ObservableArrayType<Type>, value: Type, newValue: Type, index: number): void;
-    onGetAtIndex(observable: ObservableArrayType<Type>, value: Type, index: number): void;
+export interface ArrayTypeChangeCbk {
+    onSetArrayValue(observable: ObservableArrayType, value: any[], newValue: any[]): void;
+    onSetArrayAtIndex(observable: ObservableArrayType, value: any, newValue: any, index: number): void;
+    onGetArrayAtIndex(observable: ObservableArrayType, value: any, index: number): void;
 }
 
-type DictionaryKeyType = string | number;
+type DictionaryKeyType = string | number | symbol;
 
-export interface ObjectTypeChangeCbk<Key, Value> {
-    onSet(key: DictionaryKeyType, newValue: Value): void;
-    onGet(key: DictionaryKeyType, value: Value): void;
+export interface ObjectTypeChangeCbk {
+    onSetObjectValue(observable: ObservableDictionaryType, value: any, newValue: any): void;
+    onSetObjectProperty(observable: ObservableDictionaryType, value: any, newValue: any, key: DictionaryKeyType): void;
+    onGetObjectProperty(observable: ObservableDictionaryType, value: any, key: DictionaryKeyType): void;
 }
 
 export class BaseObservableType<NotifyCbkType>
@@ -34,11 +35,13 @@ export class BaseObservableType<NotifyCbkType>
     }
 }
 
-export class ObservablePrimitiveType<Type> extends BaseObservableType<PrimitiveTypeChangeCbk<Type>>
-{
-    protected initValue: Type;
+type PrimitiveType = number | string | boolean;
 
-    constructor(public name: string, protected value: Type) {
+export class ObservablePrimitiveType extends BaseObservableType<PrimitiveTypeChangeCbk>
+{
+    protected initValue: PrimitiveType;
+
+    constructor(public name: string, protected value: PrimitiveType) {
         super();
 
         this.initValue = value;
@@ -52,14 +55,15 @@ export class ObservablePrimitiveType<Type> extends BaseObservableType<PrimitiveT
         this.setValue(this.initValue);
     }
 
-    public setValue(newValue: Type) {
-        for (let observer of this.observers) {
+    public setValue(newValue: PrimitiveType) {
+        for (let observer of this.observers) {console.log('set');
             observer.onSet(this, this.value, newValue);
         }
+
         this.value = newValue;
     }
 
-    public getValue(): Type {
+    public getValue(): PrimitiveType {
         for (let observer of this.observers) {
             observer.onGet(this, this.value);
         }
@@ -67,14 +71,14 @@ export class ObservablePrimitiveType<Type> extends BaseObservableType<PrimitiveT
     }
 }
 
-export class ObservableArrayType<Type> extends BaseObservableType<ArrayTypeChangeCbk<Type>>
+export class ObservableArrayType extends BaseObservableType<ArrayTypeChangeCbk>
 {
-    protected initValues: Type[];
+    protected initValues: any[];
 
-    constructor(public name: string, protected values: Type[]) {
+    constructor(public name: string, protected values: any[]) {
         super();
 
-        this.initValues = [...values];
+        this.initValues = JSON.parse(JSON.stringify(values));
     }
 
     public empty() {
@@ -82,48 +86,76 @@ export class ObservableArrayType<Type> extends BaseObservableType<ArrayTypeChang
     }
 
     public reset() {
-        this.setValues(this.initValues);
+        this.setValue(this.initValues);
     }
 
-    getValues(): Type[] { return this.values }
-    setValues(values: Type[]) {
+    getValue(): any[] { return this.values }
+    setValue(values: any[]) {
         let oldValues = [...this.values];
         this.values = [...values];
 
         for (let observer of this.observers) {
-            observer.onSetValues(this, oldValues, this.values);
-        }        
+            observer.onSetArrayValue(this, oldValues, this.values);
+        }
     }
 
-    setValueAtIndex(newValue: Type, index: number) {
+    setValueAtIndex(newValue: any, index: number) {
         for (let observer of this.observers) {
-            observer.onSetAtIndex(this, this.values[index], newValue, index);
+            observer.onSetArrayAtIndex(this, this.values[index], newValue, index);
         }
         this.values[index] = newValue;
     }
 
-    getAtIndex(index: number): Type {
+    getAtIndex(index: number): any {
         for (let observer of this.observers) {
-            observer.onGetAtIndex(this, this.values[index], index);
+            observer.onGetArrayAtIndex(this, this.values[index], index);
         }
         return this.values[index];
     }
 }
 
-export class ObservableDictionaryType<DictionaryKeyType, Value>
+export class ObservableDictionaryType extends BaseObservableType<ObjectTypeChangeCbk>
 {
-    constructor(protected value: Record<string | number, Value>, public notifyCbk: ObjectTypeChangeCbk<DictionaryKeyType, Value>) {
+    protected initValue: any;
+
+    constructor(public name: string, protected value: any) {
+        super();
+
+        this.initValue = JSON.parse(JSON.stringify(value));
     }
 
-    set(key: string | number, value: Value) {
+    public empty() {
+        this.value = {};
+    }
+
+    public reset() {
+        this.setValue(this.initValue);
+    }
+
+    getKeys(): any[] { return Object.keys(this.value) }
+    setValue(value: any) {
+        let oldValues = JSON.parse(JSON.stringify(this.value));
+        this.value = JSON.parse(JSON.stringify(value));
+
+        for (let observer of this.observers) {
+            observer.onSetObjectValue(this, oldValues, this.value);
+        }
+    }
+
+    setValueAtIndex(key: string | number, value: any) {
+        for (let observer of this.observers) {
+            observer.onSetObjectProperty(this, key, this.value[key], value);
+        }
+
         this.value[key] = value;
-        this.notifyCbk.onSet(key, value);
     }
 
-    get(key: string | number): Value {
-        this.notifyCbk.onGet(key, this.value[key]);
+    getAtIndex(key: string | number | symbol): any {
+        for (let observer of this.observers) {
+            observer.onGetObjectProperty(this, key, this.value[key]);
+        }
         return this.value[key];
     }
 }
 
-export type ObservableTypes = ObservablePrimitiveType<any> | ObservableArrayType<any>;
+export type ObservableTypes = ObservablePrimitiveType | ObservableArrayType | ObservableDictionaryType;

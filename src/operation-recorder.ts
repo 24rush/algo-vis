@@ -1,5 +1,6 @@
-import { ArrayTypeChangeCbk, ObservableArrayType, ObservablePrimitiveType, ObservableTypes, PrimitiveTypeChangeCbk } from "./observable-type";
+import { ArrayTypeChangeCbk, ObjectTypeChangeCbk, ObservableArrayType, ObservableDictionaryType, ObservablePrimitiveType, ObservableTypes, PrimitiveTypeChangeCbk } from "./observable-type";
 import { logd } from "./index"
+import { PrimitiveTypeVisualizer } from "./visualizers";
 
 var MustacheIt = require('mustache');
 var esprima = require('esprima')
@@ -52,7 +53,7 @@ class RWPrimitiveOperationPayload {
     constructor(public observable: any, public oldValue: any, public newValue: any) { }
 }
 
-class RWPropertyObjectOperationPayload {
+class RWIndexedObjectOperationPayload {
     constructor(public observable: any, public oldValue: any, public newValue: any, public property: any) { }
 }
 
@@ -68,7 +69,7 @@ class TraceOperationPayload {
     constructor(public message: string) { }
 }
 
-type OperationAttributeType = RWPrimitiveOperationPayload | RWPropertyObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | TraceOperationPayload;
+type OperationAttributeType = RWPrimitiveOperationPayload | RWIndexedObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | TraceOperationPayload;
 
 class Operation {
     constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationAttributeType) {
@@ -145,21 +146,30 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
     }
 }
 
-export class OperationRecorder extends NotificationEmitter implements PrimitiveTypeChangeCbk<any>, ArrayTypeChangeCbk<any> {
-    onSetValues(observable: ObservableArrayType<any>, value: any, newValue: any): void {
+export class OperationRecorder extends NotificationEmitter implements PrimitiveTypeChangeCbk, ArrayTypeChangeCbk, ObjectTypeChangeCbk {
+    onSetArrayValue(observable: ObservableArrayType, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, [...value], [...newValue]));
     }
-    onSet(observable: ObservablePrimitiveType<any>, value: any, newValue: any): void {
+    onSet(observable: ObservablePrimitiveType, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onGet(observable: ObservablePrimitiveType<any>, value: any): void {
+    onGet(observable: ObservablePrimitiveType, value: any): void {
         this.addOperation(OperationType.READ, new RWPrimitiveOperationPayload(observable, value, value));
     }
-    onSetAtIndex(observable: ObservableArrayType<any>, value: any, newValue: any, index: number): void {
-        this.addOperation(OperationType.WRITE_AT, new RWPropertyObjectOperationPayload(observable, value, newValue, index));
+    onSetArrayAtIndex(observable: ObservableArrayType, value: any, newValue: any, index: number): void {
+        this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, index));
     }
-    onGetAtIndex(observable: ObservableArrayType<any>, value: any, index: number): void {
-        this.addOperation(OperationType.READ_AT, new RWPropertyObjectOperationPayload(observable, value, value, index));
+    onGetArrayAtIndex(observable: ObservableArrayType, value: any, index: number): void {
+        this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, index));
+    }
+    onSetObjectValue(observable: ObservableDictionaryType, value: any, newValue: any): void {
+        this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
+    }
+    onSetObjectProperty(observable: ObservableDictionaryType, value: any, newValue: any, key: string | number | symbol): void {
+        this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, key));
+    }
+    onGetObjectProperty(observable: ObservableDictionaryType, value: any, key: string | number | symbol): void {
+        this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, key));
     }
 
     constructor() {
@@ -178,10 +188,10 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     private emptyCodeLineNumbers: number[] = [];
     private fcnReturns: number[] = [];
     private markLineOverrides: number[] = [];
-    private noMarkLineZone: IndexRange[] = [];    
+    private noMarkLineZone: IndexRange[] = [];
 
-    protected primitiveTypeObservers: ObservablePrimitiveType<any>[] = [];
-    protected arrayTypeObservers: ObservableArrayType<any>[] = [];
+    protected primitiveTypeObservers: ObservablePrimitiveType[] = [];
+    protected arrayTypeObservers: ObservableArrayType[] = [];
 
     protected code: string;
     protected compilationStatus: boolean;
@@ -234,12 +244,12 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         }
     }
 
-    public registerPrimitives<Type>(observables: ObservablePrimitiveType<Type>[]) {
+    public registerPrimitives(observables: ObservablePrimitiveType[]) {
         for (let observable of observables)
             this.registerPrimitive(observable);
     }
 
-    public registerPrimitive<Type>(observable: ObservablePrimitiveType<Type>) {
+    public registerPrimitive(observable: ObservablePrimitiveType) {
         if (this.primitiveTypeObservers.indexOf(observable) != -1)
             return;
 
@@ -247,12 +257,12 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         observable.registerObserver(this);
     }
 
-    public registerArrays<Type>(observables: ObservableArrayType<Type>[]) {
+    public registerArrays<Type>(observables: ObservableArrayType[]) {
         for (let observable of observables)
             this.registerArray(observable);
     }
 
-    public registerArray<Type>(observable: ObservableArrayType<Type>) {
+    public registerArray<Type>(observable: ObservableArrayType) {
         if (this.arrayTypeObservers.indexOf(observable) != -1)
             return;
 
@@ -273,9 +283,6 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }
 
     public markStartCodeLine(lineNumber: number) {
-        if (this.isEmptyLine(lineNumber))
-            return;
-
         this.lastExecutedCodeLineNumber = lineNumber;
         if (this.firstExecutedCodeLineNumber == -1)
             this.firstExecutedCodeLineNumber = lineNumber;
@@ -314,6 +321,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             this.compilationStatus = false;
 
             this.onCompilationStatus(this.compilationStatus, e.message);
+            throw e;
         }
 
         for (let primitiveObservers of this.primitiveTypeObservers) {
@@ -383,10 +391,10 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         if (hook) {
             if (this.consoleLogFcn == undefined)
                 this.consoleLogFcn = console.log;
-            
+
             console.log = (message: any) => {
                 this.addOperation(OperationType.TRACE, new TraceOperationPayload(message));
-                this.consoleLogFcn.apply(console, [message] );
+                this.consoleLogFcn.apply(console, [message]);
             };
         } else {
             console.log = this.consoleLogFcn;
@@ -503,15 +511,15 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                 }
             case OperationType.READ_AT:
                 {
-                    let operationAttributes = operation.attributes as RWPropertyObjectOperationPayload;
+                    let operationAttributes = operation.attributes as RWIndexedObjectOperationPayload;
                     operationAttributes.observable.getAtIndex(operationAttributes.property);
                     break;
                 }
             case OperationType.WRITE:
                 {
                     let operationAttributes = operation.attributes as RWPrimitiveOperationPayload;
-                    if (this.isObjectPropertyType(operationAttributes.newValue)) {
-                        operationAttributes.observable.setValues(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
+                    if (this.isArrayType(operationAttributes.newValue)) {
+                        operationAttributes.observable.setValue(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
                     }
                     else {
                         operationAttributes.observable.setValue(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
@@ -520,7 +528,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                 }
             case OperationType.WRITE_AT:
                 {
-                    let operationAttributes = operation.attributes as RWPropertyObjectOperationPayload;
+                    let operationAttributes = operation.attributes as RWIndexedObjectOperationPayload;
                     operationAttributes.observable.setValueAtIndex(reverse ? operationAttributes.oldValue : operationAttributes.newValue, operationAttributes.property);
                     break;
                 }
@@ -537,9 +545,16 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             this.nextOperationIndex = this.operations.length;
     }
 
-    private isObjectPropertyType(object: any): boolean {
+    private isArrayType(object: any): boolean {
         let variableType = Object.prototype.toString.call(object);
         let isArray = variableType == "[object Array]";
+
+        return isArray;
+    }
+
+    private isObjectType(object: any): boolean {
+        let variableType = Object.prototype.toString.call(object);
+        let isArray = variableType == "[object Object]";
 
         return isArray;
     }
@@ -562,7 +577,8 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     public setVar(scopeName: string, varName: string, object: any) {
         var type: string;
 
-        let isArray = this.isObjectPropertyType(object);
+        let isArray = this.isArrayType(object);
+        let isObject = this.isObjectType(object);
 
         if (isArray) {
             if (object.length >= 0) {
@@ -583,39 +599,23 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         let variable = this.vars[scopeName][varName];
 
+        let observableFactory = (varName: string, object: any) => {
+            if (isArray) return new ObservableArrayType(varName, object);
+            if (isObject) return new ObservableDictionaryType(varName, object);
+
+            return new ObservablePrimitiveType(varName, object);
+        }
+
         if (!variable.observable) {
-            switch (type) {
-                case 'boolean':
-                    variable.observable = isArray ? new ObservableArrayType<boolean>(varName, object) : new ObservablePrimitiveType<boolean>(varName, object);
-                    isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
-                    break;
-                case 'number':
-                    variable.observable = isArray ? new ObservableArrayType<number>(varName, object) : new ObservablePrimitiveType<number>(varName, object);
-                    isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
-                    break;
-                case 'undefined':
-                case 'string':
-                    variable.observable = isArray ? new ObservableArrayType<string>(varName, object) : new ObservablePrimitiveType<string>(varName, object);
-                    isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
-                    break;
-            }
+            variable.observable = observableFactory(varName, object);
+            isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
         }
 
         this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
 
-        switch (type) {
-            case 'boolean':
-            case 'number':
-            case 'string':
-                {
-                    if (isArray)
-                        variable.observable.setValues(object);
-                    else
-                        variable.observable.setValue(object);
-                    break;
-                }
+        if (variable.observable) {
+            variable.observable.setValue(object);
         }
-
     }
 
     private registerVarInScope(scopeName: string, varname: string, vardecl: VariableDeclaration) {
@@ -690,7 +690,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                 switch (decl.init.type) {
                     case "ArrayExpression":
                     case "ObjectExpression": {
-                        this.noMarkLineZone.push(new IndexRange(decl.range[0], decl.range[1]));
+                        this.noMarkLineZone.push(new IndexRange(decl.init.range[0] - 1, decl.init.range[1] + 1));
                         break;
                     }
                     case "CallExpression": {
@@ -798,7 +798,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                 case 'WhileStatement':
                 case 'BlockStatement':
                     {
-                        this.markLineOverrides.push(item.body.range[0] + 1);
+                        this.markLineOverrides.push(item.body.range ? item.body.range[0] + 1 : item.range[0] + 1);
                         this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0] + 0, item.range[1] - 1);
                         this.extractVariables(scopeName + ".local", item);
                         break;
@@ -841,7 +841,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                         this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
                     }
 
-                    if (item.right && item.right.type == "ObjectExpression") {console.log('hee');
+                    if (item.right && item.right.type == "ObjectExpression") {
                         this.noMarkLineZone.push(new IndexRange(item.range[0], item.range[1]));
                     }
 
@@ -857,7 +857,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                             let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
 
                             if (vardeclaration.length) {
-                                this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]+1);
+                                this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
                             }
                         }
                         else {
@@ -878,7 +878,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                             }
                         }
 
-                        if (item.arguments) {
+                        if (item.arguments && item.arguments.length) {
                             this.noMarkLineZone.push(new IndexRange(item.range[0], item.range[1]));
                         }
 
@@ -893,15 +893,17 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }
 
     private updateNoMarkLineZone(injectionIndex: number, injectionSize: number) {
-        for (const noMarkZoneRange of this.noMarkLineZone) {
+        for (let noMarkZoneRangeIndex in this.noMarkLineZone) {
+            let noMarkZoneRange = this.noMarkLineZone[noMarkZoneRangeIndex];
+
             if (injectionIndex <= noMarkZoneRange.s)
                 noMarkZoneRange.s += injectionSize;
 
             if (injectionIndex <= noMarkZoneRange.e)
-                noMarkZoneRange.e += injectionSize;                
+                noMarkZoneRange.e += injectionSize;
 
             //console.log('inject ' + injectionIndex + ' ' + injectionSize + ' ' + noMarkZoneRange.s + ' ' + noMarkZoneRange.e);
-        };        
+        };
     }
 
     private injectCookies() {
@@ -921,9 +923,9 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         // Variable setting
         for (const scope of Object.keys(this.vars)) {
-            for (const index of Object.keys(this.vars[scope])) {            
+            for (const index of Object.keys(this.vars[scope])) {
                 let vardata = this.vars[scope][index];
-                for (const endOfDefinitionIndex of vardata.endOfDefinitionIndexes) {                
+                for (const endOfDefinitionIndex of vardata.endOfDefinitionIndexes) {
                     let injectedCode = MustacheIt.render(";setVar('{{scopeName}}', '{{name}}', {{name}});", { scopeName: vardata.scopeName, name: vardata.name });
                     addCodeInjection(endOfDefinitionIndex, injectedCode);
                 };
@@ -937,21 +939,21 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         };
 
         // Function returns
-        for (const endOfDefinitionIndex of this.fcnReturns) {                        
+        for (const endOfDefinitionIndex of this.fcnReturns) {
             addCodeInjection(endOfDefinitionIndex, "<FCNRET>");
         };
 
         // Mark line overrides
-        for (const endOfDefinitionIndex of this.markLineOverrides) {                        
+        for (const endOfDefinitionIndex of this.markLineOverrides) {
             addCodeInjection(endOfDefinitionIndex, "<MARKLINE>");
         };
-console.log(this.noMarkLineZone);
+
         // Inject cookies in code        
-        for (const indexEndOfDef of Object.keys(injectAtIndex).reverse()) {                                
+        for (const indexEndOfDef of Object.keys(injectAtIndex).reverse()) {
             let index = parseInt(indexEndOfDef);
 
             let stringsToInject = injectAtIndex[index].join('');
-            this.code = this.code.slice(0, index) + stringsToInject + this.code.slice(index);
+            this.code = this.code.substring(0, index) + stringsToInject + this.code.substring(index);
 
             this.updateNoMarkLineZone(index, stringsToInject.length);
         };
@@ -961,6 +963,11 @@ console.log(this.noMarkLineZone);
         if (!this.code)
             return false;
 
+        this.code += ";";
+
+        var doc = new DOMParser().parseFromString(this.code, "text/html");
+        this.code = doc.documentElement.textContent;
+
         let syntax = undefined;
 
         try {
@@ -968,8 +975,8 @@ console.log(this.noMarkLineZone);
             logd(syntax);
 
         } catch (error) {
-            this.onCompilationStatus(false, "line " + error.lineNumber + "> " + error.description);
-            return false;
+            this.onCompilationStatus(false, "line " + error.lineNumber + " " + error.description);
+            throw error;
         }
 
         this.vars = {};
@@ -978,98 +985,72 @@ console.log(this.noMarkLineZone);
         this.markLineOverrides = [];
 
         this.scopes['global'] = new ScopeDeclaration(syntax.range[0], syntax.range[1]);
-        this.extractVariables('global', syntax);        
+        this.markLineOverrides.push(syntax.range[1] - 1);
+
+        this.extractVariables('global', syntax);
 
         this.injectCookies();
 
-        let skippedLineMarkers = ['{', '}', '/*', '*/'];
+        let replaceTokens = (token: string, replacement: string, line: string): string => {
+            if (line.indexOf(token) == -1)
+                return line;
 
-        // Mark lines with no code
-        let lineNo = 1;
-        let lineByLine = this.code.split('\n');
-
-        for (let line of lineByLine) {
-            let trimmedLine = line.trim();
-
-            if (trimmedLine.length == 0 || (trimmedLine.length == 1 && (skippedLineMarkers.indexOf(trimmedLine) != -1))) {
-                this.emptyCodeLineNumbers.push(lineNo);
-            }
-
-            if (trimmedLine.indexOf('//') == 0) {
-                this.emptyCodeLineNumbers.push(lineNo);
-            }
-
-            lineNo++;
-        }
-
-        let replaceTokens = (token: string, replacement: string, line: string, currIndexInCode: number): string => {
             let replacedTokenStr = "";
             let tokenizedLines = line.split(token);
             let diffLen = replacement.length - token.length;
 
             for (let indexLine = 0; indexLine < tokenizedLines.length - 1; indexLine++) {
                 let tokenizedLine = tokenizedLines[indexLine];
-                if (this.isInNoMarkLineZone(currIndexInCode + tokenizedLine.length)) {
+                if (this.isInNoMarkLineZone(this.code.length + tokenizedLine.length)) {
                     replacedTokenStr += tokenizedLine;
-                    this.updateNoMarkLineZone(currIndexInCode + replacedTokenStr.length, diffLen);
+                    this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length, diffLen);
                 }
-                else {                    
+                else {
                     replacedTokenStr += (tokenizedLine + replacement);
                     // MISTERY
-                    //let insertedSize = (tokenizedLine + replacement).length;
-                    // this.updateNoMarkLineZone(currIndexInCode + replacedTokenStr.length - insertedSize, diffLen);
+                    let insertedSize = (tokenizedLine + replacement).length;
+                    //this.updateNoMarkLineZone(currIndexInCode + replacedTokenStr.length - insertedSize, diffLen);
                 }
             }
 
             return replacedTokenStr + (tokenizedLines.length > 1 ? tokenizedLines[tokenizedLines.length - 1] : line);
         }
 
-        let insertInLine = (insertionStr: string, offsetInLine: number, line: string, currIndexInCode: number): string => {
-            if (this.isInNoMarkLineZone(currIndexInCode + offsetInLine))
+        let insertInLine = (insertionStr: string, offsetInLine: number, line: string): string => {
+            if (insertionStr != '\n' && this.isInNoMarkLineZone(this.code.length + offsetInLine))
                 return line;
 
-            this.updateNoMarkLineZone(currIndexInCode + offsetInLine, insertionStr.length);
+            this.updateNoMarkLineZone(this.code.length + offsetInLine, insertionStr.length);
 
             return line.substring(0, offsetInLine) + insertionStr + line.substring(offsetInLine);
         }
 
-        // Start of line markers
-        lineNo = 1;
-        lineByLine = this.code.split('\n');
+        // Mark lines with no code
+        let skippedLineMarkers = ['{', '}', '/*', '*/'];
+        let codeLineByLine = this.code.split('\n');
         this.code = "";
-        let currentIndexInCode = 0;
-        let prevLineEndsWithComma = false;
-
-        for (let line of lineByLine) {
+        for (let [lineIndex, line] of codeLineByLine.entries()) {
             let trimmedLine = line.trim();
-            if (trimmedLine.length) {                
-                if (skippedLineMarkers.indexOf(trimmedLine) == -1) {                    
-                    let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineNo });
 
-                    if (line.indexOf("<MARKLINE>") != -1) {
-                        line = replaceTokens("<MARKLINE>", codeLineMarker, line, currentIndexInCode);
-                    }
-                    else {
-                        if (!prevLineEndsWithComma && trimmedLine.indexOf("case") == -1) {
-                            if (trimmedLine[0] == '{') { // handles for loop with { on new line                                                                
-                                line = insertInLine(codeLineMarker, 1, "{" + line.replace('{', ''), currentIndexInCode);
-                            }
-                            else
-                                line = insertInLine(codeLineMarker, 0, line, currentIndexInCode);
-                        }
+            if (trimmedLine.length == 0 || trimmedLine.indexOf('//') == 0 ||
+                (trimmedLine.length == 1 && (skippedLineMarkers.indexOf(trimmedLine) != -1))) {
+                this.emptyCodeLineNumbers.push(lineIndex + 1);
+            }
+            
+            line = line + '\n';
 
-                        line = replaceTokens("<FCNRET>", codeLineMarker, line, currentIndexInCode);
-                    }
+            if (!this.isEmptyLine(lineIndex + 1)) {
+                let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineIndex + 1 });
+
+                line = replaceTokens("<MARKLINE>", codeLineMarker, line);
+                line = replaceTokens("<FCNRET>", codeLineMarker, line);
+
+                if (line.indexOf("case") == -1) {
+                    line = insertInLine(codeLineMarker, line.trim()[0] == '{' ? line.indexOf('{') + 1 : 0, line);
                 }
-
-                prevLineEndsWithComma = trimmedLine[trimmedLine.length - 1] == ',';
             }
 
-            lineNo++;
-            if (line.length)
-                this.code += line + '\n';
-
-            currentIndexInCode += line.length;
+            this.code += line;
         }
 
         return true;
