@@ -1,5 +1,5 @@
-import { ObservableArrayType, ObservableDictionaryType, ObservablePrimitiveType, ObservableTypes } from "./observable-type";
-import { ArrayTypeVisualizer, BaseVisualizer, ObjectTypeVisualizer, PrimitiveTypeVisualizer } from "./visualizers";
+import { ObservableVariable, VariableType } from "./observable-type";
+import { BaseVisualizer } from "./visualizers";
 
 export class Layout {
     constructor(protected scene: HTMLElement) {
@@ -40,15 +40,9 @@ export class Layout {
         if (key in this.observableToPrimitive)
             return;
 
-        let visualizer;
-        if (observable instanceof ObservablePrimitiveType)
-            visualizer = new PrimitiveTypeVisualizer(observable, this);
-        if (observable instanceof ObservableArrayType)
-            visualizer = new ArrayTypeVisualizer(observable, this);
-        if (observable instanceof ObservableDictionaryType)
-            visualizer = new ObjectTypeVisualizer(observable, this);
-
+        let visualizer = new BaseVisualizer(observable, this);                
         visualizer.draw();
+        
         this.observableToPrimitive[key] = visualizer;
     }
 

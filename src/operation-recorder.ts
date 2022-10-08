@@ -1,6 +1,5 @@
-import { ArrayTypeChangeCbk, ObjectTypeChangeCbk, ObservableArrayType, ObservableDictionaryType, ObservablePrimitiveType, ObservableTypes, PrimitiveTypeChangeCbk } from "./observable-type";
+import { ObservableVariable, VariableChangeCbk } from "./observable-type";
 import { logd } from "./index"
-import { PrimitiveTypeVisualizer } from "./visualizers";
 
 var MustacheIt = require('mustache');
 var esprima = require('esprima')
@@ -92,8 +91,8 @@ enum OperationRecorderStatus {
 }
 
 export interface VariableScopingNotification {
-    onEnterScopeVariable(scopeName: string, observable: ObservableTypes): void;
-    onExitScopeVariable(scopeName: string, observable: ObservableTypes): void;
+    onEnterScopeVariable(scopeName: string, observable: ObservableVariable): void;
+    onExitScopeVariable(scopeName: string, observable: ObservableVariable): void;
 }
 
 export interface TraceMessageNotification {
@@ -122,12 +121,12 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         this.compilationStatusObservers.push(notifier);
     }
 
-    onEnterScopeVariable(scopeName: string, observable: ObservableTypes): void {
+    onEnterScopeVariable(scopeName: string, observable: ObservableVariable): void {
         for (const notifier of this.variableScopeObservers) {
             notifier.onEnterScopeVariable(scopeName, observable);
         }
     }
-    onExitScopeVariable(scopeName: string, observable: ObservableTypes): void {
+    onExitScopeVariable(scopeName: string, observable: ObservableVariable): void {
         for (const notifier of this.variableScopeObservers) {
             notifier.onExitScopeVariable(scopeName, observable);
         };
@@ -146,29 +145,29 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
     }
 }
 
-export class OperationRecorder extends NotificationEmitter implements PrimitiveTypeChangeCbk, ArrayTypeChangeCbk, ObjectTypeChangeCbk {
-    onSetArrayValue(observable: ObservableArrayType, value: any, newValue: any): void {
-        this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, [...value], [...newValue]));
+export class OperationRecorder extends NotificationEmitter implements VariableChangeCbk {
+    onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
+        this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue))));
     }
-    onSet(observable: ObservablePrimitiveType, value: any, newValue: any): void {
+    onSetEvent(observable: ObservableVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onGet(observable: ObservablePrimitiveType, value: any): void {
+    onGetEvent(observable: ObservableVariable, value: any): void {
         this.addOperation(OperationType.READ, new RWPrimitiveOperationPayload(observable, value, value));
     }
-    onSetArrayAtIndex(observable: ObservableArrayType, value: any, newValue: any, index: number): void {
+    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index: number): void {
         this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, index));
     }
-    onGetArrayAtIndex(observable: ObservableArrayType, value: any, index: number): void {
+    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index: number): void {
         this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, index));
     }
-    onSetObjectValue(observable: ObservableDictionaryType, value: any, newValue: any): void {
+    onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onSetObjectProperty(observable: ObservableDictionaryType, value: any, newValue: any, key: string | number | symbol): void {
+    onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: string | number | symbol): void {
         this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, key));
     }
-    onGetObjectProperty(observable: ObservableDictionaryType, value: any, key: string | number | symbol): void {
+    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: string | number | symbol): void {
         this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, key));
     }
 
@@ -190,8 +189,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
 
-    protected primitiveTypeObservers: ObservablePrimitiveType[] = [];
-    protected arrayTypeObservers: ObservableArrayType[] = [];
+    protected variableObservers: ObservableVariable[] = [];
 
     protected code: string;
     protected compilationStatus: boolean;
@@ -215,11 +213,8 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         this.code = "";
         this.compilationStatus = true;
 
-        for (let primitiveObservers of this.primitiveTypeObservers) {
+        for (let primitiveObservers of this.variableObservers) {
             primitiveObservers.empty();
-        }
-        for (let arrayObservers of this.arrayTypeObservers) {
-            arrayObservers.empty();
         }
 
         this.nextOperationIndex = 0;
@@ -244,29 +239,16 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         }
     }
 
-    public registerPrimitives(observables: ObservablePrimitiveType[]) {
+    public registerVariableObservers(observables: ObservableVariable[]) {
         for (let observable of observables)
-            this.registerPrimitive(observable);
+            this.registerVariableObserver(observable);
     }
 
-    public registerPrimitive(observable: ObservablePrimitiveType) {
-        if (this.primitiveTypeObservers.indexOf(observable) != -1)
+    public registerVariableObserver(observable: ObservableVariable) {
+        if (this.variableObservers.indexOf(observable) != -1)
             return;
 
-        this.primitiveTypeObservers.push(observable);
-        observable.registerObserver(this);
-    }
-
-    public registerArrays<Type>(observables: ObservableArrayType[]) {
-        for (let observable of observables)
-            this.registerArray(observable);
-    }
-
-    public registerArray<Type>(observable: ObservableArrayType) {
-        if (this.arrayTypeObservers.indexOf(observable) != -1)
-            return;
-
-        this.arrayTypeObservers.push(observable);
+        this.variableObservers.push(observable);
         observable.registerObserver(this);
     }
 
@@ -309,7 +291,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
         logd(this.code);
 
         try {
-            this.hookConsoleLog();
+            this.hookConsoleLog();           
             (1, eval)(this.code);
             this.hookConsoleLog(false);
 
@@ -324,12 +306,8 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             throw e;
         }
 
-        for (let primitiveObservers of this.primitiveTypeObservers) {
+        for (let primitiveObservers of this.variableObservers) {
             primitiveObservers.unregisterObserver(this);
-        }
-
-        for (let arrayObservers of this.arrayTypeObservers) {
-            arrayObservers.unregisterObserver(this);
         }
 
         this.status = OperationRecorderStatus.Idle;
@@ -338,37 +316,20 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }
 
     public startReplay() {
-        for (let primitiveObservers of this.primitiveTypeObservers) {
-            primitiveObservers.empty();
-        }
-        for (let arrayObservers of this.arrayTypeObservers) {
-            arrayObservers.empty();
+        for (let variableObservers of this.variableObservers) {
+            variableObservers.empty();
         }
 
         this.nextOperationIndex = 0;
 
-        let codeLine = this.getFirstCodeLineNumber();
-        let allSkipableOperations = true;
-
         for (let opIdx in this.operations) {
             let operation = this.operations[opIdx];
 
-            if (operation.type != OperationType.NONE && operation.type != OperationType.SCOPE_START) {
-                allSkipableOperations = false;
+            if (operation.type != OperationType.NONE && operation.type != OperationType.SCOPE_START)
                 break;
-            }
 
-            if (operation.codeLineNumber != codeLine) {
-                if (allSkipableOperations) {
-                    codeLine = operation.codeLineNumber;
-                    this.firstExecutedCodeLineNumber = codeLine;
-                    this.executeOneCodeLine();
-
-                    allSkipableOperations = false;
-                } else {
-                    break;
-                }
-            }
+            this.firstExecutedCodeLineNumber = operation.codeLineNumber;
+            this.executeCurrentOperation();
         }
 
         this.lastExecutedCodeLineNumber = this.getFirstCodeLineNumber();
@@ -518,12 +479,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             case OperationType.WRITE:
                 {
                     let operationAttributes = operation.attributes as RWPrimitiveOperationPayload;
-                    if (this.isArrayType(operationAttributes.newValue)) {
-                        operationAttributes.observable.setValue(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
-                    }
-                    else {
-                        operationAttributes.observable.setValue(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
-                    }
+                    operationAttributes.observable.setValue(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
                     break;
                 }
             case OperationType.WRITE_AT:
@@ -545,20 +501,6 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
             this.nextOperationIndex = this.operations.length;
     }
 
-    private isArrayType(object: any): boolean {
-        let variableType = Object.prototype.toString.call(object);
-        let isArray = variableType == "[object Array]";
-
-        return isArray;
-    }
-
-    private isObjectType(object: any): boolean {
-        let variableType = Object.prototype.toString.call(object);
-        let isArray = variableType == "[object Object]";
-
-        return isArray;
-    }
-
     private isReferenceObject(object: any): boolean {
         let variableType = Object.prototype.toString.call(object);
         return (variableType == "[object Array]");
@@ -575,19 +517,6 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
     }
 
     public setVar(scopeName: string, varName: string, object: any) {
-        var type: string;
-
-        let isArray = this.isArrayType(object);
-        let isObject = this.isObjectType(object);
-
-        if (isArray) {
-            if (object.length >= 0) {
-                type = typeof object[0];
-            }
-        } else {
-            type = typeof object;
-        }
-
         if (this.isReferenceObject(object)) {
             let scopeVarName = this.getReferencedObject(scopeName + "." + varName);
             if (scopeVarName != scopeName + "." + varName) { // source reference                
@@ -599,23 +528,14 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
 
         let variable = this.vars[scopeName][varName];
 
-        let observableFactory = (varName: string, object: any) => {
-            if (isArray) return new ObservableArrayType(varName, object);
-            if (isObject) return new ObservableDictionaryType(varName, object);
-
-            return new ObservablePrimitiveType(varName, object);
-        }
-
         if (!variable.observable) {
-            variable.observable = observableFactory(varName, object);
-            isArray ? this.registerArray(variable.observable) : this.registerPrimitive(variable.observable);
+            variable.observable = new ObservableVariable(varName, object);
+            this.registerVariableObserver(variable.observable);
+
+            this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
         }
 
-        this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
-
-        if (variable.observable) {
-            variable.observable.setValue(object);
-        }
+        variable.observable.setValue(object);
     }
 
     private registerVarInScope(scopeName: string, varname: string, vardecl: VariableDeclaration) {
@@ -838,7 +758,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                     let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
 
                     if (vardeclaration.length > 0) {
-                        this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]);
+                        this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]+1);
                     }
 
                     if (item.right && item.right.type == "ObjectExpression") {
@@ -879,6 +799,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                         }
 
                         if (item.arguments && item.arguments.length) {
+                            // Don't add line markers in between function parameters
                             this.noMarkLineZone.push(new IndexRange(item.range[0], item.range[1]));
                         }
 
@@ -1009,7 +930,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                     replacedTokenStr += (tokenizedLine + replacement);
                     // MISTERY
                     let insertedSize = (tokenizedLine + replacement).length;
-                    //this.updateNoMarkLineZone(currIndexInCode + replacedTokenStr.length - insertedSize, diffLen);
+                    this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length - insertedSize, diffLen);
                 }
             }
 
@@ -1036,7 +957,7 @@ export class OperationRecorder extends NotificationEmitter implements PrimitiveT
                 (trimmedLine.length == 1 && (skippedLineMarkers.indexOf(trimmedLine) != -1))) {
                 this.emptyCodeLineNumbers.push(lineIndex + 1);
             }
-            
+
             line = line + '\n';
 
             if (!this.isEmptyLine(lineIndex + 1)) {

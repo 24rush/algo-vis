@@ -1,20 +1,16 @@
-export interface PrimitiveTypeChangeCbk {
-    onSet(observable: ObservablePrimitiveType, value: any, newValue: any): void;
-    onGet(observable: ObservablePrimitiveType, value: any): void;
-}
-
-export interface ArrayTypeChangeCbk {
-    onSetArrayValue(observable: ObservableArrayType, value: any[], newValue: any[]): void;
-    onSetArrayAtIndex(observable: ObservableArrayType, value: any, newValue: any, index: number): void;
-    onGetArrayAtIndex(observable: ObservableArrayType, value: any, index: number): void;
-}
-
 type DictionaryKeyType = string | number | symbol;
 
-export interface ObjectTypeChangeCbk {
-    onSetObjectValue(observable: ObservableDictionaryType, value: any, newValue: any): void;
-    onSetObjectProperty(observable: ObservableDictionaryType, value: any, newValue: any, key: DictionaryKeyType): void;
-    onGetObjectProperty(observable: ObservableDictionaryType, value: any, key: DictionaryKeyType): void;
+export class VariableChangeCbk {
+    onSetEvent(observable: ObservableVariable, value: any, newValue: any) { console.log("Method not implemented."); };
+    onGetEvent(observable: ObservableVariable, value: any) { console.log("Method not implemented."); }
+
+    onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any) { console.log("Method not implemented."); };
+    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index: number) { console.log("Method not implemented."); };
+    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index: number) { console.log("Method not implemented."); };
+
+    onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any) { console.log("Method not implemented."); };
+    onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: DictionaryKeyType) { console.log("Method not implemented."); };
+    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: DictionaryKeyType) { console.log("Method not implemented."); };
 }
 
 export class BaseObservableType<NotifyCbkType>
@@ -35,86 +31,14 @@ export class BaseObservableType<NotifyCbkType>
     }
 }
 
-type PrimitiveType = number | string | boolean;
-
-export class ObservablePrimitiveType extends BaseObservableType<PrimitiveTypeChangeCbk>
-{
-    protected initValue: PrimitiveType;
-
-    constructor(public name: string, protected value: PrimitiveType) {
-        super();
-
-        this.initValue = value;
-    }
-
-    public empty() {
-        this.setValue(undefined);
-    }
-
-    public reset() {
-        this.setValue(this.initValue);
-    }
-
-    public setValue(newValue: PrimitiveType) {
-        for (let observer of this.observers) {console.log('set');
-            observer.onSet(this, this.value, newValue);
-        }
-
-        this.value = newValue;
-    }
-
-    public getValue(): PrimitiveType {
-        for (let observer of this.observers) {
-            observer.onGet(this, this.value);
-        }
-        return this.value;
-    }
+export enum VariableType {
+    undefined,
+    Primitive,
+    Array,
+    Object
 }
 
-export class ObservableArrayType extends BaseObservableType<ArrayTypeChangeCbk>
-{
-    protected initValues: any[];
-
-    constructor(public name: string, protected values: any[]) {
-        super();
-
-        this.initValues = JSON.parse(JSON.stringify(values));
-    }
-
-    public empty() {
-        this.values = [];
-    }
-
-    public reset() {
-        this.setValue(this.initValues);
-    }
-
-    getValue(): any[] { return this.values }
-    setValue(values: any[]) {
-        let oldValues = [...this.values];
-        this.values = [...values];
-
-        for (let observer of this.observers) {
-            observer.onSetArrayValue(this, oldValues, this.values);
-        }
-    }
-
-    setValueAtIndex(newValue: any, index: number) {
-        for (let observer of this.observers) {
-            observer.onSetArrayAtIndex(this, this.values[index], newValue, index);
-        }
-        this.values[index] = newValue;
-    }
-
-    getAtIndex(index: number): any {
-        for (let observer of this.observers) {
-            observer.onGetArrayAtIndex(this, this.values[index], index);
-        }
-        return this.values[index];
-    }
-}
-
-export class ObservableDictionaryType extends BaseObservableType<ObjectTypeChangeCbk>
+export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
 {
     protected initValue: any;
 
@@ -125,37 +49,67 @@ export class ObservableDictionaryType extends BaseObservableType<ObjectTypeChang
     }
 
     public empty() {
-        this.value = {};
+        this.value = undefined;
     }
 
     public reset() {
         this.setValue(this.initValue);
     }
 
-    getKeys(): any[] { return Object.keys(this.value) }
-    setValue(value: any) {
-        let oldValues = JSON.parse(JSON.stringify(this.value));
+    public getType() { return this.determineType(this.value); }
+
+    public getKeys(): any[] { return Object.keys(this.value) }
+
+    public getValue(): any {
+        for (let observer of this.observers) {
+            observer.onGetEvent(this, this.value);
+        }
+        return this.value;
+    }
+
+    public getAtIndex(index: string | number | symbol): any {
+        let variableType = this.determineType(this.value);
+
+        for (let observer of this.observers) {
+            if (variableType == VariableType.Array)
+                observer.onGetArrayAtIndexEvent(this, this.value[index], index as number);
+            else if (variableType == VariableType.Object)
+                observer.onGetObjectPropertyEvent(this, index, this.value[index]);
+            else throw "Cannot at index on primitive";
+        }
+
+        return this.value[index];
+    }
+
+    public setValue(value: any) {
+        let oldValues = this.value ? JSON.parse(JSON.stringify(this.value)) : undefined;
         this.value = JSON.parse(JSON.stringify(value));
 
+        let variableType = this.determineType(value);
+
         for (let observer of this.observers) {
-            observer.onSetObjectValue(this, oldValues, this.value);
+            switch (variableType) {
+                case VariableType.undefined:
+                case VariableType.Primitive: observer.onSetEvent(this, this.value, value); break;
+                case VariableType.Array: observer.onSetArrayValueEvent(this, oldValues, this.value); break;
+                case VariableType.Object: observer.onSetObjectValueEvent(this, oldValues, this.value); break;
+                default: throw "OBSERVABLE type unknown"
+            }                
         }
     }
 
-    setValueAtIndex(key: string | number, value: any) {
-        for (let observer of this.observers) {
-            observer.onSetObjectProperty(this, key, this.value[key], value);
-        }
+    private determineType(object: any): VariableType {
+        if (!object)
+            return VariableType.undefined;
 
-        this.value[key] = value;
-    }
+        let variableType = Object.prototype.toString.call(object);
 
-    getAtIndex(key: string | number | symbol): any {
-        for (let observer of this.observers) {
-            observer.onGetObjectProperty(this, key, this.value[key]);
-        }
-        return this.value[key];
+        let isArray = (variableType == "[object Array]");
+        let isObject = (variableType == "[object Object]");
+
+        if (isArray) return VariableType.Array;
+        if (isObject) return VariableType.Object;
+
+        return VariableType.Primitive;
     }
 }
-
-export type ObservableTypes = ObservablePrimitiveType | ObservableArrayType | ObservableDictionaryType;

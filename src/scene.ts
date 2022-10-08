@@ -1,5 +1,5 @@
 import { DOMmanipulator } from "./dom-manipulator"
-import { ObservableTypes } from "./observable-type"
+import { ObservableVariable } from "./observable-type"
 import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
@@ -46,10 +46,10 @@ export class Scene {
         });
 
         oprec.registerVarScopeNotifier({
-            onEnterScopeVariable: (scopeName: string, observable: ObservableTypes) => {
+            onEnterScopeVariable: (scopeName: string, observable: ObservableVariable) => {
                 layout.add(scopeName, observable);
             },
-            onExitScopeVariable: (scopeName: string, observable: ObservableTypes) => {
+            onExitScopeVariable: (scopeName: string, observable: ObservableVariable) => {
                 layout.remove(scopeName, observable);
             }
         });

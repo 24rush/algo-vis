@@ -2,7 +2,7 @@ import { DOMmanipulator } from "./dom-manipulator";
 import { Layout } from "./layout";
 var MustacheIt = require('mustache');
 
-import { ObservablePrimitiveType, ObservableArrayType, PrimitiveTypeChangeCbk, ArrayTypeChangeCbk, ObjectTypeChangeCbk, ObservableDictionaryType } from "./observable-type.js"
+import { ObservableVariable, VariableChangeCbk, VariableType } from "./observable-type"
 
 class FontSizeCache {
     private static cache: any = {}; // elementId: { textLength : fontSize }
@@ -22,12 +22,64 @@ class FontSizeCache {
     }
 }
 
-export class BaseVisualizer {
-    protected htmlElement: HTMLElement = undefined;
+enum DrawnElement {
+    undefined,
+    Primitive,
+    Array,
+    Object
+}
 
-    public draw() { };
+export class BaseVisualizer extends VariableChangeCbk {
+    protected readonly templateVarName ='<div class="var-box" style="display: table;"> \
+    <span id="var-name" class="var-name">{{name}}:</span> \
+    </div> \
+    ';
+    
+    protected readonly templatePrimitive: string = 
+    '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+         <span id="var-value"></span> \
+     </span>';
+
+    protected readonly templateArray = '<span> \
+    {{#data}} \
+        <div style="padding-right: 3px; display: table-cell;"> \
+            <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+                <span id="var-value"></span> \ \
+            </span> \
+            <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
+        </div> \
+    {{/data}} \
+    </span>';
+
+    protected readonly templateObject = '<span> \
+    {{#data}} \
+        <div style="padding-right: 3px; display: table-cell;"> \
+            <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+                <span id="var-value"></span> \ \
+            </span> \
+            <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
+        </div> \
+    {{/data}} \
+    </span>';
+
+    protected readonly height: number = 35;
+    protected readonly width: number = 35;
+
+    protected htmlElement: HTMLElement = undefined;
+    protected keyValueElements: Record<string | number | symbol, HTMLElement> = {};
+    protected indextValueElements: HTMLElement[] = [];
+    protected text: HTMLElement = undefined;
+
+    protected drawn: boolean = false;
+    protected drawnElement: DrawnElement = DrawnElement.undefined;
+
+    constructor(protected observable: ObservableVariable, protected layout: Layout) {
+        super();    
+
+        this.observable.registerObserver(this);
+    }
+
     public getHTMLElement(): HTMLElement { return this.htmlElement; }
-    public detach() { };
 
     public textWidth(text: HTMLElement): { w: number, h: number } {
         let fontFamily = window.getComputedStyle(text, null).getPropertyValue('font-family');
@@ -105,194 +157,92 @@ export class BaseVisualizer {
 
         FontSizeCache.setFontSize(text.id, text.textContent, newFontSize);
     }
-}
-
-export class PrimitiveTypeVisualizer extends BaseVisualizer implements PrimitiveTypeChangeCbk {
-    protected readonly height: number = 35;
-    protected readonly width: number = 35;
-
-    protected text: HTMLElement = undefined;
-    protected templateDOM: SVGSVGElement = undefined;
-
-    private readonly template: string = '<div class="var-box" style="display: table;"> \
-                                           <span id="var-name" class="var-name">{{name}}:</span> \
-                                            <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
-                                                <span id="var-value"></span> \
-                                            </span> \
-                                         </div>';
-
-    constructor(protected observable: ObservablePrimitiveType, protected layout: Layout) {
-        super();
-    }
 
     public detach(): void {
         this.observable.unregisterObserver(this);
     }
 
-    onSet(_observable: ObservablePrimitiveType, _currValue: any, newValue: any): void {
-        this.fitText(this.text, newValue, this.width, this.height);
-    }
-    onGet(): void {
-    }
-
-    draw() {
-        let rendered = MustacheIt.render(this.template, {
+    public draw() {
+        let rendered = MustacheIt.render(this.templateVarName, {
             name: this.observable.name,
-            width: this.width, height: this.height
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
         this.layout.requestAppend(this.htmlElement);
-
-        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(this.htmlElement, 'var-value');
-        this.fitText(this.text, this.observable.getValue(), this.text.clientWidth, this.text.clientHeight);
-
-        this.observable.registerObserver(this);
-    }
-}
-
-// ARRAY
-export class ArrayTypeVisualizer extends BaseVisualizer implements ArrayTypeChangeCbk {
-    protected readonly height: number = 40;
-    protected readonly width: number = 40;
-
-    private textValueElements: HTMLElement[] = [];
-
-    private readonly template = '<div class="var-box" style="display: table;"> \
-                                    <span id="var-name" class="var-name">{{name}}:</span> \
-                                    {{#data}} \
-                                    <div style="padding-right: 3px; display: table-cell;"> \
-                                        <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
-                                            <span id="var-value"></span> \ \
-                                        </span> \
-                                        <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
-                                    </div> \
-                                    {{/data}} \
-                                </div>';
-
-    constructor(protected observable: ObservableArrayType, protected layout: Layout) {
-        super();
     }
 
-    public detach(): void {
-        this.observable.unregisterObserver(this);
+    private needsDraw() : boolean {
+        return !this.drawn;
     }
 
-    onSetArrayValue(observable: ObservableArrayType, value: any[], newValue: any[]): void {
-        if (value.length != newValue.length) {
-            this.redraw();
-        }
-        else {
-            for (let [i, v] of newValue.entries()) {
-                if (value[i] != newValue[i])
-                    this.onSetArrayAtIndex(observable, v, v, i);
-            };
-        }
+    private needsRedraw(requestedDraw: DrawnElement) : boolean {
+        if (!this.drawn)
+            return true;
+
+        if (this.drawn && this.drawnElement != requestedDraw)
+            return true;
+
+        return false;
     }
 
-    onSetArrayAtIndex(_observable: ObservableArrayType, _oldValue: any, newValue: any, index: number): void {
-        if (index < this.textValueElements.length) {
-            this.fitText(this.textValueElements[index], newValue, this.width, this.height);
-        } else {
-            this.redraw();
-        }
-    }
-    onGetArrayAtIndex(_observable: ObservableArrayType, _value: any, _index: number): void {
-    }
+    private redraw(redrawType: DrawnElement) {        
+        this.htmlElement.removeChild(this.htmlElement.lastChild as HTMLElement);
 
-    private redraw() {
-        this.detach();
-        this.layout.requestRemove(this.htmlElement);
-        this.textValueElements = [];
+        this.keyValueElements = {};
+        this.indextValueElements = [];
+        this.keyValueElements = {};
+        this.text = undefined;
 
-        this.draw();
+        if (redrawType == DrawnElement.Primitive) this.drawPrimitive();
+        if (redrawType == DrawnElement.Array) this.drawArray();
+        if (redrawType == DrawnElement.Object) this.drawObject();
     }
 
-    public draw() {
-        let rendered = MustacheIt.render(this.template, {
-            name: this.observable.name,
-            data: this.observable.getValue().map((_v, index) => {
+    private drawPrimitive() {
+        let rendered = MustacheIt.render(this.templatePrimitive, {
+            width: this.width, height: this.height
+        });
+
+        let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        
+        this.htmlElement.append(valuesHtmlElement);
+
+        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
+        this.fitText(this.text, this.observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
+
+        this.drawn = true;
+        this.drawnElement = DrawnElement.Primitive;
+    }
+
+    private drawArray() {
+        let rendered = MustacheIt.render(this.templateArray, {
+            data: (this.observable.getValue() as any[]).map((_v, index) => { //TODO                
                 return {
                     width: this.width, height: this.height,
                     index: index
                 };
             }),
         });
-
+        
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
-        this.layout.requestAppend(this.htmlElement);
+        this.htmlElement.append(valuesHtmlElement);
 
-        this.textValueElements = this.textValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(this.htmlElement, 'var-value'));
-        for (let [index, textElement] of this.textValueElements.entries()) {
+        this.indextValueElements = this.indextValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value'));
+        for (let [index, textElement] of this.indextValueElements.entries()) {
             this.fitText(textElement, this.observable.getAtIndex(index), this.width, this.height);
-        }
+        }        
 
-        this.observable.registerObserver(this);
-    }
-}
-
-export class ObjectTypeVisualizer extends BaseVisualizer implements ObjectTypeChangeCbk {
-    protected readonly height: number = 40;
-    protected readonly width: number = 40;
-
-    private textValueElements: Record<string | number | symbol, HTMLElement> = {};
-
-    private readonly template = '<div class="var-box" style="display: table;"> \
-                                    <span id="var-name" class="var-name">{{name}}:</span> \
-                                    {{#data}} \
-                                    <div style="padding-right: 3px; display: table-cell;"> \
-                                        <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
-                                            <span id="var-value"></span> \ \
-                                        </span> \
-                                        <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
-                                    </div> \
-                                    {{/data}} \
-                                </div>';
-
-    constructor(protected observable: ObservableDictionaryType, protected layout: Layout) {
-        super();
-    }
-    onSetObjectValue(observable: ObservableDictionaryType, value: any, newValue: any): void {
-        if (Object.keys(value).length != Object.keys(newValue).length) { // TODO: Check key match in totality
-            this.redraw();
-        }
-        else {
-            for (let key of Object.keys(newValue)) {
-                if (value[key] != newValue[key])
-                    this.onSetObjectProperty(observable, value[key], newValue[key], key);
-            };
-        }
-    }
-    onSetObjectProperty(observable: ObservableDictionaryType, _value: any, newValue: any, key: string | number | symbol): void {
-        if (key in this.textValueElements) {
-            this.fitText(this.textValueElements[key], newValue, this.width, this.height);
-        } else {
-            this.redraw();
-        }
-    }
-    onGetObjectProperty(observable: ObservableDictionaryType, value: any, key: string | number | symbol): void {
-        throw new Error("Method not implemented.");
+        this.drawn = true;
+        this.drawnElement = DrawnElement.Array;
     }
 
-    public detach(): void {
-        this.observable.unregisterObserver(this);
-    }
-
-    private redraw() {
-        this.detach();
-        this.layout.requestRemove(this.htmlElement);
-        this.textValueElements = {};
-
-        this.draw();
-    }
-
-    public draw() {
-        let rendered = MustacheIt.render(this.template, {
-            name: this.observable.name,
+    private drawObject() {
+        let rendered = MustacheIt.render(this.templateObject, {
             data: this.observable.getKeys().map(key => {
                 return {
                     width: this.width, height: this.height,
@@ -302,17 +252,92 @@ export class ObjectTypeVisualizer extends BaseVisualizer implements ObjectTypeCh
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
-        this.layout.requestAppend(this.htmlElement);
+        this.htmlElement.append(valuesHtmlElement);
 
         let domIndex = 0;
-        let domElements = DOMmanipulator.elementsStartsWithId<HTMLElement>(this.htmlElement, 'var-value');                
+        let domElements = DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');        
+
         for (let key of this.observable.getKeys()) {
-            this.textValueElements[key] = domElements[domIndex++];
-            this.fitText(this.textValueElements[key], this.observable.getAtIndex(key), this.width, this.height);
+            this.keyValueElements[key] = domElements[domIndex++];
+            this.fitText(this.keyValueElements[key], this.observable.getAtIndex(key), this.width, this.height);
         }
 
-        this.observable.registerObserver(this);
+        this.drawn = true;
+        this.drawnElement = DrawnElement.Object;
+    }
+
+    override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {        
+        if (this.needsRedraw(DrawnElement.Primitive)) {
+            this.redraw(DrawnElement.Primitive);
+            return;
+        }
+        
+        if (this.needsDraw()) {
+            this.drawPrimitive();
+        }
+        else
+            this.fitText(this.text, newValue, this.width, this.height);
+    }
+
+    override onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
+        if (this.needsRedraw(DrawnElement.Array)) {
+            this.redraw(DrawnElement.Array);
+            return;
+        }
+        
+        if (this.needsDraw()) {
+            this.drawArray();
+            return;
+        }
+        
+        if (value.length != newValue.length) {
+            this.redraw(DrawnElement.Array);
+        }
+        else {
+            for (let [i, v] of newValue.entries()) {
+                if (value[i] != newValue[i])
+                    this.onSetArrayAtIndexEvent(observable, v, v, i);
+            };
+        }
+    }
+
+    override onSetArrayAtIndexEvent(_observable: ObservableVariable, _oldValue: any, newValue: any, index: number): void {
+        if (index < this.indextValueElements.length) {
+            this.fitText(this.indextValueElements[index], newValue, this.width, this.height);
+        } else {
+            this.redraw(DrawnElement.Array);
+        }
+    }
+
+    override onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
+        if (this.needsRedraw(DrawnElement.Object)) {
+            this.redraw(DrawnElement.Object);
+            return;
+        }
+        
+        if (this.needsDraw) {
+            this.drawObject();
+            return;
+        }
+        
+        if (Object.keys(value).length != Object.keys(newValue).length) { // TODO: Check key match in totality
+            this.redraw(DrawnElement.Object);
+        }
+        else {
+            for (let key of Object.keys(newValue)) {
+                if (value[key] != newValue[key])
+                    this.onSetObjectPropertyEvent(observable, value[key], newValue[key], key);
+            };
+        }
+    }
+
+    override onSetObjectPropertyEvent(observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {
+        if (key in this.keyValueElements) {
+            this.fitText(this.keyValueElements[key], newValue, this.width, this.height);
+        } else {
+            this.redraw(DrawnElement.Object);
+        }
     }
 }

@@ -100,8 +100,14 @@ let htmlTemplate =
         <li class="list-group-item fw-semibold">Compilation
         <button id="btn-compilation-status" type="button" class="btn btn-success btn-sm">OK</button>
         </li>
-        <li class="list-group-item fw-semibold">Variables
-        <div id="panelVariablesBody" class="accordion-body">
+        <li class="list-group-item fw-semibold">Variables    
+        
+        <div id="panelVariablesBody">
+        
+        <ul class="list-group list-group-flush" style="display: none;" id="scopeTemplate>
+          <li class="list-group-item">{{scopeName}}</li>
+        </ul>
+
         </div>
         </li>
         <li class="list-group-item fw-semibold">Console output
