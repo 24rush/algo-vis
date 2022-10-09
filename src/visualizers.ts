@@ -162,7 +162,7 @@ export class BaseVisualizer extends VariableChangeCbk {
         this.observable.unregisterObserver(this);
     }
 
-    public draw() {
+    public draw() : HTMLElement {
         let rendered = MustacheIt.render(this.templateVarName, {
             name: this.observable.name,
         });
@@ -170,7 +170,7 @@ export class BaseVisualizer extends VariableChangeCbk {
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
-        this.layout.requestAppend(this.htmlElement);
+        return this.htmlElement;
     }
 
     private needsDraw() : boolean {
