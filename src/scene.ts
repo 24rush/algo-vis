@@ -3,21 +3,108 @@ import { ObservableVariable } from "./observable-type"
 import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
+import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
+
 var bootstrap = require('bootstrap')
+
+class AVViewModel {
+    consoleOutput: string = "";
+
+    showComments: boolean = true;
+    onShowComments(): any { }
+
+    isPaused = true;
+    onAutoplayToggled(): any { }
+
+    compilationStatus: boolean = true;
+    compilatonMessage: string = "";
+    compilationErrorMessage(): string { return "error: " + this.compilatonMessage; };
+
+    onAdvance(): any { }
+    onRestart(): any { }
+
+    public setDefaults() {
+        this.consoleOutput = "";
+        this.isPaused = true;
+        this.showComments = false; // needs sync with UI checked
+        this.compilationStatus = true;
+        this.compilatonMessage = "";
+    }
+}
 
 export class Scene {
     private codeRenderer: CodeRenderer;
+    private commentsPopover: any = undefined;
+    private autoReplayInterval = 200;        
+    private autoplayTimer: NodeJS.Timer = undefined;        
 
-    constructor(private appId: string, private codeEditorId: string, private codeId?: string) {
+    private viewModel: AVViewModel = new AVViewModel();
+
+    private operationRecorder = new OperationRecorder();
+
+    constructor(widget: Element, private appId: string, private codeEditorId: string, private codeId?: string) {
         let parent = document.getElementById(this.appId);
         if (!parent)
             return;
 
         this.codeRenderer = new CodeRenderer(this.codeEditorId);
-        let oprec = new OperationRecorder();
 
-        let consoleTxt: HTMLElement = DOMmanipulator.elementStartsWithId(parent, "consoleTxt");
         let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));
+
+        let viewModelObs = new ObservableViewModel(this.viewModel);
+        new UIBinder(widget, viewModelObs);
+
+        let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);        
+        avViewModel.setDefaults();
+
+        this.viewModel.onShowComments = () => {
+            avViewModel.showComments = !avViewModel.showComments;
+
+            if (avViewModel.showComments) {
+                highlightLine(this.operationRecorder.getNextCodeLineNumber());
+            } else {
+                this.commentsPopover?.dispose();
+                this.commentsPopover = undefined;
+            }
+        };
+
+        this.viewModel.onAutoplayToggled = () => {
+            if (this.operationRecorder.isReplayFinished()) {
+                avViewModel.isPaused = true;
+                return;
+            }
+
+            avViewModel.isPaused = !avViewModel.isPaused;
+
+            if (!avViewModel.isPaused) {
+                this.autoplayTimer = setInterval(() => {
+                    advance();
+
+                    if (this.operationRecorder.isReplayFinished() || avViewModel.isPaused) {
+                        clearInterval(this.autoplayTimer);
+                    }
+                }, this.autoReplayInterval);
+            }
+            else {
+                clearInterval(this.autoplayTimer);
+            }
+        }
+
+        this.viewModel.onAdvance = () => {console.log('adv');
+            if (avViewModel.isPaused)                
+                advance();
+        }
+
+        this.viewModel.onRestart = () => {
+            avViewModel.isPaused = true;
+            avViewModel.consoleOutput = "";
+
+            clearInterval(this.autoplayTimer);            
+            layout.clearAll();
+            
+            this.operationRecorder.startReplay();
+            highlightLine(this.operationRecorder.getFirstCodeLineNumber());
+        }
 
         let self = this;
 
@@ -35,17 +122,17 @@ export class Scene {
 
         this.codeRenderer.registerEventNotifier({
             onSourceCodeUpdated(newCode: string) {
-                consoleTxt.textContent = "";
+                avViewModel.consoleOutput = "";
                 layout.clearAll();
 
-                oprec.setSourceCode(newCode);
-                oprec.startReplay();
+                this.operationRecorder.setSourceCode(newCode);
+                this.operationRecorder.startReplay();
 
-                self.codeRenderer.highlightLine(oprec.getFirstCodeLineNumber());
+                self.codeRenderer.highlightLine(this.operationRecorder.getFirstCodeLineNumber());
             }
         });
 
-        oprec.registerVarScopeNotifier({
+        this.operationRecorder.registerVarScopeNotifier({
             onEnterScopeVariable: (scopeName: string, observable: ObservableVariable) => {
                 layout.add(scopeName, observable);
             },
@@ -54,35 +141,19 @@ export class Scene {
             }
         });
 
-        oprec.registerTraceNotifier({
+        this.operationRecorder.registerTraceNotifier({
             onTraceMessage(message: string): void {
-                consoleTxt.textContent += message + '\r\n';                
+                avViewModel.consoleOutput += message + '\r\n';
             }
         });
 
-        oprec.registerCompilationStatusNotifier({
+        this.operationRecorder.registerCompilationStatusNotifier({
             onCompilationStatus(status: boolean, message: string): void {
-                let btnCompilationStatus = document.getElementById("btn-compilation-status");
-                btnCompilationStatus.classList.remove("btn-success", "btn-danger");
-                btnCompilationStatus.classList.add(status ? "btn-success" : "btn-danger");
-                btnCompilationStatus.textContent = status ? "OK" : "error: " + message;
+                avViewModel.compilatonMessage = message;
+                avViewModel.compilationStatus = status;
             }
         });
 
-        let showCommentsCheckbox = document.getElementById('showCommentsCheck-' + codeEditorId) as HTMLInputElement;
-        let showComments = showCommentsCheckbox.checked;
-
-        showCommentsCheckbox.addEventListener('click', function(){
-            showComments = showCommentsCheckbox.checked;
-            if (showComments) {
-                highlightLine(oprec.getNextCodeLineNumber());
-            } else {
-                commentsPopover.dispose();
-                commentsPopover = undefined;
-            }
-        });
-
-        let commentsPopover: any = undefined;
         var options = {
             'content': "",
         };
@@ -90,17 +161,17 @@ export class Scene {
         var observer = new MutationObserver(function (mutations) {
             mutations.forEach(function (mutationRecord) {
                 let aceCursor = document.querySelector("[class=myMarker]") as HTMLElement;
-                if (!showComments || mutationRecord.target != aceCursor)
+                if (!avViewModel.showComments || mutationRecord.target != aceCursor)
                     return;
 
-                if (commentsPopover) commentsPopover.dispose();
+                if (this.commentsPopover) this.commentsPopover.dispose();
                 let commentsElement = document.getElementById("comments-" + codeEditorId);
 
                 commentsElement.style['left'] = aceCursor.style['left'];
                 commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
 
-                commentsPopover = new bootstrap.Popover(commentsElement, options);
-                commentsPopover.show();
+                this.commentsPopover = new bootstrap.Popover(commentsElement, options);
+                this.commentsPopover.show();
             });
         });
 
@@ -109,7 +180,7 @@ export class Scene {
 
             let lineComment = this.codeRenderer.getLineComment(lineNo);
 
-            if (showComments && lineComment !== "") {
+            if (avViewModel.showComments && lineComment !== "") {
                 options.content = lineComment;
                 let checkerFunc = () => {
                     let aceCursor = document.querySelector("[class=myMarker]") as HTMLElement;
@@ -124,65 +195,12 @@ export class Scene {
         };
 
         let advance = () => {
-            oprec.advanceOneCodeLine();
-            highlightLine(oprec.getNextCodeLineNumber());
+            this.operationRecorder.advanceOneCodeLine();
+            highlightLine(this.operationRecorder.getNextCodeLineNumber());
         };
 
-        oprec.setSourceCode(this.codeRenderer.getSourceCode());
-        oprec.startReplay();
-        highlightLine(oprec.getFirstCodeLineNumber());
-
-        let autoReplayInterval = 200;
-        let paused = true;
-        let autoplay: NodeJS.Timer = undefined;
-
-        let resetAutoPlayBtn = (isPaused: boolean) => {
-            document.getElementById("btn-autoplay-text").textContent = !isPaused ? "Pause" : "Autoplay";
-            let iElem = document.getElementById("btn-autoplay-i");
-            iElem.classList.remove("bi-fast-forward-fill", "bi-pause-fill");
-            iElem.classList.add(!isPaused ? "bi-pause-fill" : "bi-fast-forward-fill");
-        }
-
-        document.getElementById("btn-execute-" + codeEditorId).addEventListener('click', () => {
-            if (paused == false)
-                return;
-
-            advance();
-        });
-
-        document.getElementById("btn-autoplay-" + codeEditorId).addEventListener('click', () => {
-            if (oprec.isReplayFinished()) {
-                paused = true;
-                resetAutoPlayBtn(paused);
-                return;
-            }
-
-            paused = !paused;
-            resetAutoPlayBtn(paused);
-
-            if (!paused) {
-                autoplay = setInterval(() => {
-                    advance();
-
-                    if (oprec.isReplayFinished() || paused) {
-                        clearInterval(autoplay);
-                    }
-                }, autoReplayInterval);
-            }
-            else {
-                clearInterval(autoplay);
-            }
-        });
-
-        document.getElementById("btn-restart-" + codeEditorId).addEventListener('click', () => {
-            paused = true;
-            resetAutoPlayBtn(paused);
-            clearInterval(autoplay);
-
-            consoleTxt.textContent = "";
-            layout.clearAll();
-            oprec.startReplay();
-            highlightLine(oprec.getFirstCodeLineNumber());
-        });        
+        this.operationRecorder.setSourceCode(this.codeRenderer.getSourceCode());
+        this.operationRecorder.startReplay();
+        highlightLine(this.operationRecorder.getFirstCodeLineNumber());
     }
 }

@@ -1,5 +1,4 @@
 import { ObservableVariable, VariableChangeCbk } from "./observable-type";
-import { logd } from "./index"
 
 var MustacheIt = require('mustache');
 var esprima = require('esprima')
@@ -282,14 +281,14 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
     private recordSourceCode() {
         this.status = OperationRecorderStatus.Recording;
+/*
+        console.log("VARS: "); console.log(this.vars);
+        console.log("SCOPES: "); console.log(this.scopes);
+        console.log("REFS: "); console.log(this.refs);
+        console.log("FUNCDEFS: "); console.log(this.funcDefs);
 
-        logd("VARS: "); logd(this.vars);
-        logd("SCOPES: "); logd(this.scopes);
-        logd("REFS: "); logd(this.refs);
-        logd("FUNCDEFS: "); logd(this.funcDefs);
-
-        logd(this.code);
-
+        console.log(this.code);
+*/
         try {
             this.hookConsoleLog();           
             (1, eval)(this.code);
@@ -312,7 +311,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        logd("OPERATIONS: "); console.log(this.operations);
+        //console.log("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -893,7 +892,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         try {
             syntax = esprima.parseScript(this.code, { range: true });
-            logd(syntax);
+            console.log(syntax);
 
         } catch (error) {
             this.onCompilationStatus(false, "line " + error.lineNumber + " " + error.description);

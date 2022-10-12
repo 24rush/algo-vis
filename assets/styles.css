@@ -1,0 +1,59 @@
+.algovis {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .btn-overrides {
+    padding: 3px !important;
+  }
+
+  .halfScreen {
+    width: 50%;
+  }
+
+  .var-box {
+    padding: 3px;
+  }
+
+  .var-name {
+    display: table-cell;
+    vertical-align: middle;
+    font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
+  }
+
+  .var-value {
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid;
+    font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
+  }
+
+  .myMarker {
+    position: absolute;
+    background: rgba(100, 200, 100, 0.5);
+    z-index: 20
+  }
+
+  .blink {
+    animation: blinker 0.2s linear 3;
+  }
+
+  @keyframes blinker {
+    0% {
+      color: rgb(207, 74, 74);
+    }
+
+    50% {
+      opacity: 0;
+      color: rgb(207, 74, 74);
+    }
+
+    100% {
+      color: black;
+    }
+  }
+  * {
+      border-radius: 1px !important;
+  }

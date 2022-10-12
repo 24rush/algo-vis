@@ -4,7 +4,7 @@ var MustacheIt = require('mustache');
 
 export class Layout {
     protected readonly scopeTemplate = '\
-    <ul class="list-group list-group-flush" av-scope="{{scope}}"> \
+    <ul class="list-group list-group" av-scope="{{scope}}"> \
       <li class="list-group-item">{{scopeName}}</li> \
       <li class="list-group-item"></li> \
     </ul>'
@@ -76,7 +76,7 @@ console.log(scopeName + " " + parentScopeName);
         delete this.observableToVisualizer[key];
     }
 
-    public clearAll() {
+    public clearAll() {return;
         for (let key of Object.keys(this.observableToVisualizer)) {
             let visualizer = this.observableToVisualizer[key];
 

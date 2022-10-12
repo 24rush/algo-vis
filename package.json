@@ -8,8 +8,10 @@
     "ace-builds": "^1.11.1",
     "bootstrap": "^5.2.1",
     "esprima": "^4.0.1",
+    "html-loader": "^4.2.0",
     "lodash": "^4.17.21",
-    "mustache": "^4.2.0"
+    "mustache": "^4.2.0",
+    "raw-loader": "^4.0.2"
   },
   "devDependencies": {
     "@types/ace": "0.0.48",
