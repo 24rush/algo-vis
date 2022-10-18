@@ -1,16 +1,16 @@
 type DictionaryKeyType = string | number | symbol;
 
 export class VariableChangeCbk {
-    onSetEvent(observable: ObservableVariable, value: any, newValue: any) { console.log("Method not implemented."); };
-    onGetEvent(observable: ObservableVariable, value: any) { console.log("Method not implemented."); }
+    onSetEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+    onGetEvent(observable: ObservableVariable, value: any) { /*console.log("Method not implemented.");*/ }
 
-    onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any) { console.log("Method not implemented."); };
-    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index: number) { console.log("Method not implemented."); };
-    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index: number) { console.log("Method not implemented."); };
+    onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index: number) { /*console.log("Method not implemented.");*/ };
+    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index: number) { /*console.log("Method not implemented.");*/ };
 
-    onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any) { console.log("Method not implemented."); };
-    onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: DictionaryKeyType) { console.log("Method not implemented."); };
-    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: DictionaryKeyType) { console.log("Method not implemented."); };
+    onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+    onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
+    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
 }
 
 export class BaseObservableType<NotifyCbkType>
@@ -45,7 +45,7 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
     constructor(public name: string, protected value: any) {
         super();
 
-        this.initValue = JSON.parse(JSON.stringify(value));
+        this.initValue = value ? JSON.parse(JSON.stringify(value)) : undefined;
     }
 
     public empty() {
@@ -83,7 +83,7 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
 
     public setValue(value: any) {
         let oldValues = this.value ? JSON.parse(JSON.stringify(this.value)) : undefined;
-        this.value = JSON.parse(JSON.stringify(value));
+        this.value = value != undefined ? JSON.parse(JSON.stringify(value)) : undefined;
 
         let variableType = this.determineType(value);
 

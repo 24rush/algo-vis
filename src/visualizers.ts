@@ -122,7 +122,8 @@ export class BaseVisualizer extends VariableChangeCbk {
 
         let cachedFontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
-
+        if (!currentFontSize || currentFontSize == NaN) currentFontSize = 15;
+        
         if (cachedFontSizeForNewValue > 0 && cachedFontSizeForNewValue == currentFontSize) {
             return;
         }
@@ -202,7 +203,7 @@ export class BaseVisualizer extends VariableChangeCbk {
 
     private drawPrimitive() {
         let rendered = MustacheIt.render(this.templatePrimitive, {
-            width: this.width, height: this.height
+            width: 30, height: 30
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
@@ -271,6 +272,7 @@ export class BaseVisualizer extends VariableChangeCbk {
     override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {        
         if (this.needsRedraw(DrawnElement.Primitive)) {
             this.redraw(DrawnElement.Primitive);
+
             return;
         }
         
@@ -285,12 +287,7 @@ export class BaseVisualizer extends VariableChangeCbk {
         if (this.needsRedraw(DrawnElement.Array)) {
             this.redraw(DrawnElement.Array);
             return;
-        }
-        
-        if (this.needsDraw()) {
-            this.drawArray();
-            return;
-        }
+        }        
         
         if (value.length != newValue.length) {
             this.redraw(DrawnElement.Array);
@@ -317,10 +314,8 @@ export class BaseVisualizer extends VariableChangeCbk {
             return;
         }
         
-        if (this.needsDraw) {
-            this.drawObject();
-            return;
-        }
+        console.log(value);
+        console.log(newValue);
         
         if (Object.keys(value).length != Object.keys(newValue).length) { // TODO: Check key match in totality
             this.redraw(DrawnElement.Object);
@@ -333,8 +328,8 @@ export class BaseVisualizer extends VariableChangeCbk {
         }
     }
 
-    override onSetObjectPropertyEvent(observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {
-        if (key in this.keyValueElements) {
+    override onSetObjectPropertyEvent(_observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {            
+        if (key in this.keyValueElements) {            
             this.fitText(this.keyValueElements[key], newValue, this.width, this.height);
         } else {
             this.redraw(DrawnElement.Object);

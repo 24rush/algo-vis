@@ -14,17 +14,21 @@ export class CodeRenderer {
     private lineComments: string[] = [];
 
     constructor(private elementId: string) {
-        let currentCode = document.getElementById(elementId).innerHTML;        
-        if (currentCode !== "") {
-            let newCode = "";
-            [this.lineComments, newCode] = this.extractComments(currentCode);
-            document.getElementById(elementId).innerHTML = newCode;
+        let currentCode = document.getElementById(elementId).textContent;                
+        let newCode = "";
+        if (currentCode !== "") {            
+            [this.lineComments, newCode] = this.extractComments(currentCode);            
         }            
 
+        var convert = function(convert: string){
+            return convert.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+        };
+        
         this.editor = ace.edit(this.elementId);
-        this.editor.setOptions({ useWorker: false });
+        this.editor.setOptions({ useWorker: false });        
        // this.editor.setTheme(theme_monokai);
-        this.editor.session.setMode("ace/mode/javascript");
+        this.editor.session.setMode("ace/mode/javascript");        
+        this.editor.session.setValue(convert(newCode));
 
         let timeoutReloadCode: any;
         let recompileCodeInterval = 1000;

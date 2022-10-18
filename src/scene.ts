@@ -90,7 +90,7 @@ export class Scene {
             }
         }
 
-        this.viewModel.onAdvance = () => {console.log('adv');
+        this.viewModel.onAdvance = () => {
             if (avViewModel.isPaused)                
                 advance();
         }
@@ -142,7 +142,7 @@ export class Scene {
         });
 
         this.operationRecorder.registerTraceNotifier({
-            onTraceMessage(message: string): void {
+            onTraceMessage(message: string): void {                
                 avViewModel.consoleOutput += message + '\r\n';
             }
         });

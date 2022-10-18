@@ -5,6 +5,8 @@ var esprima = require('esprima')
 
 enum OperationType {
     NONE,
+    FORCE_MARK, // force the debugger to stop at a line even if it has only skipable operations
+
     READ,
     READ_AT,
     WRITE,
@@ -31,8 +33,8 @@ class IndexRange {
 DATATYPES USED BY POST PREPROCESSOR
 */
 class VariableDeclaration {
-    public observable: any;
     public endOfDefinitionIndexes: number[] = [];
+    public source: string = "";
 
     constructor(public scopeName: string, public name: string, public vartype: VarType, public endOfDefinitionIndex: number) {
         this.endOfDefinitionIndexes = [endOfDefinitionIndex];
@@ -40,7 +42,11 @@ class VariableDeclaration {
 }
 
 class ScopeDeclaration {
-    constructor(protected startOfDefinitionIndex: number, protected endOfDefinitionIndex: number) { }
+    constructor(public name: string, public startOfDefinitionIndex: number, public endOfDefinitionIndex: number) { }
+}
+
+class PushFuncParams {
+    constructor(public startOfDefinitionIndex: number, public endOfDefinitionIndex: number, public varToParams: [string, string][]) { }
 }
 
 /*
@@ -179,16 +185,18 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     }
 
     // CODE Parsing
-    private vars: any; // [scopeName][varname] = VariableDeclaration
-    private scopes: any; // [scopeName] = ScopeDeclaration
-    private refs: any; // [scopeName.varName] = [funcName.paramName]
-    private funcDefs: any; // [funcName] = [param...]
+    private varDeclarations: Record<string, Record<string, VariableDeclaration>>; // [scopeName][varname] = VariableDeclaration
+    private scopes: ScopeDeclaration[] = [];
+    private refs: Record<string, string> = {}; // [funcName.paramName] = [scopeName.varName]
+    private funcDefs: Record<string, string[]>; // [funcName] = [param...]
+    private pushFuncParams: PushFuncParams[] = []; // [PushFuncParams]
     private emptyCodeLineNumbers: number[] = [];
     private fcnReturns: number[] = [];
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
 
     protected variableObservers: ObservableVariable[] = [];
+    private runtimeObservables: Map<string, any> = new Map();
 
     protected code: string;
     protected compilationStatus: boolean;
@@ -200,6 +208,9 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     protected maxLineNumber: number = 0;
 
     protected consoleLogFcn: any = undefined;
+
+    protected currentScope: string[] = [];
+    protected funcParamsStack: string[] = [];
 
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished() { return this.status == OperationRecorderStatus.ReplayEnded; }
@@ -219,9 +230,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         this.nextOperationIndex = 0;
         this.operations = [];
         this.emptyCodeLineNumbers = [];
-        this.vars = {}; this.scopes = {}; this.fcnReturns = [];
-        this.refs = {}; this.funcDefs = {};
+        this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
+        this.refs = {}; this.funcDefs = {}; this.pushFuncParams = [];
         this.markLineOverrides = []; this.noMarkLineZone = [];
+
+        this.currentScope = []; this.funcParamsStack = [];
+        this.runtimeObservables = new Map();
 
         this.maxLineNumber = 0;
         this.firstExecutedCodeLineNumber = -1;
@@ -252,6 +266,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     }
 
     public getFirstCodeLineNumber(): number {
+        console.log(this.firstExecutedCodeLineNumber);
         return this.firstExecutedCodeLineNumber;
     }
 
@@ -263,6 +278,14 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         return this.lastExecutedCodeLineNumber;
     }
 
+    public forceMarkLine(lineNumber: number) {
+        this.lastExecutedCodeLineNumber = lineNumber;
+        if (this.firstExecutedCodeLineNumber == -1)
+            this.firstExecutedCodeLineNumber = lineNumber;
+
+        this.addOperation(OperationType.FORCE_MARK);
+    }
+
     public markStartCodeLine(lineNumber: number) {
         this.lastExecutedCodeLineNumber = lineNumber;
         if (this.firstExecutedCodeLineNumber == -1)
@@ -271,32 +294,53 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         this.addOperation(OperationType.NONE);
     }
 
-    public startScope(scopeName: string) {
-        this.addOperation(OperationType.SCOPE_START, new ScopeOperationPayload(scopeName));
+    public startScope(scopeName: string) {        
+        scopeName = this.scopeNameToFunctionScope(scopeName);
+
+        this.currentScope.push(scopeName);
+        this.addOperation(OperationType.SCOPE_START, new ScopeOperationPayload(this.currentScope.join('.')));
     }
 
     public endScope(scopeName: string) {
-        this.addOperation(OperationType.SCOPE_END, new ScopeOperationPayload(scopeName));
+        scopeName = this.scopeNameToFunctionScope(scopeName);
+
+        this.addOperation(OperationType.SCOPE_END, new ScopeOperationPayload(this.currentScope.join('.')));
+
+        if (this.currentScope[this.currentScope.length - 1] == scopeName)
+            this.currentScope.pop();
+        else 
+            throw('LAST SCOPE IS NOT AS EXPECTED');
+    }
+
+    public pushParams(params: [string, string][]) {
+        for (let varToParamPair of params) {
+            this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]] = this.getCurrentRuntimeScope() + '.' + varToParamPair[1];
+        }
+    }
+
+    public popParams(params: [string, string][]) {
+        for (let varToParamPair of params) {
+            delete this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]];
+        }
     }
 
     private recordSourceCode() {
         this.status = OperationRecorderStatus.Recording;
-/*
-        console.log("VARS: "); console.log(this.vars);
+
+        console.log("VARS: "); console.log(this.varDeclarations);
         console.log("SCOPES: "); console.log(this.scopes);
-        console.log("REFS: "); console.log(this.refs);
         console.log("FUNCDEFS: "); console.log(this.funcDefs);
+        console.log("PUSHPARAMS: "); console.log(this.pushFuncParams);
 
         console.log(this.code);
-*/
+
         try {
-            this.hookConsoleLog();           
+            this.hookConsoleLog();
             (1, eval)(this.code);
             this.hookConsoleLog(false);
 
             this.compilationStatus = true;
-            this.onCompilationStatus(this.compilationStatus, "");
-
+            this.onCompilationStatus(this.compilationStatus, "");            
         } catch (e) {
             this.hookConsoleLog(false);
             this.compilationStatus = false;
@@ -311,7 +355,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        //console.log("OPERATIONS: "); console.log(this.operations);
+        console.log("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -406,6 +450,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 return;
 
             if (this.isEmptyLine(this.operations[this.nextOperationIndex].codeLineNumber)) {
+                console.log('empty ' + this.operations[this.nextOperationIndex].codeLineNumber);
                 this.executeOneCodeLine(reverse);
             }
         }
@@ -437,29 +482,47 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                         varTypeFilter = (operation.type == OperationType.CREATE_VAR) ? VarType.let : VarType.var;
 
                     let varName = undefined;
-                    if (operation.type == OperationType.CREATE_VAR) {
-                        operationAttributes = operation.attributes as VarCreationOperationPayload;
-                        varName = operationAttributes.varName;
-                    } else {
-                        operationAttributes = operation.attributes as ScopeOperationPayload;
+                    switch (operation.type) {
+                        case OperationType.CREATE_VAR: {
+                            operationAttributes = operation.attributes as VarCreationOperationPayload;
+                            varName = operationAttributes.varName;
+
+                            break;
+                        }
+                        case OperationType.SCOPE_START:
+                        case OperationType.SCOPE_END:
+                            operationAttributes = operation.attributes as ScopeOperationPayload;
+                        
+                            break;
                     }
 
-                    let varsInScope = this.getVariableDeclarationInScope(operationAttributes.scopeName, varTypeFilter, varName);
+                    let scopeChain = operationAttributes.scopeName.split('.');
+                    let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : operationAttributes.scopeName;
+                    this.setRuntimeExecutionScope(operation.type, lastScope);
 
-                    if (varsInScope.length == 0)
-                        break;
+                    let varDecls = this.getVariableDeclarationInScope(operationAttributes.scopeName, varTypeFilter, varName).map(v => v.name);
 
-                    for (let variable of varsInScope) {
-                        if (!variable.observable)
-                            continue;
+                    let runtimeObservables = this.getRuntimeObservables(operationAttributes.scopeName + (varName ? '.' + varName : ""));
 
-                        if (operation.type == OperationType.SCOPE_START) {
-                            variable.observable.empty();
+                    for (let runtimeObservable of runtimeObservables) {
+                        if (runtimeObservable) {
+
+                            // Check to see if there is any variable declared in the scope
+                            // so we don't create an empty scope
+                            if (varDecls.indexOf(runtimeObservable.name) == -1)
+                                continue;
+
+                            if (operation.type == OperationType.SCOPE_START) {
+                                runtimeObservable.empty();
+                            }
+                            
+                            // var variables enter in scope already and it also creates the templates for scopes
+                            if (operation.type == OperationType.CREATE_VAR || operation.type == OperationType.SCOPE_START)
+                                this.onEnterScopeVariable(operationAttributes.scopeName, runtimeObservable)
+                            else if (operation.type == OperationType.SCOPE_END) {
+                                this.onExitScopeVariable(operationAttributes.scopeName, runtimeObservable);
+                            }
                         }
-
-                        (operation.type == OperationType.SCOPE_START || operation.type == OperationType.CREATE_VAR) ?
-                            this.onEnterScopeVariable(operationAttributes.scopeName, variable.observable) :
-                            this.onExitScopeVariable(operationAttributes.scopeName, variable.observable);
                     }
                     break;
                 }
@@ -500,63 +563,135 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             this.nextOperationIndex = this.operations.length;
     }
 
-    private isReferenceObject(object: any): boolean {
-        let variableType = Object.prototype.toString.call(object);
-        return (variableType == "[object Array]");
-    }
-
-    private getReferencedObject(scopeVarName: string): string {
-        for (let ref of Object.keys(this.refs)) {
-            if (this.refs[ref] == scopeVarName) {
-                return this.getReferencedObject(ref);
-            }
+    private setRuntimeExecutionScope(type: OperationType, scopeName: string) {        
+        if (type == OperationType.SCOPE_START) {
+            this.currentScope.push(scopeName);
         }
 
+        if (type == OperationType.SCOPE_END) {
+            if (this.currentScope[this.currentScope.length - 1] == scopeName)
+                this.currentScope.pop();
+            else {
+                console.log('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
+                console.log(this.currentScope);
+            }
+        }
+    }
+
+    private getRuntimeObservables(runtimeScope: string): any[] {
+        let observables: any[] = [];
+
+        for (let [observableScope, observable] of this.runtimeObservables) {
+            if (observableScope.startsWith(runtimeScope)) {
+                observables.push(observable);
+            }
+        }
+        
+        return observables;
+    }
+
+    private getRuntimeObservable(runtimeScope: string): any {
+        if (this.runtimeObservables.has(runtimeScope))
+            return this.runtimeObservables.get(runtimeScope);
+
+        return undefined;
+    }
+
+    private setInstrumentationObservable(runtimeScope: string, observable: any) {
+        this.runtimeObservables.set(runtimeScope, observable);
+    }
+
+    private isReferenceObject(object: any): boolean {
+        let variableType = Object.prototype.toString.call(object);
+        return (variableType == "[object Array]" || variableType == "[object Object]");
+    }
+
+    private getReferencedObject(scopeVarName: string): string {        
+        while (scopeVarName in this.refs) {
+            scopeVarName = this.refs[scopeVarName];
+        }        
+        
         return scopeVarName;
     }
 
-    public setVar(scopeName: string, varName: string, object: any) {
+    private getCurrentRuntimeScope() { return this.currentScope.join('.'); }
+
+    public setVar(varname: string, object: any, varsource: string) {
+        let scopeName = this.getCurrentRuntimeScope();
+
         if (this.isReferenceObject(object)) {
-            let scopeVarName = this.getReferencedObject(scopeName + "." + varName);
-            if (scopeVarName != scopeName + "." + varName) { // source reference                
+            let varRuntimeScope = this.getCurrentRuntimeScope() + "." + varname;
+
+            if (varsource) {
+                let lastScope = this.currentScope[this.currentScope.length - 1];
+                scopeName = this.getCurrentRuntimeScope().replace('.' + lastScope, '');
+                this.refs[varRuntimeScope] = scopeName + "." + varsource;
+            }
+
+            let scopeVarName = this.getReferencedObject(varRuntimeScope);
+
+            if (scopeVarName != scopeName + "." + varname) {
                 let indexDot = scopeVarName.lastIndexOf('.');
-                varName = scopeVarName.substring(indexDot + 1);
+                varname = scopeVarName.substring(indexDot + 1);
                 scopeName = scopeVarName.substring(0, indexDot);
             }
         }
 
-        let variable = this.vars[scopeName][varName];
+        let scopeAndVar = scopeName + "." + varname;
 
-        if (!variable.observable) {
-            variable.observable = new ObservableVariable(varName, object);
-            this.registerVariableObserver(variable.observable);
+        let runtimeObservable = this.getRuntimeObservable(scopeAndVar);
 
-            this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(scopeName, varName));
+        if (!runtimeObservable) {
+            runtimeObservable = new ObservableVariable(varname, object);
+            this.setInstrumentationObservable(scopeAndVar, runtimeObservable);
+
+            this.registerVariableObserver(runtimeObservable);
+            this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(this.getCurrentRuntimeScope(), varname));
         }
 
-        variable.observable.setValue(object);
+        runtimeObservable.setValue(object);
     }
 
     private registerVarInScope(scopeName: string, varname: string, vardecl: VariableDeclaration) {
-        if (!(scopeName in this.vars))
-            this.vars[scopeName] = {};
+        if (!(scopeName in this.varDeclarations))
+            this.varDeclarations[scopeName] = {};
 
-        if (varname in this.vars[scopeName]) {
-            this.vars[scopeName][varname].endOfDefinitionIndexes.push(vardecl.endOfDefinitionIndex);
+        if (varname in this.varDeclarations[scopeName]) {
+            this.varDeclarations[scopeName][varname].endOfDefinitionIndexes.push(vardecl.endOfDefinitionIndex);
         } else {
-            this.vars[scopeName][varname] = vardecl;
+            this.varDeclarations[scopeName][varname] = vardecl;
         }
+    }
+
+    private scopeNameToFunctionScope(scopeName: string) : string {
+        if (scopeName != "global" && scopeName != "local") 
+            return "!" + scopeName;
+
+        return scopeName;
     }
 
     private getVariableDeclarationInScope(scopeName: string, varType?: VarType, varName?: string): VariableDeclaration[] {
         let foundVars: VariableDeclaration[] = [];
 
-        let varsInScope = this.vars[scopeName];
-        if (varsInScope == undefined || varsInScope.length == 0)
+        // Search for a scope chain that ends at a function as var declarations are per static code scope
+        let foundScopes = [];
+        let scopeChain = scopeName.split('.').reverse();
+        for (let scope of scopeChain) {
+            foundScopes.push(scope);
+
+            if (scope.indexOf('!') != -1) {                
+                break;
+            }
+        }
+
+        scopeName = foundScopes.reverse().join('.');
+
+        let varsInScope = this.varDeclarations[scopeName];
+        if (varsInScope == undefined || Object.keys(varsInScope).length == 0)
             return foundVars;
 
         for (let variableName of Object.keys(varsInScope)) {
-            let variable = this.vars[scopeName][variableName];
+            let variable = this.varDeclarations[scopeName][variableName];
 
             if (varType != undefined && variable.vartype != varType)
                 continue;
@@ -570,7 +705,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         return foundVars;
     }
 
-    private searchScopeAndParent(startScope: string, varName: string): [string, any] {
+    private searchScopeAndParent(startScope: string, varName: string): [string, VariableDeclaration[]] {
         let foundInScope = startScope;
 
         let vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
@@ -582,7 +717,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         return [foundInScope, vardeclaration];
     };
 
-    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {
+    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {        
         let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex);
         this.registerVarInScope(scopeName, varName, varDecl);
 
@@ -601,12 +736,14 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 varScope = scopeName.substring(0, scopeName.indexOf('.'));
             }
 
-            this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite);
-
-            let funcName = decl.id.name;
+            let varDecl = this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite);
 
             if (decl.init) {
                 switch (decl.init.type) {
+                    case "Identifier": {
+                        varDecl.source = decl.init.name;
+                        break;
+                    }
                     case "ArrayExpression":
                     case "ObjectExpression": {
                         this.noMarkLineZone.push(new IndexRange(decl.init.range[0] - 1, decl.init.range[1] + 1));
@@ -617,16 +754,18 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                         break;
                     }
                     case "ArrowFunctionExpression": {
+                        let funcName = decl.id.name;
+
                         for (let param of decl.init.params) {
                             if (!(funcName in this.funcDefs)) {
                                 this.funcDefs[funcName] = [];
                             }
 
                             this.funcDefs[funcName].push(param.name);
-                            this.createVariable(funcName, param.name, VarType.var, decl.init.body.range[0] + 1);
+                            this.createVariable(this.scopeNameToFunctionScope(funcName), param.name, VarType.var, decl.init.body.range[0] + 1);
                         }
 
-                        this.scopes[decl.id.name] = new ScopeDeclaration(decl.init.body.range[0] + 1, decl.init.body.range[1] - 1);
+                        this.scopes.push(new ScopeDeclaration(decl.id.name, decl.init.body.range[0] + 1, decl.init.body.range[1] - 1));
                         this.extractVariables(decl.id.name, decl.init.body);
 
                         break;
@@ -662,11 +801,11 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                             }
 
                             this.funcDefs[funcName].push(param.name);
-                            this.createVariable(funcName, param.name, VarType.var, item.body.range[0] + 1);
+                            this.createVariable(this.scopeNameToFunctionScope(funcName), param.name, VarType.var, item.body.range[0] + 1);
                         }
 
-                        this.scopes[funcName] = new ScopeDeclaration(item.body.range[0] + 1, item.body.range[1] - 1);
-                        this.extractVariables(funcName, item);
+                        this.scopes.push(new ScopeDeclaration(funcName, item.body.range[0] + 1, item.body.range[1] - 1));
+                        this.extractVariables(this.scopeNameToFunctionScope(funcName), item);
                         break;
                     }
                 case "ReturnStatement":
@@ -693,7 +832,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 case "ForOfStatement":
                 case "ForInStatement":
                     {
-                        this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.body.range[0] + 1, item.body.range[1]);
+                        this.scopes.push(new ScopeDeclaration("local", item.body.range[0] + 1, item.body.range[1]));
                         this.createVariable(scopeName + ".local", item.left.name, VarType.let, item.body.range[0] + 1);
                         this.extractVariables(scopeName + ".local", item);
                         break;
@@ -701,14 +840,16 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 case "ForStatement":
                     {
                         this.fcnReturns.push(item.body.range[0] + 1);
+                        this.markLineOverrides.push(item.range[0]);
 
-                        this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0], item.range[1]);
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
                         this.parseVariable(scopeName + ".local", item.init, item.body.range[0] + 1);
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
                 case "IfStatement":
                     {
+                        this.markLineOverrides.push(item.range[0]);
                         this.extractVariables(scopeName + ".local", item.consequent);
                         this.extractVariables(scopeName + ".local", item.alternate);
 
@@ -718,7 +859,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 case 'BlockStatement':
                     {
                         this.markLineOverrides.push(item.body.range ? item.body.range[0] + 1 : item.range[0] + 1);
-                        this.scopes[scopeName + ".local"] = new ScopeDeclaration(item.range[0] + 0, item.range[1] - 1);
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0] + 0, item.range[1] - 1));
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
@@ -757,7 +898,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                     let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
 
                     if (vardeclaration.length > 0) {
-                        this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1]+1);
+                        this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
                     }
 
                     if (item.right && item.right.type == "ObjectExpression") {
@@ -782,19 +923,20 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                         else {
                             let calledFunc = item.callee.name;
 
+                            let varToParamPairs: [string, string][] = [];
                             for (let i = 0; i < item.arguments.length; i++) {
                                 let argument = item.arguments[i];
                                 let paramName = argument.name;
 
                                 let vardeclaration = this.getVariableDeclarationInScope(scopeName, undefined, paramName);
 
-                                if (vardeclaration.length > 0) {
-                                    if (calledFunc in this.funcDefs) { // TODO: Handle missing function decl
-                                        this.refs[scopeName + "." + paramName] = calledFunc + "." + this.funcDefs[calledFunc][i];
-                                    }
-                                }
-
+                                if (vardeclaration.length > 0 && calledFunc in this.funcDefs) {
+                                    varToParamPairs.push([this.scopeNameToFunctionScope(calledFunc) + "." + this.funcDefs[calledFunc][i], paramName]);
+                                } else
+                                    throw('Func unknown ' + calledFunc + " " + (calledFunc in this.funcDefs))
                             }
+
+                            this.pushFuncParams.push(new PushFuncParams(item.range[0], item.range[1], varToParamPairs));
                         }
 
                         if (item.arguments && item.arguments.length) {
@@ -836,27 +978,41 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         };
 
         // Scope start setting
-        for (const scope of Object.keys(this.scopes)) {
-            let injectedCode = MustacheIt.render(";startScope('{{scope}}');", { scope: scope });
-            addCodeInjection(this.scopes[scope].startOfDefinitionIndex, injectedCode);
+        for (const scope of this.scopes) {
+            let injectedCode = MustacheIt.render(";startScope('{{scope}}');", { scope: scope.name });
+            addCodeInjection(scope.startOfDefinitionIndex, injectedCode);
         };
 
         // Variable setting
-        for (const scope of Object.keys(this.vars)) {
-            for (const index of Object.keys(this.vars[scope])) {
-                let vardata = this.vars[scope][index];
+        for (const scope of Object.keys(this.varDeclarations)) {
+            for (const index of Object.keys(this.varDeclarations[scope])) {
+                let vardata = this.varDeclarations[scope][index];
                 for (const endOfDefinitionIndex of vardata.endOfDefinitionIndexes) {
-                    let injectedCode = MustacheIt.render(";setVar('{{scopeName}}', '{{name}}', {{name}});", { scopeName: vardata.scopeName, name: vardata.name });
+                    let injectedCode = "";
+                    if (vardata.source === "")
+                        injectedCode = MustacheIt.render(";setVar('{{name}}', {{name}});", { name: vardata.name });
+                    else
+                        injectedCode = MustacheIt.render(";setVar('{{name}}', {{name}}, '{{source}}');", { name: vardata.name, source: vardata.source });
+
                     addCodeInjection(endOfDefinitionIndex, injectedCode);
                 };
             };
         };
 
         // Scope end setting
-        for (const scope of Object.keys(this.vars)) {
-            let injectedCode = MustacheIt.render(";endScope('{{scope}}');", { scope: scope });
-            addCodeInjection(this.scopes[scope].endOfDefinitionIndex, injectedCode);
+        for (const scope of this.scopes) {
+            let injectedCode = MustacheIt.render(";endScope('{{scope}}');", { scope: scope.name });
+            addCodeInjection(scope.endOfDefinitionIndex, injectedCode);
         };
+
+        // Push function parameters
+        for (const pushParams of this.pushFuncParams) {
+            let injectedCode = MustacheIt.render(";pushParams({{params}});", { params: JSON.stringify(pushParams.varToParams) });
+            addCodeInjection(pushParams.startOfDefinitionIndex, injectedCode);
+
+            injectedCode = MustacheIt.render(";popParams({{params}});", { params: JSON.stringify(pushParams.varToParams) });
+            addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);
+        }
 
         // Function returns
         for (const endOfDefinitionIndex of this.fcnReturns) {
@@ -865,7 +1021,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         // Mark line overrides
         for (const endOfDefinitionIndex of this.markLineOverrides) {
-            addCodeInjection(endOfDefinitionIndex, "<MARKLINE>");
+            addCodeInjection(endOfDefinitionIndex, "<FORCEMARKLINE>");
         };
 
         // Inject cookies in code        
@@ -899,12 +1055,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             throw error;
         }
 
-        this.vars = {};
-        this.scopes = {};
+        this.varDeclarations = {};
+        this.scopes = [];
         this.fcnReturns = [];
         this.markLineOverrides = [];
 
-        this.scopes['global'] = new ScopeDeclaration(syntax.range[0], syntax.range[1]);
+        this.scopes.push(new ScopeDeclaration('global', syntax.range[0], syntax.range[1]));
         this.markLineOverrides.push(syntax.range[1] - 1);
 
         this.extractVariables('global', syntax);
@@ -960,10 +1116,11 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             line = line + '\n';
 
             if (!this.isEmptyLine(lineIndex + 1)) {
-                let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineIndex + 1 });
-
-                line = replaceTokens("<MARKLINE>", codeLineMarker, line);
+                let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineIndex + 1 });                
                 line = replaceTokens("<FCNRET>", codeLineMarker, line);
+
+                let codeLineMarker2 = MustacheIt.render(";forcemarkcl({{lineNo}});", { lineNo: lineIndex + 1 });
+                line = replaceTokens("<FORCEMARKLINE>", codeLineMarker2, line);
 
                 if (line.indexOf("case") == -1) {
                     line = insertInLine(codeLineMarker, line.trim()[0] == '{' ? line.indexOf('{') + 1 : 0, line);
@@ -981,8 +1138,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     (<any>window).oprec.markStartCodeLine(lineNo);
 };
 
-(<any>window)['setVar'] = (scopeName: string, varname: string, varobject: any) => {
-    (<any>window).oprec.setVar(scopeName, varname, varobject);
+(<any>window)['forcemarkcl'] = (lineNo: number) => {
+    (<any>window).oprec.forceMarkLine(lineNo);
+};
+
+(<any>window)['setVar'] = (varname: string, varobject: any, varsource: string) => {
+    (<any>window).oprec.setVar(varname, varobject, varsource);
 };
 
 (<any>window)['startScope'] = (scopeName: string) => {
@@ -991,4 +1152,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
 (<any>window)['endScope'] = (scopeName: string) => {
     (<any>window).oprec.endScope(scopeName);
+};
+
+(<any>window)['pushParams'] = (params: [string, string][]) => {
+    (<any>window).oprec.pushParams(params);
+};
+
+(<any>window)['popParams'] = (params: [string, string][]) => {
+    (<any>window).oprec.popParams(params);
 };

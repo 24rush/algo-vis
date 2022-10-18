@@ -106,8 +106,11 @@ export class UIBinder {
 
                     if (propertyBound in viewModel) {
                         let bindingContext = new BindingContext(htmlElement, viewModel);
-                        if (!isNegated) bindingContext.setValueOnTrueEvaluation(valueOnEvaluation);
-                        else bindingContext.setValueOnFalseEvaluation(valueOnEvaluation);
+                        
+                        if (valueOnEvaluation != undefined) {
+                            if (!isNegated) bindingContext.setValueOnTrueEvaluation(valueOnEvaluation);
+                            else bindingContext.setValueOnFalseEvaluation(valueOnEvaluation);
+                        }
 
                         bindingContext.setBindingType(bindingType);
 
@@ -154,8 +157,7 @@ export class UIBinder {
         }
 
         // Search for av-bind-onclick
-        for (let htmlElement of widget.querySelectorAll("[av-bind-onclick]")) {
-            console.log(htmlElement)
+        for (let htmlElement of widget.querySelectorAll("[av-bind-onclick]")) {            
             let propertyBound = htmlElement.getAttribute('av-bind-onclick');
 
             if (propertyBound in viewModel) {
@@ -166,8 +168,6 @@ export class UIBinder {
                 throw "Property '" + propertyBound + "' does not exist on view model";
             }
         }
-
-        console.log(this.textPlusClassBindings);
     }
 
     private static notifyObservers(viewModel: any, property: string | symbol, newValue: any) {
@@ -193,7 +193,7 @@ export class UIBinder {
         if (this.textPlusClassBindings.has(property)) {
             let bindingContexts = this.textPlusClassBindings.get(property);
             for (let bindingContext of bindingContexts) {
-                if (bindingContext.propNeedsEvaluation) {
+                if (bindingContext.propNeedsEvaluation()) {
                     let propEval = this.getViewModeProperty(bindingContext.viewModel, property);
 
                     if (bindingContext.getBindingType() == BindingType.TEXT) {
@@ -222,7 +222,7 @@ export class UIBinder {
         }
 
         if (this.checkedBindings.has(property)) {
-            let htmlElemVMPair = this.checkedBindings.get(property); console.log(this.getViewModeProperty(htmlElemVMPair.viewModel, property));
+            let htmlElemVMPair = this.checkedBindings.get(property);
             (htmlElemVMPair.htmlElement as HTMLInputElement).checked = this.getViewModeProperty(htmlElemVMPair.viewModel, property);
         }
     }
@@ -242,7 +242,7 @@ export class UIBinder {
     }
 
     static propertyChanged(object: any, property: string | symbol, newValue: any, viewModel: any) {
-        console.log(property as string + " changed to: " + newValue);
+        //console.log(property as string + " changed to: " + newValue);
         UIBinder.notifyObservers(viewModel, property, newValue);
     }
 }
