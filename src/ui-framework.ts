@@ -111,7 +111,7 @@ export class UIBinder {
                             throw "Property '" + valueOnEvaluation + "' does not exist on view model";
                     }
 
-                    if (propertyBound in viewModel) {
+                    if (viewModel && propertyBound in viewModel) {
                         let bindingContext = new BindingContext(htmlElement, viewModel);
                         
                         if (valueOnEvaluation != undefined) {

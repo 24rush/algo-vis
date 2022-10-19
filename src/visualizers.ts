@@ -3,6 +3,7 @@ import { Localize } from "./localization";
 var MustacheIt = require('mustache');
 
 import { ObservableVariable, VariableChangeCbk } from "./observable-type"
+import { UIBinder } from "./ui-framework";
 
 class FontSizeCache {
     private static cache: any = {}; // elementId: { textLength : fontSize }
@@ -38,7 +39,7 @@ export class VariableVisualizer extends VariableChangeCbk {
     
     protected readonly templateReference: string = 
     '<span class="var-value" style="border:0px; height:{{height}}px;"> \
-         <span id="var-value" style="font-style: italic;"></span> \
+        <span style="font-style: italic;" av-bind-text="LangStrId.9"></span><span id="var-value"></span> \
      </span>';
 
     protected readonly templatePrimitive: string = 
@@ -184,23 +185,6 @@ export class VariableVisualizer extends VariableChangeCbk {
         return this.htmlElement;
     }
 
-    public drawReference() {
-        let rendered = MustacheIt.render(this.templateReference, {
-            width: 30, height: 30
-        });
-
-        let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
-        
-        this.htmlElement.append(valuesHtmlElement);        
-
-        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
-        this.fitText(this.text, Localize.str(9) + " " + this.referenceToUIStr(this.observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
-
-        this.drawn = true;
-        this.drawnElement = DrawnElement.Reference;        
-    }
-
     private needsDraw() : boolean {
         return !this.drawn;
     }
@@ -248,6 +232,24 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         this.drawn = true;
         this.drawnElement = DrawnElement.Primitive;
+    }
+
+    public drawReference() {
+        let rendered = MustacheIt.render(this.templateReference, {
+            width: 30, height: 30
+        });
+
+        let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        
+        this.htmlElement.append(valuesHtmlElement);    
+        new UIBinder(this.htmlElement, undefined) ;
+
+        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
+        this.fitText(this.text, this.referenceToUIStr(this.observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
+
+        this.drawn = true;
+        this.drawnElement = DrawnElement.Reference;        
     }
 
     private drawArray() {
@@ -312,7 +314,7 @@ export class VariableVisualizer extends VariableChangeCbk {
             this.drawReference();
         }
         else            
-            this.fitText(this.text, Localize.str(9) + " " + this.referenceToUIStr(newReference), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
+            this.fitText(this.text, this.referenceToUIStr(newReference), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
     }
 
     override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {        

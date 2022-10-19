@@ -458,7 +458,6 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 return;
 
             if (this.isEmptyLine(this.operations[this.nextOperationIndex].codeLineNumber)) {
-                console.log('empty ' + this.operations[this.nextOperationIndex].codeLineNumber);
                 this.executeOneCodeLine(reverse);
             }
         }
@@ -483,16 +482,16 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             case OperationType.CREATE_VAR:
             case OperationType.SCOPE_START:
             case OperationType.SCOPE_END:
-                {                    
-                    var scopeName : string;
-                    let varName : string;
+                {
+                    var scopeName: string;
+                    let varName: string;
 
                     switch (operation.type) {
                         case OperationType.CREATE_REF: {
                             let operationAttributes = operation.attributes as RefCreationOperationPayload;
                             scopeName = operationAttributes.scopeName;
-                            varName = operationAttributes.varName;                            
-                            
+                            varName = operationAttributes.varName;
+
                             break;
                         }
                         case OperationType.CREATE_VAR: {
@@ -514,31 +513,32 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                     let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
                     this.setRuntimeExecutionScope(operation.type, lastScope);
 
-                    let varTypeFilter = undefined;
+                    let varTypeFilter: VarType = undefined;
                     if (operation.type != OperationType.SCOPE_END) // ending scope for all types of variables
                         varTypeFilter = (operation.type == OperationType.CREATE_VAR || operation.type == OperationType.CREATE_REF) ? VarType.let : VarType.var;
-                        
+
                     let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
 
                     let runtimeObservables = this.getRuntimeObservables(scopeName + (varName ? '.' + varName : ""));
 
                     for (let runtimeObservable of runtimeObservables) {
-                        if (runtimeObservable) {
+                        // Check to see if there is any variable declared in the scope
+                        // so we don't create an empty scope
+                        if (varDecls.indexOf(runtimeObservable.name) == -1)
+                            continue;
 
-                            // Check to see if there is any variable declared in the scope
-                            // so we don't create an empty scope
-                            if (varDecls.indexOf(runtimeObservable.name) == -1)
-                                continue;
+                        if (operation.type == OperationType.SCOPE_START) {
+                            runtimeObservable.empty();
+                        }
 
-                            if (operation.type == OperationType.SCOPE_START) {
-                                runtimeObservable.empty();
-                            }
-
-                            // var variables enter in scope already and it also creates the templates for scopes
-                            if (operation.type == OperationType.CREATE_REF || operation.type == OperationType.CREATE_VAR || operation.type == OperationType.SCOPE_START)
-                                this.onEnterScopeVariable(scopeName, runtimeObservable)
-                            else if (operation.type == OperationType.SCOPE_END) {
-                                this.onExitScopeVariable(scopeName, runtimeObservable);
+                        // var variables enter in scope already and it also creates the templates for scopes
+                        if (operation.type == OperationType.SCOPE_END) {
+                            this.onExitScopeVariable(scopeName, runtimeObservable);
+                        }
+                        else {
+                            this.onEnterScopeVariable(scopeName, runtimeObservable)
+                            if (varTypeFilter == VarType.var) { // set var variables to undefined                        
+                                runtimeObservable.setValue(undefined);
                             }
                         }
                     }
@@ -661,7 +661,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             let srcScopedVar = scopeName + "." + varname;
             let dstScopedVar = this.getReferencedObject(varRuntimeScope);
 
-            if (/*srcScopedVar*/varRuntimeScope != dstScopedVar) {                
+            if (/*srcScopedVar*/varRuntimeScope != dstScopedVar) {
                 let [isNew, runtimeObservable] = this.createRuntimeObservable(/*scopeName*/this.getCurrentRuntimeScope(), varname, dstScopedVar);
 
                 if (isNew) {
@@ -675,7 +675,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 varname = dstScopedVar.substring(indexDot + 1);
                 scopeName = dstScopedVar.substring(0, indexDot);
             }
-        }        
+        }
 
         let [isNew, runtimeObservable] = this.createRuntimeObservable(scopeName, varname, object);
 

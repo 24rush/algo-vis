@@ -17,19 +17,19 @@ export class Layout {
     private observableToVisualizer: Record<string, VariableVisualizer> = {}; // {key = scope.varname, {Visualizer}}
     private scopes: Map<string, HTMLElement> = new Map(); // {key = scope, {HTMLElement}}    
 
-    private codeScopeToUiScope(codeScope: string) : string {
+    private codeScopeToUiScope(codeScope: string): string {
         let uiScopeName = codeScope.replace('global.', '').split('!').join('').split('.').join(' > ');
         uiScopeName = uiScopeName.replace('global', Localize.str(0));
 
         return uiScopeName;
     }
 
-    public add(scopeName: string, observable: ObservableVariable) : VariableVisualizer {            
+    public add(scopeName: string, observable: ObservableVariable): VariableVisualizer {
         if (!this.scopes.has(scopeName)) {
             let uiScopeName = this.codeScopeToUiScope(scopeName);
 
             let rendered = MustacheIt.render(this.scopeTemplate, { scopeName: uiScopeName, scope: scopeName });
-            let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);            
+            let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);
 
             let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
             let parentScopeHtmlElement = (parentScopeName == "") ? this.scene : this.scene.querySelector("[av-scope='" + parentScopeName + "']");
@@ -44,10 +44,10 @@ export class Layout {
 
         if (observable) {
             let key = scopeName + "." + observable.name;
-            
+
             if (key in this.observableToVisualizer)
                 return this.observableToVisualizer[key];
-                
+
             let scopeHtmlElement: HTMLElement = this.scopes.get(scopeName);
 
             let visualizer = new VariableVisualizer(observable);
@@ -56,16 +56,16 @@ export class Layout {
             this.observableToVisualizer[key] = visualizer;
 
             return visualizer;
-        }    
+        }
     }
 
     public remove(scopeName: string, observable: ObservableVariable) {
         let key = scopeName + "." + observable.name;
-        
+
         if (!(key in this.observableToVisualizer))
             return;
 
-            let visualizer = this.observableToVisualizer[key];
+        let visualizer = this.observableToVisualizer[key];
         let htmlElement = visualizer.getHTMLElement();
 
         let parentScopeHtmlElement = this.scene.querySelector("[av-scope='" + scopeName + "']");
@@ -92,7 +92,7 @@ export class Layout {
 
     public clearAll() {
         for (let key of Object.keys(this.observableToVisualizer)) {
-            let visualizer = this.observableToVisualizer[key];            
+            let visualizer = this.observableToVisualizer[key];
             visualizer.detach();
         };
 
