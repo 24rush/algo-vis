@@ -32,30 +32,35 @@ enum DrawnElement {
 }
 
 export class VariableVisualizer extends VariableChangeCbk {
-    protected readonly templateVarName ='<div class="var-box" style="display: table;"> \
+    protected readonly templateVarName = '<div class="var-box" style="display: table;"> \
     <span id="var-name" class="var-name">{{name}}:</span> \
     </div> \
     ';
-    
-    protected readonly templateReference: string = 
-    '<span class="var-value" style="border:0px; height:{{height}}px;"> \
+
+    protected readonly templateReference: string =
+        '<span class="var-value" style="border:0px; height:{{height}}px;"> \
         <span style="font-style: italic;" av-bind-text="LangStrId.9"></span><span id="var-value"></span> \
      </span>';
 
-    protected readonly templatePrimitive: string = 
-    '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+    protected readonly templatePrimitive: string =
+        '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
          <span id="var-value"></span> \
      </span>';
 
     protected readonly templateArray = '<span> \
-    {{#data}} \
-        <div style="padding-right: 3px; display: table-cell;"> \
-            <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
-                <span id="var-value"></span> \ \
-            </span> \
-            <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
-        </div> \
-    {{/data}} \
+    {{#rows}} \
+        <div class="row"  style="padding-left:7px;">\
+        <span class="col-sm-1 align-self-center" style="display: {{isMultiArray}}; font-style: italic; font-size: x-small; padding-right: 7px;">{{index_r}}</span> \
+        {{#cols}} \
+            <div class="col" style="padding:3px;"> \
+                <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+                    <span id="var-value"></span> \ \
+                </span> \
+                <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
+            </div> \
+        {{/cols}} \
+       </div> \
+    {{/rows}} \
     </span>';
 
     protected readonly templateObject = '<span> \
@@ -81,7 +86,7 @@ export class VariableVisualizer extends VariableChangeCbk {
     protected drawnElement: DrawnElement = DrawnElement.undefined;
 
     constructor(protected observable: ObservableVariable) {
-        super();    
+        super();
 
         this.observable.registerObserver(this);
     }
@@ -112,29 +117,29 @@ export class VariableVisualizer extends VariableChangeCbk {
         text.classList.remove('blink'); text.classList.add('blink');
     }
 
-    public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize : boolean = false) {
+    public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         if (objectToPrint == undefined) {
             text.textContent = 'undefined';
-            this.resetAnimation(text);        
+            this.resetAnimation(text);
             return;
         }
 
-        text.textContent = objectToPrint.toString();        
+        text.textContent = objectToPrint.toString();
         text.title = text.textContent;
         text.parentElement.title = text.textContent;
 
         if (text.textContent == "")
             return;
 
-        this.resetAnimation(text);        
+        this.resetAnimation(text);
 
-        if (disableAutoResize) 
+        if (disableAutoResize)
             return;
 
         let cachedFontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
         if (!currentFontSize || currentFontSize == NaN) currentFontSize = 15;
-        
+
         if (cachedFontSizeForNewValue > 0 && cachedFontSizeForNewValue == currentFontSize) {
             return;
         }
@@ -174,22 +179,22 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.observable.unregisterObserver(this);
     }
 
-    public draw() : HTMLElement {
+    public draw(): HTMLElement {
         let rendered = MustacheIt.render(this.templateVarName, {
             name: this.observable.name,
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);        
-        
+        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+
         return this.htmlElement;
     }
 
-    private needsDraw() : boolean {
+    private needsDraw(): boolean {
         return !this.drawn;
     }
 
-    private needsRedraw(requestedDraw: DrawnElement) : boolean {
+    private needsRedraw(requestedDraw: DrawnElement): boolean {
         if (!this.drawn)
             return true;
 
@@ -199,11 +204,11 @@ export class VariableVisualizer extends VariableChangeCbk {
         return false;
     }
 
-    private referenceToUIStr(reference: string) : string {
+    private referenceToUIStr(reference: string): string {
         return reference.replace("global.", '');
     }
 
-    private redraw(redrawType: DrawnElement) {        
+    private redraw(redrawType: DrawnElement) {
         this.htmlElement.removeChild(this.htmlElement.lastChild as HTMLElement);
 
         this.keyValueElements = {};
@@ -224,7 +229,7 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
-        
+
         this.htmlElement.append(valuesHtmlElement);
 
         this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
@@ -241,36 +246,69 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
-        
-        this.htmlElement.append(valuesHtmlElement);    
-        new UIBinder(this.htmlElement, undefined) ;
+
+        this.htmlElement.append(valuesHtmlElement);
+        new UIBinder(this.htmlElement, undefined);
 
         this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
         this.fitText(this.text, this.referenceToUIStr(this.observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
 
         this.drawn = true;
-        this.drawnElement = DrawnElement.Reference;        
+        this.drawnElement = DrawnElement.Reference;
+    }
+
+    private isMultiArray(array: any): boolean {
+        let arrayData = array as any[];
+
+        if (arrayData.length > 0) {
+            return (Object.prototype.toString.call(arrayData[0]) == "[object Array]");
+        }
+
+        return false;
     }
 
     private drawArray() {
-        let rendered = MustacheIt.render(this.templateArray, {
-            data: (this.observable.getValue() as any[]).map((_v, index) => { //TODO                
+        let arrayData = this.observable.getValue() as any[];
+        let isMultiArray = this.isMultiArray(arrayData);
+
+        let rows: any = [];
+        let nr_cols: number;
+
+        let funcMapCols = (arrayData: any[]) => {
+            return arrayData.map((_v, index) => {
                 return {
                     width: this.width, height: this.height,
-                    index: index
+                    index_c: index
                 };
-            }),
-        });
-        
+            });
+        };
+
+        if (!isMultiArray) {
+            arrayData = [arrayData];
+        }
+
+        for (let index_r in arrayData) {
+            rows.push({
+                index_r : index_r,
+                isMultiArray: !isMultiArray ? "none" : "inline",
+                cols: funcMapCols(arrayData[index_r])
+            });
+        }
+
+        let rendered = MustacheIt.render(this.templateArray, { rows: rows });
+
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
         this.htmlElement.append(valuesHtmlElement);
 
+        nr_cols = rows[0].cols.length;
+
         this.indextValueElements = this.indextValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value'));
-        for (let [index, textElement] of this.indextValueElements.entries()) {
-            this.fitText(textElement, this.observable.getAtIndex(index), this.width, this.height);
-        }        
+        for (let [index, textElement] of this.indextValueElements.entries()) { //TODO handle jagged arrays
+            let value = isMultiArray ? this.observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) : this.observable.getAtIndex(index);
+            this.fitText(textElement, value, this.width, this.height);
+        }
 
         this.drawn = true;
         this.drawnElement = DrawnElement.Array;
@@ -292,7 +330,7 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.htmlElement.append(valuesHtmlElement);
 
         let domIndex = 0;
-        let domElements = DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');        
+        let domElements = DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
 
         for (let key of this.observable.getKeys()) {
             this.keyValueElements[key] = domElements[domIndex++];
@@ -303,7 +341,7 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.drawnElement = DrawnElement.Object;
     }
 
-    override onSetReferenceEvent(_observable: ObservableVariable, oldReference: string, newReference: any): void {        
+    override onSetReferenceEvent(_observable: ObservableVariable, oldReference: string, newReference: any): void {
         if (this.needsRedraw(DrawnElement.Reference)) {
             this.redraw(DrawnElement.Reference);
 
@@ -313,17 +351,17 @@ export class VariableVisualizer extends VariableChangeCbk {
         if (this.needsDraw()) {
             this.drawReference();
         }
-        else            
+        else
             this.fitText(this.text, this.referenceToUIStr(newReference), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
     }
 
-    override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {        
+    override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {
         if (this.needsRedraw(DrawnElement.Primitive)) {
             this.redraw(DrawnElement.Primitive);
 
             return;
         }
-        
+
         if (this.needsDraw()) {
             this.drawPrimitive();
         }
@@ -335,25 +373,52 @@ export class VariableVisualizer extends VariableChangeCbk {
         if (this.needsRedraw(DrawnElement.Array)) {
             this.redraw(DrawnElement.Array);
             return;
-        }        
-        
-        if (value.length != newValue.length) {
+        }
+
+        let isMultiArrayOld = this.isMultiArray(value);
+        let isMultiArrayNew = this.isMultiArray(newValue);
+
+        let multiArraySize = (array: any[]): number => {
+            let arrElements = 0;
+
+            if (this.isMultiArray(array)) {
+                for (let r in array)
+                    arrElements += array[r].length;
+            } else {
+                arrElements = array.length
+            }
+
+            return arrElements;
+        }
+
+        if (isMultiArrayOld != isMultiArrayNew || multiArraySize(value) != multiArraySize(newValue)) {
             this.redraw(DrawnElement.Array);
         }
         else {
-            for (let [i, v] of newValue.entries()) {
-                if (value[i] != newValue[i])
-                    this.onSetArrayAtIndexEvent(observable, v, v, i);
-            };
+            if (!isMultiArrayNew) {
+                for (let [i, v] of newValue.entries()) {
+                    if (value[i] != newValue[i])
+                        this.onSetArrayAtIndexEvent(observable, v, v, i);
+                };
+            }
+            else {
+                for (let [r, _v] of newValue.entries()) {
+                    for (let [c, _v] of newValue[r].entries()) {
+                        if (value[r][c] != newValue[r][c])
+                            this.onSetArrayAtIndexEvent(observable, newValue[r][c], newValue[r][c], r, c);
+                    }
+                };
+            }
         }
     }
 
-    override onSetArrayAtIndexEvent(_observable: ObservableVariable, _oldValue: any, newValue: any, index: number): void {
-        if (index < this.indextValueElements.length) {
-            this.fitText(this.indextValueElements[index], newValue, this.width, this.height);
-        } else {
-            this.redraw(DrawnElement.Array);
-        }
+    override onSetArrayAtIndexEvent(observable: ObservableVariable, _oldValue: any, newValue: any, index_r: number, index_c?: number): void {
+        let arrayData = observable.getValue() as any[];
+        let isMultiArray = this.isMultiArray(arrayData);
+
+        if (isMultiArray) index_r = index_r * arrayData[0].length + index_c;
+
+        this.fitText(this.indextValueElements[index_r], newValue, this.width, this.height);
     }
 
     override onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
@@ -373,8 +438,8 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
     }
 
-    override onSetObjectPropertyEvent(_observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {            
-        if (key in this.keyValueElements) {            
+    override onSetObjectPropertyEvent(_observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {
+        if (key in this.keyValueElements) {
             this.fitText(this.keyValueElements[key], newValue, this.width, this.height);
         } else {
             this.redraw(DrawnElement.Object);

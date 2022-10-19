@@ -125,10 +125,10 @@ export class Scene {
                 avViewModel.consoleOutput = "";
                 layout.clearAll();
 
-                this.operationRecorder.setSourceCode(newCode);
-                this.operationRecorder.startReplay();
+                self.operationRecorder.setSourceCode(newCode);
+                self.operationRecorder.startReplay();
 
-                self.codeRenderer.highlightLine(this.operationRecorder.getFirstCodeLineNumber());
+                self.codeRenderer.highlightLine(self.operationRecorder.getFirstCodeLineNumber());
             }
         });
 

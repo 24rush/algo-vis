@@ -924,8 +924,13 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 case "AssignmentExpression": {
                     let varName = '';
 
-                    if (item.type == "AssignmentExpression")
+                    if (item.type == "AssignmentExpression") {
                         varName = (!item.left.object || !item.left.object.name) ? item.left.name : item.left.object.name;
+
+                        if (!varName && item.left.object.object) { // handle matrix assignment
+                            varName = item.left.object.object.name;
+                        }
+                    }
                     else
                         varName = item.argument.object.name;
 

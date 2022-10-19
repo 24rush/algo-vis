@@ -1,17 +1,22 @@
 type DictionaryKeyType = string | number | symbol;
 
 export class VariableChangeCbk {
-    onSetReferenceEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
-    onSetEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
-    onGetEvent(observable: ObservableVariable, value: any) { /*console.log("Method not implemented.");*/ }
-
+    // set Reference + Primitive
+    onSetReferenceEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
+    onSetEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
+    
+    // set Array and array at index
     onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
-    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index: number) { /*console.log("Method not implemented.");*/ };
-    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index: number) { /*console.log("Method not implemented.");*/ };
+    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index_r: number, index_c: number) { /*console.log("Method not implemented.");*/ };
 
+    // set object and object propery
     onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
     onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
-    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
+
+    // get primitive and array at index and object property
+    onGetEvent(observable: ObservableVariable, value: any) { /*console.log("Method not implemented.");*/ }
+    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index_r: number, index_c?: number) { /*console.log("Method not implemented.");*/ };
+    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };    
 }
 
 export class BaseObservableType<NotifyCbkType>
@@ -69,18 +74,18 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
         return this.value;
     }
 
-    public getAtIndex(index: string | number | symbol): any {
+    public getAtIndex(index_r: string | number | symbol, index_c?: string | number | symbol): any {
         let variableType = this.determineType(this.value);
 
         for (let observer of this.observers) {
             if (variableType == VariableType.Array)
-                observer.onGetArrayAtIndexEvent(this, this.value[index], index as number);
+                observer.onGetArrayAtIndexEvent(this, this.value[index_r], index_r as number);
             else if (variableType == VariableType.Object)
-                observer.onGetObjectPropertyEvent(this, index, this.value[index]);
+                observer.onGetObjectPropertyEvent(this, index_r, this.value[index_r]);
             else throw "Cannot at index on primitive";
         }
 
-        return this.value[index];
+        return index_c != undefined ? this.value[index_r][index_c] : this.value[index_r];
     }
 
     public setReference(newReference: string) {
