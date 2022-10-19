@@ -11,11 +11,13 @@ enum OperationType {
     READ_AT,
     WRITE,
     WRITE_AT,
+    WRITE_REF,
 
     LINE_NUMBER,
     SCOPE_START,
     SCOPE_END,
     CREATE_VAR,
+    CREATE_REF,
 
     TRACE
 }
@@ -69,11 +71,15 @@ class VarCreationOperationPayload {
     constructor(public scopeName: string, public varName: string) { }
 }
 
+class RefCreationOperationPayload {
+    constructor(public scopeName: string, public varName: string, public dstScopeVarName: string) { }
+}
+
 class TraceOperationPayload {
     constructor(public message: string) { }
 }
 
-type OperationAttributeType = RWPrimitiveOperationPayload | RWIndexedObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | TraceOperationPayload;
+type OperationAttributeType = RWPrimitiveOperationPayload | RWIndexedObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | RefCreationOperationPayload | TraceOperationPayload;
 
 class Operation {
     constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationAttributeType) {
@@ -153,6 +159,9 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
 export class OperationRecorder extends NotificationEmitter implements VariableChangeCbk {
     onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue))));
+    }
+    onSetReferenceEvent(observable: ObservableVariable, value: any, newValue: any): void {
+        this.addOperation(OperationType.WRITE_REF, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
     onSetEvent(observable: ObservableVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
@@ -266,7 +275,6 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     }
 
     public getFirstCodeLineNumber(): number {
-        console.log(this.firstExecutedCodeLineNumber);
         return this.firstExecutedCodeLineNumber;
     }
 
@@ -294,7 +302,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         this.addOperation(OperationType.NONE);
     }
 
-    public startScope(scopeName: string) {        
+    public startScope(scopeName: string) {
         scopeName = this.scopeNameToFunctionScope(scopeName);
 
         this.currentScope.push(scopeName);
@@ -308,8 +316,8 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         if (this.currentScope[this.currentScope.length - 1] == scopeName)
             this.currentScope.pop();
-        else 
-            throw('LAST SCOPE IS NOT AS EXPECTED');
+        else
+            throw ('LAST SCOPE IS NOT AS EXPECTED');
     }
 
     public pushParams(params: [string, string][]) {
@@ -340,7 +348,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             this.hookConsoleLog(false);
 
             this.compilationStatus = true;
-            this.onCompilationStatus(this.compilationStatus, "");            
+            this.onCompilationStatus(this.compilationStatus, "");
         } catch (e) {
             this.hookConsoleLog(false);
             this.compilationStatus = false;
@@ -355,7 +363,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        console.log("OPERATIONS: "); console.log(this.operations);
+        //console.log("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -471,38 +479,48 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                     this.onTraceMessage(operationAttributes.message);
                     break;
                 }
+            case OperationType.CREATE_REF:
             case OperationType.CREATE_VAR:
             case OperationType.SCOPE_START:
             case OperationType.SCOPE_END:
-                {
-                    let operationAttributes = undefined;
+                {                    
+                    var scopeName : string;
+                    let varName : string;
 
-                    let varTypeFilter = undefined;
-                    if (operation.type != OperationType.SCOPE_END) // ending scope for all types of variables
-                        varTypeFilter = (operation.type == OperationType.CREATE_VAR) ? VarType.let : VarType.var;
-
-                    let varName = undefined;
                     switch (operation.type) {
+                        case OperationType.CREATE_REF: {
+                            let operationAttributes = operation.attributes as RefCreationOperationPayload;
+                            scopeName = operationAttributes.scopeName;
+                            varName = operationAttributes.varName;                            
+                            
+                            break;
+                        }
                         case OperationType.CREATE_VAR: {
-                            operationAttributes = operation.attributes as VarCreationOperationPayload;
+                            let operationAttributes = operation.attributes as VarCreationOperationPayload;
+                            scopeName = operationAttributes.scopeName;
                             varName = operationAttributes.varName;
 
                             break;
                         }
                         case OperationType.SCOPE_START:
                         case OperationType.SCOPE_END:
-                            operationAttributes = operation.attributes as ScopeOperationPayload;
-                        
+                            let operationAttributes = operation.attributes as ScopeOperationPayload;
+                            scopeName = operationAttributes.scopeName;
+
                             break;
                     }
 
-                    let scopeChain = operationAttributes.scopeName.split('.');
-                    let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : operationAttributes.scopeName;
+                    let scopeChain = scopeName.split('.');
+                    let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
                     this.setRuntimeExecutionScope(operation.type, lastScope);
 
-                    let varDecls = this.getVariableDeclarationInScope(operationAttributes.scopeName, varTypeFilter, varName).map(v => v.name);
+                    let varTypeFilter = undefined;
+                    if (operation.type != OperationType.SCOPE_END) // ending scope for all types of variables
+                        varTypeFilter = (operation.type == OperationType.CREATE_VAR || operation.type == OperationType.CREATE_REF) ? VarType.let : VarType.var;
+                        
+                    let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
 
-                    let runtimeObservables = this.getRuntimeObservables(operationAttributes.scopeName + (varName ? '.' + varName : ""));
+                    let runtimeObservables = this.getRuntimeObservables(scopeName + (varName ? '.' + varName : ""));
 
                     for (let runtimeObservable of runtimeObservables) {
                         if (runtimeObservable) {
@@ -515,12 +533,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                             if (operation.type == OperationType.SCOPE_START) {
                                 runtimeObservable.empty();
                             }
-                            
+
                             // var variables enter in scope already and it also creates the templates for scopes
-                            if (operation.type == OperationType.CREATE_VAR || operation.type == OperationType.SCOPE_START)
-                                this.onEnterScopeVariable(operationAttributes.scopeName, runtimeObservable)
+                            if (operation.type == OperationType.CREATE_REF || operation.type == OperationType.CREATE_VAR || operation.type == OperationType.SCOPE_START)
+                                this.onEnterScopeVariable(scopeName, runtimeObservable)
                             else if (operation.type == OperationType.SCOPE_END) {
-                                this.onExitScopeVariable(operationAttributes.scopeName, runtimeObservable);
+                                this.onExitScopeVariable(scopeName, runtimeObservable);
                             }
                         }
                     }
@@ -550,6 +568,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                     operationAttributes.observable.setValueAtIndex(reverse ? operationAttributes.oldValue : operationAttributes.newValue, operationAttributes.property);
                     break;
                 }
+            case OperationType.WRITE_REF:
+                {
+                    let operationAttributes = operation.attributes as RWPrimitiveOperationPayload;
+                    operationAttributes.observable.setReference(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
+                    break;
+                }
         }
 
         this.lastExecutedOperationIndex = this.nextOperationIndex;
@@ -563,7 +587,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             this.nextOperationIndex = this.operations.length;
     }
 
-    private setRuntimeExecutionScope(type: OperationType, scopeName: string) {        
+    private setRuntimeExecutionScope(type: OperationType, scopeName: string) {
         if (type == OperationType.SCOPE_START) {
             this.currentScope.push(scopeName);
         }
@@ -586,19 +610,25 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 observables.push(observable);
             }
         }
-        
+
         return observables;
     }
 
-    private getRuntimeObservable(runtimeScope: string): any {
-        if (this.runtimeObservables.has(runtimeScope))
-            return this.runtimeObservables.get(runtimeScope);
+    private createRuntimeObservable(scopeName: string, varname: string, object: any): [boolean, any] {
+        let runtimeScope = scopeName + "." + varname;
 
-        return undefined;
+        if (this.runtimeObservables.has(runtimeScope))
+            return [false, this.runtimeObservables.get(runtimeScope)];
+
+        let runtimeObservable = new ObservableVariable(varname, object);
+        this.setInstrumentationObservable(runtimeScope, runtimeObservable);
+
+        return [true, runtimeObservable];
     }
 
     private setInstrumentationObservable(runtimeScope: string, observable: any) {
         this.runtimeObservables.set(runtimeScope, observable);
+        this.registerVariableObserver(observable);
     }
 
     private isReferenceObject(object: any): boolean {
@@ -606,11 +636,11 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         return (variableType == "[object Array]" || variableType == "[object Object]");
     }
 
-    private getReferencedObject(scopeVarName: string): string {        
+    private getReferencedObject(scopeVarName: string): string {
         while (scopeVarName in this.refs) {
             scopeVarName = this.refs[scopeVarName];
-        }        
-        
+        }
+
         return scopeVarName;
     }
 
@@ -628,24 +658,28 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 this.refs[varRuntimeScope] = scopeName + "." + varsource;
             }
 
-            let scopeVarName = this.getReferencedObject(varRuntimeScope);
+            let srcScopedVar = scopeName + "." + varname;
+            let dstScopedVar = this.getReferencedObject(varRuntimeScope);
 
-            if (scopeVarName != scopeName + "." + varname) {
-                let indexDot = scopeVarName.lastIndexOf('.');
-                varname = scopeVarName.substring(indexDot + 1);
-                scopeName = scopeVarName.substring(0, indexDot);
+            if (/*srcScopedVar*/varRuntimeScope != dstScopedVar) {                
+                let [isNew, runtimeObservable] = this.createRuntimeObservable(/*scopeName*/this.getCurrentRuntimeScope(), varname, dstScopedVar);
+
+                if (isNew) {
+                    this.addOperation(OperationType.CREATE_REF, new RefCreationOperationPayload(/*scopeName*/this.getCurrentRuntimeScope(), varname, dstScopedVar));
+                }
+
+                runtimeObservable.setReference(dstScopedVar);
+
+                // Overwrite with referenced variable
+                let indexDot = dstScopedVar.lastIndexOf('.');
+                varname = dstScopedVar.substring(indexDot + 1);
+                scopeName = dstScopedVar.substring(0, indexDot);
             }
-        }
+        }        
 
-        let scopeAndVar = scopeName + "." + varname;
+        let [isNew, runtimeObservable] = this.createRuntimeObservable(scopeName, varname, object);
 
-        let runtimeObservable = this.getRuntimeObservable(scopeAndVar);
-
-        if (!runtimeObservable) {
-            runtimeObservable = new ObservableVariable(varname, object);
-            this.setInstrumentationObservable(scopeAndVar, runtimeObservable);
-
-            this.registerVariableObserver(runtimeObservable);
+        if (isNew) {
             this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(this.getCurrentRuntimeScope(), varname));
         }
 
@@ -663,8 +697,8 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         }
     }
 
-    private scopeNameToFunctionScope(scopeName: string) : string {
-        if (scopeName != "global" && scopeName != "local") 
+    private scopeNameToFunctionScope(scopeName: string): string {
+        if (scopeName != "global" && scopeName != "local")
             return "!" + scopeName;
 
         return scopeName;
@@ -679,7 +713,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         for (let scope of scopeChain) {
             foundScopes.push(scope);
 
-            if (scope.indexOf('!') != -1) {                
+            if (scope.indexOf('!') != -1) {
                 break;
             }
         }
@@ -717,7 +751,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         return [foundInScope, vardeclaration];
     };
 
-    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {        
+    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {
         let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex);
         this.registerVarInScope(scopeName, varName, varDecl);
 
@@ -933,7 +967,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                                 if (vardeclaration.length > 0 && calledFunc in this.funcDefs) {
                                     varToParamPairs.push([this.scopeNameToFunctionScope(calledFunc) + "." + this.funcDefs[calledFunc][i], paramName]);
                                 } else
-                                    throw('Func unknown ' + calledFunc + " " + (calledFunc in this.funcDefs))
+                                    throw ('Func unknown ' + calledFunc + " " + (calledFunc in this.funcDefs))
                             }
 
                             this.pushFuncParams.push(new PushFuncParams(item.range[0], item.range[1], varToParamPairs));
@@ -1116,7 +1150,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             line = line + '\n';
 
             if (!this.isEmptyLine(lineIndex + 1)) {
-                let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineIndex + 1 });                
+                let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineIndex + 1 });
                 line = replaceTokens("<FCNRET>", codeLineMarker, line);
 
                 let codeLineMarker2 = MustacheIt.render(";forcemarkcl({{lineNo}});", { lineNo: lineIndex + 1 });

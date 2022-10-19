@@ -1,3 +1,5 @@
+import { Localize } from "./localization";
+
 interface PropertyChangedCbk {
     onPropertyUpdated(property: string | symbol, newValue: any): void;
 }
@@ -98,6 +100,11 @@ export class UIBinder {
                         isNegated = true;
                         propertyBound = propertyBound.replace('!', '');
                     }
+                    
+                    if (valueOnEvaluation && valueOnEvaluation.startsWith("LangStrId")) {
+                        let strId = valueOnEvaluation.split('.')[1];
+                        valueOnEvaluation = Localize.str(parseInt(strId));
+                    }
 
                     if (valueOnEvaluation && valueOnEvaluation.indexOf('()') != -1) {
                         if (!(valueOnEvaluation.replace('()', '') in viewModel))
@@ -123,7 +130,12 @@ export class UIBinder {
 
                     }
                     else {
-                        throw "Property '" + propertyBound + "' does not exist on view model";
+                        if (propertyBound.startsWith("LangStrId")) {
+                            let strId = propertyBound.split('.')[1];
+                            htmlElement.textContent = Localize.str(parseInt(strId));
+                        }
+                        else
+                            throw "Property '" + propertyBound + "' does not exist on view model";
                     }
                 }
                 

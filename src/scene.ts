@@ -164,14 +164,14 @@ export class Scene {
                 if (!avViewModel.showComments || mutationRecord.target != aceCursor)
                     return;
 
-                if (this.commentsPopover) this.commentsPopover.dispose();
+                if (self.commentsPopover) self.commentsPopover.dispose();
                 let commentsElement = document.getElementById("comments-" + codeEditorId);
 
                 commentsElement.style['left'] = aceCursor.style['left'];
                 commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
 
-                this.commentsPopover = new bootstrap.Popover(commentsElement, options);
-                this.commentsPopover.show();
+                self.commentsPopover = new bootstrap.Popover(commentsElement, options);
+                self.commentsPopover.show();
             });
         });
 

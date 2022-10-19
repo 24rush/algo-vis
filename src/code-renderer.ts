@@ -25,6 +25,7 @@ export class CodeRenderer {
         };
         
         this.editor = ace.edit(this.elementId);
+        this.editor.setShowPrintMargin(false);
         this.editor.setOptions({ useWorker: false });        
        // this.editor.setTheme(theme_monokai);
         this.editor.session.setMode("ace/mode/javascript");        
@@ -56,6 +57,7 @@ export class CodeRenderer {
     }
 
     public highlightLine(lineNo: number) {
+        this.editor.gotoLine(lineNo);
         this.unhighlightLine();
         this.marker = this.editor.session.addMarker(new this.Range(lineNo - 1, 0, lineNo - 1, 1), "myMarker", "fullLine");
     }

@@ -2,19 +2,19 @@
     <div class="btn-group btn-group-sm">
         <button av-bind-onclick="onAdvance" type="button" class="btn btn-light btn-overrides">
             <i class="bi bi-play-fill"></i>
-            <span>Execute line</span>
+            <span av-bind-text="LangStrId.4">Execute line</span>
         </button>
         <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides">
             <i id="btn-autoplay-i" class="bi bi-fast-forward-fill" av-bind-class='{"!isPaused" : "bi-pause-fill", "isPaused" : "bi-fast-forward-fill"}'></i>
-            <span id="btn-autoplay-text" av-bind-text='{"isPaused": "Autoplay", "!isPaused": "Pause"}'>Autoplay</span>
+            <span id="btn-autoplay-text" av-bind-text='{"isPaused": "LangStrId.1", "!isPaused": "LangStrId.2"}'></span>
         </button>        
         <button av-bind-onclick="onRestart" type="button" class="btn btn-light btn-overrides">
             <i class="bi bi-arrow-clockwise"></i>
-            <span >Restart</span>
+            <span av-bind-text="LangStrId.6">Restart</span>
         </button>
         <div class="btn form-check-inline">
             <input class="form-check-input" type="checkbox" value="" unchecked av-bind-onclick="onShowComments" id="showCommentsCheck-{{codeEditorId}}">
-            <label class="form-check-label" for="showCommentsCheck-{{codeEditorId}}">
+            <label class="form-check-label" for="showCommentsCheck-{{codeEditorId}}" av-bind-text="LangStrId.3">
                 Show comments
             </label>
         </div>
@@ -27,15 +27,14 @@
 
 <div id="{{appVisId}}" class="halfScreen">
 <ul class="list-group list-group">
-    <li class="list-group-item fw-semibold">Compilation
-    <button id="btn-compilation-status" type="button" class="btn btn-success btn-sm" av-bind-class='{"compilationStatus": "btn-success", "!compilationStatus": "btn-danger"}' av-bind-text='{"compilationStatus": "OK", "!compilationStatus": "compilationErrorMessage()"}'></button>
+    <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.5">Compilation</span>
+    <button id="btn-compilation-status" type="button" class="btn btn-success btn-sm" style="vertical-align: baseline;" av-bind-class='{"compilationStatus": "btn-success", "!compilationStatus": "btn-danger"}' av-bind-text='{"compilationStatus": "OK", "!compilationStatus": "compilationErrorMessage()"}'></button>
     </li>
-    <li class="list-group-item fw-semibold">Variables    
-    
-    <div id="panelVariablesBody">
-    </div>
+    <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.7">Variables</span>
+        <div id="panelVariablesBody">
+        </div>
     </li>
-    <li class="list-group-item fw-semibold">Console output
+    <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.8">Console output</span>
     <textarea class="form-control" style="background-color:white; width: 100%; max-width: 100%;" rows="2"
         max-rows="8" av-bind-text="consoleOutput" disabled></textarea>
     </li>

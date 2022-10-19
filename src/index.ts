@@ -1,3 +1,4 @@
+import { LangEnum, Localize } from "./localization";
 import { Scene } from "./scene";
 
 require('@popperjs/core')
@@ -6,6 +7,8 @@ var MustacheIt = require('mustache')
 
 let cssStyle = require('../assets/styles.css').default;
 const htmlTemplate = require('../assets/main.html').default;
+
+Localize.setLang(LangEnum.Ro);
 
 let index = 0;
 for (let widget of document.querySelectorAll("[class=algovis]")) {

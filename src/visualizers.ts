@@ -1,8 +1,8 @@
 import { DOMmanipulator } from "./dom-manipulator";
-import { Layout } from "./layout";
+import { Localize } from "./localization";
 var MustacheIt = require('mustache');
 
-import { ObservableVariable, VariableChangeCbk, VariableType } from "./observable-type"
+import { ObservableVariable, VariableChangeCbk } from "./observable-type"
 
 class FontSizeCache {
     private static cache: any = {}; // elementId: { textLength : fontSize }
@@ -26,15 +26,21 @@ enum DrawnElement {
     undefined,
     Primitive,
     Array,
-    Object
+    Object,
+    Reference
 }
 
-export class BaseVisualizer extends VariableChangeCbk {
+export class VariableVisualizer extends VariableChangeCbk {
     protected readonly templateVarName ='<div class="var-box" style="display: table;"> \
     <span id="var-name" class="var-name">{{name}}:</span> \
     </div> \
     ';
     
+    protected readonly templateReference: string = 
+    '<span class="var-value" style="border:0px; height:{{height}}px;"> \
+         <span id="var-value" style="font-style: italic;"></span> \
+     </span>';
+
     protected readonly templatePrimitive: string = 
     '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
          <span id="var-value"></span> \
@@ -73,7 +79,7 @@ export class BaseVisualizer extends VariableChangeCbk {
     protected drawn: boolean = false;
     protected drawnElement: DrawnElement = DrawnElement.undefined;
 
-    constructor(protected observable: ObservableVariable, protected layout: Layout) {
+    constructor(protected observable: ObservableVariable) {
         super();    
 
         this.observable.registerObserver(this);
@@ -105,20 +111,24 @@ export class BaseVisualizer extends VariableChangeCbk {
         text.classList.remove('blink'); text.classList.add('blink');
     }
 
-    public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number) {
+    public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize : boolean = false) {
         if (objectToPrint == undefined) {
-            text.textContent = '';
+            text.textContent = 'undefined';
+            this.resetAnimation(text);        
             return;
         }
 
-        text.textContent = objectToPrint.toString();
+        text.textContent = objectToPrint.toString();        
         text.title = text.textContent;
         text.parentElement.title = text.textContent;
 
         if (text.textContent == "")
             return;
 
-        this.resetAnimation(text);
+        this.resetAnimation(text);        
+
+        if (disableAutoResize) 
+            return;
 
         let cachedFontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
@@ -169,9 +179,26 @@ export class BaseVisualizer extends VariableChangeCbk {
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
-
+        this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);        
+        
         return this.htmlElement;
+    }
+
+    public drawReference() {
+        let rendered = MustacheIt.render(this.templateReference, {
+            width: 30, height: 30
+        });
+
+        let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        
+        this.htmlElement.append(valuesHtmlElement);        
+
+        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
+        this.fitText(this.text, Localize.str(9) + " " + this.referenceToUIStr(this.observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
+
+        this.drawn = true;
+        this.drawnElement = DrawnElement.Reference;        
     }
 
     private needsDraw() : boolean {
@@ -188,6 +215,10 @@ export class BaseVisualizer extends VariableChangeCbk {
         return false;
     }
 
+    private referenceToUIStr(reference: string) : string {
+        return reference.replace("global.", '');
+    }
+
     private redraw(redrawType: DrawnElement) {        
         this.htmlElement.removeChild(this.htmlElement.lastChild as HTMLElement);
 
@@ -199,6 +230,7 @@ export class BaseVisualizer extends VariableChangeCbk {
         if (redrawType == DrawnElement.Primitive) this.drawPrimitive();
         if (redrawType == DrawnElement.Array) this.drawArray();
         if (redrawType == DrawnElement.Object) this.drawObject();
+        if (redrawType == DrawnElement.Reference) this.drawReference();
     }
 
     private drawPrimitive() {
@@ -269,6 +301,20 @@ export class BaseVisualizer extends VariableChangeCbk {
         this.drawnElement = DrawnElement.Object;
     }
 
+    override onSetReferenceEvent(_observable: ObservableVariable, oldReference: string, newReference: any): void {        
+        if (this.needsRedraw(DrawnElement.Reference)) {
+            this.redraw(DrawnElement.Reference);
+
+            return;
+        }
+
+        if (this.needsDraw()) {
+            this.drawReference();
+        }
+        else            
+            this.fitText(this.text, Localize.str(9) + " " + this.referenceToUIStr(newReference), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
+    }
+
     override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {        
         if (this.needsRedraw(DrawnElement.Primitive)) {
             this.redraw(DrawnElement.Primitive);
@@ -313,10 +359,7 @@ export class BaseVisualizer extends VariableChangeCbk {
             this.redraw(DrawnElement.Object);
             return;
         }
-        
-        console.log(value);
-        console.log(newValue);
-        
+
         if (Object.keys(value).length != Object.keys(newValue).length) { // TODO: Check key match in totality
             this.redraw(DrawnElement.Object);
         }

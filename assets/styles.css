@@ -10,6 +10,8 @@
 
   .halfScreen {
     width: 50%;
+    padding-right: 2px;
+    padding-left: 1px;
   }
 
   .var-box {
@@ -19,20 +21,21 @@
   .var-name {
     display: table-cell;
     vertical-align: middle;
+    padding-right: 5px;
     font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
   }
 
   .var-value {
     display: table-cell;
     text-align: center;
-    vertical-align: middle;
+    vertical-align: middle;    
     border: 1px solid;
     font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
   }
 
   .myMarker {
     position: absolute;
-    background: rgba(100, 200, 100, 0.5);
+    background: #0d6dfd3e;
     z-index: 20
   }
 

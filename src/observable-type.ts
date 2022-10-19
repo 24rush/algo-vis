@@ -1,6 +1,7 @@
 type DictionaryKeyType = string | number | symbol;
 
 export class VariableChangeCbk {
+    onSetReferenceEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
     onSetEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
     onGetEvent(observable: ObservableVariable, value: any) { /*console.log("Method not implemented.");*/ }
 
@@ -35,14 +36,15 @@ export enum VariableType {
     undefined,
     Primitive,
     Array,
-    Object
+    Object,
+    Reference
 }
 
 export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
 {
     protected initValue: any;
 
-    constructor(public name: string, protected value: any) {
+    constructor(public name: string, protected value?: any) {
         super();
 
         this.initValue = value ? JSON.parse(JSON.stringify(value)) : undefined;
@@ -81,6 +83,15 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
         return this.value[index];
     }
 
+    public setReference(newReference: string) {
+        let oldReference = this.value ? JSON.parse(JSON.stringify(this.value)) : undefined;
+        this.value = newReference != undefined ? JSON.parse(JSON.stringify(newReference)) : undefined;
+
+        for (let observer of this.observers) {
+            observer.onSetReferenceEvent(this, oldReference, this.value);
+        }
+    }
+
     public setValue(value: any) {
         let oldValues = this.value ? JSON.parse(JSON.stringify(this.value)) : undefined;
         this.value = value != undefined ? JSON.parse(JSON.stringify(value)) : undefined;
@@ -90,7 +101,7 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
         for (let observer of this.observers) {
             switch (variableType) {
                 case VariableType.undefined:
-                case VariableType.Primitive: observer.onSetEvent(this, this.value, value); break;
+                case VariableType.Primitive: observer.onSetEvent(this, oldValues, this.value); break;
                 case VariableType.Array: observer.onSetArrayValueEvent(this, oldValues, this.value); break;
                 case VariableType.Object: observer.onSetObjectValueEvent(this, oldValues, this.value); break;
                 default: throw "OBSERVABLE type unknown"
