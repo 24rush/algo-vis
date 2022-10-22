@@ -19,7 +19,6 @@
   }
 
   .var-name {
-    display: table-cell;
     vertical-align: middle;
     padding-right: 5px;
     font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace

@@ -779,7 +779,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                         break;
                     }
                     case "ArrayExpression":
-                    case "ObjectExpression": {
+                    case "ObjectExpression": { console.log(decl.init.name);
                         this.noMarkLineZone.push(new IndexRange(decl.init.range[0] - 1, decl.init.range[1] + 1));
                         break;
                     }

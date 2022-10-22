@@ -3,7 +3,7 @@ import { Localize } from "./localization";
 var MustacheIt = require('mustache');
 
 import { ObservableVariable, VariableChangeCbk } from "./observable-type"
-import { UIBinder } from "./ui-framework";
+import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
 
 class FontSizeCache {
     private static cache: any = {}; // elementId: { textLength : fontSize }
@@ -32,31 +32,32 @@ enum DrawnElement {
 }
 
 export class VariableVisualizer extends VariableChangeCbk {
-    protected readonly templateVarName = '<div class="var-box" style="display: table;"> \
-    <span id="var-name" class="var-name">{{name}}:</span> \
+    protected readonly templateVarName = 
+    '<div class="var-box" style="display: table;"> \
+        <span id="var-name" class="align-self-center p-2 var-name" style="display: table-cell;">{{name}}:</span> \
     </div> \
     ';
 
     protected readonly templateReference: string =
-        '<span class="var-value" style="border:0px; height:{{height}}px;"> \
+    '<span class="var-value" style="border:0px; height:{{height}}px;"> \
         <span style="font-style: italic;" av-bind-text="LangStrId.9"></span><span id="var-value"></span> \
      </span>';
 
     protected readonly templatePrimitive: string =
-        '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+    '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
          <span id="var-value"></span> \
      </span>';
 
-    protected readonly templateArray = '<span> \
+    protected readonly templateArray = '<span style="display: table;"> \
     {{#rows}} \
-        <div class="row"  style="padding-left:7px;">\
-        <span class="col-sm-1 align-self-center" style="display: {{isMultiArray}}; font-style: italic; font-size: x-small; padding-right: 7px;">{{index_r}}</span> \
+        <div style="padding-left:7px; display: table-row;">\
+        <span class="align-self-baseline" av-bind-style-display=\'{"isMultiArray" : "table-cell", "!isMultiArray" : "none"}\' style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
         {{#cols}} \
-            <div class="col" style="padding:3px;"> \
+            <div style="padding:3px;" av-bind-style-display=\'{"isNotStack" : "table-cell", "!isNotStack" : "table-row"}\' > \
                 <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
                     <span id="var-value"></span> \ \
                 </span> \
-                <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
+                <span av-bind-style-display=\'{"isNotQueueOrStack" : "table", "!isNotQueueOrStack" : "none"}\' style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
             </div> \
         {{/cols}} \
        </div> \
@@ -120,7 +121,6 @@ export class VariableVisualizer extends VariableChangeCbk {
     public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         if (objectToPrint == undefined) {
             text.textContent = 'undefined';
-            this.resetAnimation(text);
             return;
         }
 
@@ -130,8 +130,6 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         if (text.textContent == "")
             return;
-
-        this.resetAnimation(text);
 
         if (disableAutoResize)
             return;
@@ -233,7 +231,7 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.htmlElement.append(valuesHtmlElement);
 
         this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
-        this.fitText(this.text, this.observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
+        this.fitText(this.text, this.observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);        
 
         this.drawn = true;
         this.drawnElement = DrawnElement.Primitive;
@@ -270,6 +268,8 @@ export class VariableVisualizer extends VariableChangeCbk {
     private drawArray() {
         let arrayData = this.observable.getValue() as any[];
         let isMultiArray = this.isMultiArray(arrayData);
+        let isNotStack = this.observable.getName().indexOf('stack') == -1;
+        let isNotQueueOrStack = isNotStack && this.observable.getName().indexOf('queue') == -1;
 
         let rows: any = [];
         let nr_cols: number;
@@ -290,7 +290,6 @@ export class VariableVisualizer extends VariableChangeCbk {
         for (let index_r in arrayData) {
             rows.push({
                 index_r : index_r,
-                isMultiArray: !isMultiArray ? "none" : "inline",
                 cols: funcMapCols(arrayData[index_r])
             });
         }
@@ -302,11 +301,20 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         this.htmlElement.append(valuesHtmlElement);
 
+        let target = {isMultiArray: false, isNotStack: true, isNotQueueOrStack: true};
+        let viewModel = new ObservableViewModel(target);    
+        new UIBinder(this.htmlElement, viewModel);
+
+        clientViewModel<typeof target>(viewModel).isMultiArray = isMultiArray;        
+        clientViewModel<typeof target>(viewModel).isNotStack = isNotStack;
+        clientViewModel<typeof target>(viewModel).isNotQueueOrStack = isNotQueueOrStack;    
+
         nr_cols = rows[0].cols.length;
 
         this.indextValueElements = this.indextValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value'));
         for (let [index, textElement] of this.indextValueElements.entries()) { //TODO handle jagged arrays
-            let value = isMultiArray ? this.observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) : this.observable.getAtIndex(index);
+            let value = isMultiArray ? this.observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) : 
+                        (isNotStack ? this.observable.getAtIndex(index) : this.observable.getAtIndex(nr_cols - index -1));
             this.fitText(textElement, value, this.width, this.height);
         }
 
@@ -351,8 +359,10 @@ export class VariableVisualizer extends VariableChangeCbk {
         if (this.needsDraw()) {
             this.drawReference();
         }
-        else
+        else {
             this.fitText(this.text, this.referenceToUIStr(newReference), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
+            this.resetAnimation(this.text);
+        }
     }
 
     override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {
@@ -365,8 +375,10 @@ export class VariableVisualizer extends VariableChangeCbk {
         if (this.needsDraw()) {
             this.drawPrimitive();
         }
-        else
+        else {
             this.fitText(this.text, newValue, this.width, this.height);
+            this.resetAnimation(this.text);
+        }
     }
 
     override onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
@@ -419,6 +431,7 @@ export class VariableVisualizer extends VariableChangeCbk {
         if (isMultiArray) index_r = index_r * arrayData[0].length + index_c;
 
         this.fitText(this.indextValueElements[index_r], newValue, this.width, this.height);
+        this.resetAnimation(this.indextValueElements[index_r]);
     }
 
     override onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
@@ -441,6 +454,7 @@ export class VariableVisualizer extends VariableChangeCbk {
     override onSetObjectPropertyEvent(_observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {
         if (key in this.keyValueElements) {
             this.fitText(this.keyValueElements[key], newValue, this.width, this.height);
+            this.resetAnimation(this.keyValueElements[key]);
         } else {
             this.redraw(DrawnElement.Object);
         }

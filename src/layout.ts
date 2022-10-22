@@ -8,7 +8,7 @@ export class Layout {
     protected readonly scopeTemplate = '\
     <ul class="list-group list-group" av-scope="{{scope}}"> \
       <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px;">{{scopeName}}</li> \
-      <li class="list-group-item" style="padding-right: 0px;"></li> \
+      <li class="list-group-item" style="padding-right: 0px; display: table;"></li> \
     </ul>'
 
     constructor(protected scene: HTMLElement) {
