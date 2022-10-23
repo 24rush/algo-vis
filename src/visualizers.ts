@@ -31,20 +31,31 @@ enum DrawnElement {
     Reference
 }
 
+class VisualizerViewModel {
+    isMultiArray: boolean = false;
+    isNotStack: boolean = true;
+    isNotQueueOrStack: boolean = true;
+    isEmpty: boolean = false;
+
+    public setDefaults() {
+
+    }
+};
+
 export class VariableVisualizer extends VariableChangeCbk {
-    protected readonly templateVarName = 
-    '<div class="var-box" style="display: table;"> \
+    protected readonly templateVarName =
+        '<div class="var-box" style="display: table;"> \
         <span id="var-name" class="align-self-center p-2 var-name" style="display: table-cell;">{{name}}:</span> \
     </div> \
     ';
 
     protected readonly templateReference: string =
-    '<span class="var-value" style="border:0px; height:{{height}}px;"> \
+        '<span class="var-value" style="border:0px; height:{{height}}px;"> \
         <span style="font-style: italic;" av-bind-text="LangStrId.9"></span><span id="var-value"></span> \
      </span>';
 
     protected readonly templatePrimitive: string =
-    '<span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
+        '<span class="var-value" av-bind-style-border=\'{"isEmpty":"none"}\' style="width: {{width}}px; height:{{height}}px;"> \
          <span id="var-value"></span> \
      </span>';
 
@@ -54,8 +65,8 @@ export class VariableVisualizer extends VariableChangeCbk {
         <span class="align-self-baseline" av-bind-style-display=\'{"isMultiArray" : "table-cell", "!isMultiArray" : "none"}\' style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
         {{#cols}} \
             <div style="padding:3px;" av-bind-style-display=\'{"isNotStack" : "table-cell", "!isNotStack" : "table-row"}\' > \
-                <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
-                    <span id="var-value"></span> \ \
+                <span class="var-value" av-bind-style-border=\'{"isEmpty":"none"}\' style="width: {{width}}px; height:{{height}}px;"> \
+                    <span id="var-value"></span> \
                 </span> \
                 <span av-bind-style-display=\'{"isNotQueueOrStack" : "table", "!isNotQueueOrStack" : "none"}\' style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
             </div> \
@@ -64,13 +75,13 @@ export class VariableVisualizer extends VariableChangeCbk {
     {{/rows}} \
     </span>';
 
-    protected readonly templateObject = '<span> \
+    protected readonly templateObject = '<span style="display: table;" class="justify-contents-baseline"> \
     {{#data}} \
         <div style="padding-right: 3px; display: table-cell;"> \
-            <span class="var-value" style="width: {{width}}px; height:{{height}}px;"> \
-                <span id="var-value"></span> \ \
+            <span class="var-value" av-bind-style-border=\'{"isEmpty":"none"}\' style="width: {{width}}px; height:{{height}}px;"> \
+                <span id="var-value"></span> \
             </span> \
-            <span style="display: table; margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
+            <span av-bind-style-display=\'{"!isEmpty" : "table", "isEmpty" : "none"}\' style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
         </div> \
     {{/data}} \
     </span>';
@@ -86,10 +97,19 @@ export class VariableVisualizer extends VariableChangeCbk {
     protected drawn: boolean = false;
     protected drawnElement: DrawnElement = DrawnElement.undefined;
 
+    protected viewModel: VisualizerViewModel = new VisualizerViewModel();
+    protected uiBinder: UIBinder = undefined;
+    protected clientViewModel: VisualizerViewModel = undefined;
+
     constructor(protected observable: ObservableVariable) {
         super();
 
         this.observable.registerObserver(this);
+
+        let viewModel = new ObservableViewModel(this.viewModel);
+
+        this.clientViewModel = clientViewModel<typeof this.viewModel>(viewModel);
+        this.uiBinder = new UIBinder(viewModel);
     }
 
     public getHTMLElement(): HTMLElement { return this.htmlElement; }
@@ -122,6 +142,13 @@ export class VariableVisualizer extends VariableChangeCbk {
         if (objectToPrint == undefined) {
             text.textContent = 'undefined';
             return;
+        }
+
+        if (typeof objectToPrint == 'object') {
+            if (objectToPrint.length == 0 || (objectToPrint.length == undefined && Object.keys(objectToPrint).length == 0)) {
+                text.textContent = 'empty';
+                return;
+            }
         }
 
         text.textContent = objectToPrint.toString();
@@ -175,6 +202,7 @@ export class VariableVisualizer extends VariableChangeCbk {
 
     public detach(): void {
         this.observable.unregisterObserver(this);
+        this.uiBinder.unbind();
     }
 
     public draw(): HTMLElement {
@@ -230,8 +258,11 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         this.htmlElement.append(valuesHtmlElement);
 
-        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
-        this.fitText(this.text, this.observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);        
+        this.uiBinder.bindTo(this.htmlElement);
+        this.clientViewModel.isEmpty = this.observable.getValue() == undefined;
+
+        this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
+        this.fitText(this.text, this.observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
 
         this.drawn = true;
         this.drawnElement = DrawnElement.Primitive;
@@ -246,9 +277,9 @@ export class VariableVisualizer extends VariableChangeCbk {
         let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
         this.htmlElement.append(valuesHtmlElement);
-        new UIBinder(this.htmlElement, undefined);
+        this.uiBinder.bindTo(this.htmlElement);
 
-        this.text = DOMmanipulator.elementStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
+        this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
         this.fitText(this.text, this.referenceToUIStr(this.observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
 
         this.drawn = true;
@@ -267,9 +298,16 @@ export class VariableVisualizer extends VariableChangeCbk {
 
     private drawArray() {
         let arrayData = this.observable.getValue() as any[];
+
+        let isEmpty = arrayData == undefined || arrayData.length == 0 || arrayData[0].length == 0;
         let isMultiArray = this.isMultiArray(arrayData);
         let isNotStack = this.observable.getName().indexOf('stack') == -1;
         let isNotQueueOrStack = isNotStack && this.observable.getName().indexOf('queue') == -1;
+
+        if (isEmpty) { // Overwrites to handle empty values
+            isNotStack = true;
+            isNotQueueOrStack = false;
+        }
 
         let rows: any = [];
         let nr_cols: number;
@@ -287,35 +325,39 @@ export class VariableVisualizer extends VariableChangeCbk {
             arrayData = [arrayData];
         }
 
+        if (isEmpty) {
+            // Copy the data so that we don't mess with the original
+            arrayData[0] = [...arrayData];
+            arrayData[0][0] = undefined;
+        }
+
         for (let index_r in arrayData) {
             rows.push({
-                index_r : index_r,
+                index_r: index_r,
                 cols: funcMapCols(arrayData[index_r])
             });
         }
 
         let rendered = MustacheIt.render(this.templateArray, { rows: rows });
+        nr_cols = rows[0].cols.length;
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
         this.htmlElement.append(valuesHtmlElement);
 
-        let target = {isMultiArray: false, isNotStack: true, isNotQueueOrStack: true};
-        let viewModel = new ObservableViewModel(target);    
-        new UIBinder(this.htmlElement, viewModel);
-
-        clientViewModel<typeof target>(viewModel).isMultiArray = isMultiArray;        
-        clientViewModel<typeof target>(viewModel).isNotStack = isNotStack;
-        clientViewModel<typeof target>(viewModel).isNotQueueOrStack = isNotQueueOrStack;    
-
-        nr_cols = rows[0].cols.length;
+        this.uiBinder.bindTo(this.htmlElement);
+        this.clientViewModel.isEmpty = isEmpty;
+        this.clientViewModel.isMultiArray = isMultiArray;
+        this.clientViewModel.isNotStack = isNotStack;
+        this.clientViewModel.isNotQueueOrStack = isNotQueueOrStack;
 
         this.indextValueElements = this.indextValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value'));
         for (let [index, textElement] of this.indextValueElements.entries()) { //TODO handle jagged arrays
-            let value = isMultiArray ? this.observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) : 
-                        (isNotStack ? this.observable.getAtIndex(index) : this.observable.getAtIndex(nr_cols - index -1));
-            this.fitText(textElement, value, this.width, this.height);
+            let value = isMultiArray ? this.observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) :
+                (isNotStack ? this.observable.getAtIndex(index) : this.observable.getAtIndex(nr_cols - index - 1));
+            value = isEmpty ? [] : value;
+            this.fitText(textElement, value, this.width, this.height, isEmpty);
         }
 
         this.drawn = true;
@@ -323,10 +365,20 @@ export class VariableVisualizer extends VariableChangeCbk {
     }
 
     private drawObject() {
+        let keysToRender = this.observable.getKeys();
+
+        let isEmpty: boolean = keysToRender.length == 0;
+
+        if (isEmpty) {
+            // Copy the data so that we don't mess with the original
+            keysToRender = [...keysToRender];
+            keysToRender[0] = undefined;
+        }
+
         let rendered = MustacheIt.render(this.templateObject, {
-            data: this.observable.getKeys().map(key => {
+            data: keysToRender.map(key => {
                 return {
-                    width: this.width, height: this.height,
+                    width: this.width, height: isEmpty ? 40 : this.height, // TODO
                     index: key
                 };
             }),
@@ -337,12 +389,16 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         this.htmlElement.append(valuesHtmlElement);
 
+        this.uiBinder.bindTo(this.htmlElement);
+        this.clientViewModel.isEmpty = isEmpty;
+
         let domIndex = 0;
         let domElements = DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');
 
-        for (let key of this.observable.getKeys()) {
+        for (let key of keysToRender) {
             this.keyValueElements[key] = domElements[domIndex++];
-            this.fitText(this.keyValueElements[key], this.observable.getAtIndex(key), this.width, this.height);
+            let value = isEmpty ? {} : this.observable.getAtIndex(key);
+            this.fitText(this.keyValueElements[key], value, this.width, this.height, isEmpty);
         }
 
         this.drawn = true;

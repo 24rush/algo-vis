@@ -21,7 +21,7 @@ for (let widget of document.querySelectorAll("[class=algovis]")) {
     let innerHtml = MustacheIt.render(htmlTemplate, { codeEditorId: codeEditorId, appVisId: appVisId, code: widget.innerHTML, index: index });
     widget.innerHTML = innerHtml;
 
-    new Scene(widget, appVisId, codeEditorId, codeId);
+    new Scene(widget as HTMLElement, appVisId, codeEditorId, codeId);
 }
 
 let styles = document.createElement('style');

@@ -42,17 +42,26 @@ export class Scene {
 
     private operationRecorder = new OperationRecorder();
 
-    constructor(widget: Element, private appId: string, private codeEditorId: string, private codeId?: string) {
+    constructor(widget: HTMLElement, private appId: string, private codeEditorId: string, private codeId?: string) {
         let parent = document.getElementById(this.appId);
-        if (!parent)
+        if (!parent) {
+            console.error('%s does not exist', this.appId);
             return;
+        }
 
-        this.codeRenderer = new CodeRenderer(this.codeEditorId);
-
-        let layout = new Layout(DOMmanipulator.elementStartsWithId(parent, "panelVariablesBody"));
+        let variablesPanel = DOMmanipulator.elementStartsWithId(parent, "panelVariables-" + codeEditorId);
+        if (!variablesPanel) {
+            console.error('Cannont find panelVariables');
+            return;
+        }
+        
+        this.codeRenderer = new CodeRenderer(this.codeEditorId);        
+        let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
-        new UIBinder(widget, viewModelObs);
+
+        let buttonsWidget = DOMmanipulator.elementStartsWithId(widget, "buttons-" + codeEditorId);
+        new UIBinder(viewModelObs).bindTo(buttonsWidget).bindTo(parent);
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);        
         avViewModel.setDefaults();

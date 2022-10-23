@@ -28,35 +28,37 @@ enum BindingType {
     TEXT,
     CLASS,
     CHECKED,
-    STYLE_DISPLAY
+    STYLE
 }
 
 class BindingContext {
 
     constructor(public type: BindingType, public htmlElement: HTMLElement, public viewModel: ObservableViewModel) { }
 
-    private needsEvaluation: boolean = false;
     private valueOnTrue: string = undefined;
     private valueOnFalse: string = undefined;
+
+    private styleTargetProp: string = undefined; // For STYLE only bindings
 
     public setBindingType(type: BindingType) { this.type = type; }
     public getBindingType() { return this.type; }
 
     public setValueOnTrueEvaluation(value: string) {
         this.valueOnTrue = value;
-        this.needsEvaluation = true;
     }
 
     public setValueOnFalseEvaluation(value: string) {
         this.valueOnFalse = value;
-        this.needsEvaluation = true;
     }
+
+    public setStyleTargetProp(prop: string) { this.styleTargetProp = prop; }
+    public getStyleTargetProp(): string { return this.styleTargetProp; }
 
     public getValueOnTrueEvaluation(): string { return this.evaluateValue(this.valueOnTrue); }
     public getValueOnFalseEvaluation(): string { return this.evaluateValue(this.valueOnFalse); }
-    public getValueOnEvaluation(propEval: boolean) { return this.evaluateValue(propEval ? this.valueOnTrue : this.valueOnFalse); }
+    public getValueOnEvaluation(propEval: boolean): string { return this.evaluateValue(propEval ? this.valueOnTrue : this.valueOnFalse); }
 
-    public propNeedsEvaluation(): boolean { return this.needsEvaluation; }
+    public propNeedsEvaluation(): boolean { return this.valueOnFalse != undefined || this.valueOnTrue != undefined; }
 
     private evaluateValue(value: string): string {
         if (value && value.indexOf('()') != -1) {
@@ -70,14 +72,19 @@ class BindingContext {
 
 export class UIBinder {
 
+    // Static members
     private static propertyObservers: Map<any, Map<string | symbol, PropertyChangedCbk[]>> = new Map();
 
+    // Instance members
     private propertyBindings: Map<string, BindingContext[]> = new Map();
 
-    constructor(protected widget: Element, protected viewModel: ObservableViewModel) {
-        // Search for ag-bind-text or av-bind-class
-        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-style-display"];
+    constructor(protected viewModel: ObservableViewModel) { }
+
+    public bindTo(widget: Element): UIBinder {
+        // Search for all known binding attributes
+        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-style-display", "av-bind-style-border"];
         let bindingType = BindingType.undefined;
+        let styleTargetProp: string = undefined;
 
         for (let bindingAttr of bindingAttrs) {
             for (let htmlElement of widget.querySelectorAll("[" + bindingAttr + "]")) {
@@ -95,13 +102,15 @@ export class UIBinder {
                             break;
                         }
                     case "av-bind-style-display":
+                    case "av-bind-style-border":
                         {
-                            bindingType = BindingType.STYLE_DISPLAY;
+                            bindingType = BindingType.STYLE;
+                            styleTargetProp = bindingAttr.split('-').pop();
                             break;
                         }
                 }
 
-                let addBinding = (bindingType: BindingType, triggerProperty: string, valueOnEvaluation: string = undefined) => {
+                let addBinding = (bindingType: BindingType, triggerProperty: string, valueOnEvaluation: string = undefined, styleTargetProp: string) => {
                     let isNegated = triggerProperty.startsWith('!');
                     if (isNegated) {
                         triggerProperty = triggerProperty.replace('!', '');
@@ -115,13 +124,14 @@ export class UIBinder {
                         }
                         else
                             if (valueOnEvaluation.indexOf('()') != -1) {
-                                if (!(valueOnEvaluation.replace('()', '') in viewModel))
+                                if (!(valueOnEvaluation.replace('()', '') in this.viewModel))
                                     throw "Property '" + valueOnEvaluation + "' does not exist on view model";
                             }
                     }
 
-                    if (viewModel && triggerProperty in viewModel) {
-                        let bindingContext = new BindingContext(bindingType, htmlElement as HTMLElement, viewModel);
+                    if (this.viewModel && triggerProperty in this.viewModel) {
+                        let bindingContext = new BindingContext(bindingType, htmlElement as HTMLElement, this.viewModel);
+                        if (styleTargetProp != undefined) bindingContext.setStyleTargetProp(styleTargetProp);
 
                         if (valueOnEvaluation != undefined) {
                             if (!isNegated) bindingContext.setValueOnTrueEvaluation(valueOnEvaluation);
@@ -145,11 +155,11 @@ export class UIBinder {
                 // Check object expression
                 if (bindingText.indexOf("{") != -1) {
                     for (let [triggerProperty, value] of Object.entries(JSON.parse(bindingText))) {
-                        addBinding(bindingType, triggerProperty, value as string);
+                        addBinding(bindingType, triggerProperty, value as string, styleTargetProp);
                     }
                 }
                 else {
-                    addBinding(bindingType, bindingText);
+                    addBinding(bindingType, bindingText, undefined, styleTargetProp);
                 }
             }
         }
@@ -158,8 +168,8 @@ export class UIBinder {
         for (let htmlElement of widget.querySelectorAll("[av-bind-checked]")) {
             let propertyBound = htmlElement.getAttribute('av-bind-checked');
 
-            if (propertyBound in viewModel) {
-                this.addPropertyBinding(propertyBound, new BindingContext(BindingType.CHECKED, htmlElement as HTMLElement, viewModel));
+            if (propertyBound in this.viewModel) {
+                this.addPropertyBinding(propertyBound, new BindingContext(BindingType.CHECKED, htmlElement as HTMLElement, this.viewModel));
                 this.registerPropertyObserver(this.viewModel, propertyBound, this);
 
                 htmlElement.addEventListener('change', (event) => {
@@ -175,7 +185,7 @@ export class UIBinder {
         for (let htmlElement of widget.querySelectorAll("[av-bind-onclick]")) {
             let propertyBound = htmlElement.getAttribute('av-bind-onclick');
 
-            if (propertyBound in viewModel) {
+            if (propertyBound in this.viewModel) {
                 htmlElement.addEventListener('click', (_event) => {
                     (this.viewModel as any)[propertyBound]();
                 });
@@ -183,6 +193,8 @@ export class UIBinder {
                 throw "Property '" + propertyBound + "' does not exist on view model";
             }
         }
+
+        return this;
     }
 
     private addPropertyBinding(triggerProperty: string, bindingContext: BindingContext) {
@@ -195,6 +207,12 @@ export class UIBinder {
     private static notifyObservers(viewModel: any, property: string | symbol, newValue: any) {
         if (UIBinder.propertyObservers.has(viewModel) && UIBinder.propertyObservers.get(viewModel).has(property)) {
             UIBinder.propertyObservers.get(viewModel).get(property).forEach(obs => obs.onPropertyUpdated(property, newValue));
+        }
+    }
+
+    public unbind() {
+        if (UIBinder.propertyObservers.has(this.viewModel)) {
+            UIBinder.propertyObservers.delete(this.viewModel);
         }
     }
 
@@ -223,15 +241,24 @@ export class UIBinder {
                         }
                     case BindingType.TEXT:
                     case BindingType.CLASS:
-                    case BindingType.STYLE_DISPLAY:
+                    case BindingType.STYLE:
                         {
                             if (bindingContext.propNeedsEvaluation()) {
                                 let propEval = this.getViewModeProperty(bindingContext.viewModel, property);
                                 let propValueAfterEval = bindingContext.getValueOnEvaluation(propEval);
 
                                 if (propValueAfterEval != undefined) {
-                                    if (bindingContext.getBindingType() == BindingType.STYLE_DISPLAY) {
-                                        bindingContext.htmlElement.style.display = propValueAfterEval;
+                                    if (bindingContext.getBindingType() == BindingType.STYLE) {
+                                        let targetStyle = bindingContext.getStyleTargetProp();
+
+                                        switch (targetStyle) {
+                                            case "display":
+                                                bindingContext.htmlElement.style.display = propValueAfterEval;
+                                                break;
+                                            case "border":
+                                                bindingContext.htmlElement.style.border = propValueAfterEval;
+                                                break;
+                                        }
                                     }
 
                                     if (bindingContext.getBindingType() == BindingType.TEXT) {
@@ -269,7 +296,7 @@ export class UIBinder {
     }
 
     static propertyChanged(object: any, property: string | symbol, newValue: any, viewModel: any) {
-        console.log("%s changed to: %s", property as string, newValue);
+        //console.log("%s changed to: %s", property as string, newValue);
         UIBinder.notifyObservers(viewModel, property, newValue);
     }
 }

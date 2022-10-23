@@ -107,7 +107,7 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
             switch (variableType) {
                 case VariableType.undefined:
                 case VariableType.Primitive: observer.onSetEvent(this, oldValues, this.value); break;
-                case VariableType.Array: observer.onSetArrayValueEvent(this, oldValues, this.value); break;
+                case VariableType.Array: observer.onSetArrayValueEvent(this, oldValues? [...oldValues] : oldValues, this.value? [...this.value] : this.value); break;
                 case VariableType.Object: observer.onSetObjectValueEvent(this, oldValues, this.value); break;
                 default: throw "OBSERVABLE type unknown"
             }                

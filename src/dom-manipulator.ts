@@ -157,9 +157,9 @@ export class DOMmanipulator
         return svgElement;
     }
 
-    static elementStartsWithId<Type>(parent: HTMLElement, id: string) : Type 
+    static elementStartsWithId(parent: HTMLElement, id: string) : HTMLElement
     {
-        return this.elementsStartsWithId<Type>(parent, id)[0];
+        return this.elementsStartsWithId<HTMLElement>(parent, id)[0];
     }
 
     static elementsStartsWithId<Type>(parent: HTMLElement, id: string) : Type[] 
