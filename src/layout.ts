@@ -6,9 +6,9 @@ var MustacheIt = require('mustache');
 
 export class Layout {
     protected readonly scopeTemplate = '\
-    <ul class="list-group list-group" av-scope="{{scope}}"> \
+    <ul class="list-group list-group-mine" av-scope="{{scope}}"> \
       <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px;">{{scopeName}}</li> \
-      <li class="list-group-item" style="padding-right: 0px; display: table;"></li> \
+      <li class="list-group-item" style="border: 2px solid #0d6efd; padding-right: 0px; display: table;"></li> \
     </ul>'
 
     constructor(protected scene: HTMLElement) {
@@ -31,14 +31,10 @@ export class Layout {
             let rendered = MustacheIt.render(this.scopeTemplate, { scopeName: uiScopeName, scope: scopeName });
             let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);
 
-            let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
-            let parentScopeHtmlElement = (parentScopeName == "") ? this.scene : this.scene.querySelector("[av-scope='" + parentScopeName + "']");
+            //let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
+            //let parentScopeHtmlElement = (parentScopeName == "") ? this.scene : this.scene.querySelector("[av-scope='" + parentScopeName + "']");
 
-            if (parentScopeHtmlElement.children.length <= 1)
-                parentScopeHtmlElement.append(scopeHtmlElement);
-            else
-                parentScopeHtmlElement.children[1].append(scopeHtmlElement);
-
+            this.scene.prepend(scopeHtmlElement);
             this.scopes.set(scopeName, scopeHtmlElement);
         }
 

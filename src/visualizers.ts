@@ -66,19 +66,20 @@ class VisualizerViewModel {
 
 export class VariableVisualizer extends VariableChangeCbk {
     protected readonly templateVarName =
-        '<div class="var-box" style="display: table;"> \
-        <span id="var-name" class="align-self-center var-name" style="display: table-cell;">{{name}}:</span> \
+        '<div class="var-box" style="display: table-row;"> \
+        <span id="var-name" class="var-name" style="display: table-cell; text-align: right; width: 20%;">{{name}}:</span> \
     </div> \
     ';
 
     protected readonly templateReference: string =
-        '<span class="var-value" style="border:0px; height:{{height}}px;"> \
-        <span style="font-style: italic;" av-bind-text="LangStrId.9"></span><span id="var-value"></span> \
+        '<span class="var-value" style="display: table; border:none; height:{{height}}px;"> \
+        <span style="font-style: italic; vertical-align:middle;" av-bind-text="LangStrId.9"></span> \
+        <span id="var-value" style="vertical-align:middle;"></span> \
      </span>';
 
     protected readonly templatePrimitive: string =
-        '<span class="var-value" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}" style="width: {{width}}px; height:{{height}}px;"> \
-         <span id="var-value"></span> \
+        '<span class="var-value" style="display: table; margin-left:3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}"> \
+         <span id="var-value" style="vertical-align:sub;"></span> \
      </span>';
 
     protected readonly templateArray = '<span style="display: table;"> \
@@ -280,7 +281,7 @@ export class VariableVisualizer extends VariableChangeCbk {
 
     private drawPrimitive() {
         let rendered = MustacheIt.render(this.templatePrimitive, {
-            width: 30, height: 30
+            width: 35, height: 35
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
