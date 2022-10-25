@@ -5,8 +5,8 @@
             <span av-bind-text="LangStrId.4">Execute line</span>
         </button>
         <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides">
-            <i class="bi bi-fast-forward-fill" av-bind-class='{"!isPaused" : "bi-pause-fill", "isPaused" : "bi-fast-forward-fill"}'></i>
-            <span av-bind-text='{"isPaused": "LangStrId.1", "!isPaused": "LangStrId.2"}'></span>
+            <i class="bi bi-fast-forward-fill" av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
+            <span av-bind-text='{isPaused: LangStrId.1, !isPaused: LangStrId.2}'></span>
         </button>        
         <button av-bind-onclick="onRestart" type="button" class="btn btn-light btn-overrides">
             <i class="bi bi-arrow-clockwise"></i>
@@ -26,9 +26,9 @@
 </div>
 
 <div id="{{appVisId}}" class="halfScreen">
-    <ul class="list-group list-group">
+    <ul class="list-group">
         <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.5">Compilation</span>
-        <button type="button" class="btn btn-success btn-sm" style="vertical-align: baseline;" av-bind-class='{"compilationStatus": "btn-success", "!compilationStatus": "btn-danger"}' av-bind-text='{"compilationStatus": "OK", "!compilationStatus": "compilationErrorMessage()"}'></button>
+        <button type="button" class="btn btn-success btn-sm" style="vertical-align: baseline;" av-bind-class='{compilationStatus: btn-success, !compilationStatus: btn-danger}' av-bind-text='{compilationStatus: OK, !compilationStatus: compilationErrorMessage()}'></button>
         </li>
         <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.7">Variables</span>
             <div id="panelVariables-{{codeEditorId}}">
