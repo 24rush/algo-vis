@@ -78,8 +78,8 @@ export class VariableVisualizer extends VariableChangeCbk {
      </span>';
 
     protected readonly templatePrimitive: string =
-        '<span class="var-value" style="display: table; margin-left:3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}"> \
-         <span id="var-value" style="vertical-align:sub;"></span> \
+        '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}"> \
+         <span id="var-value" style="vertical-align:middle;"></span> \
      </span>';
 
     protected readonly templateArray = '<span style="display: table;"> \
@@ -117,8 +117,10 @@ export class VariableVisualizer extends VariableChangeCbk {
     protected indextValueElements: HTMLElement[] = [];
     protected text: HTMLElement = undefined;
 
+    protected elementEverDrawn = false;
     protected drawn: boolean = false;
     protected drawnElement: DrawnElement = DrawnElement.undefined;
+    protected pendingDraw: DrawnElement = DrawnElement.undefined;
 
     protected viewModel: VisualizerViewModel = new VisualizerViewModel();
     protected uiBinder: UIBinder = undefined;
@@ -235,14 +237,25 @@ export class VariableVisualizer extends VariableChangeCbk {
     }
 
     public draw(): HTMLElement {
+        if (this.elementEverDrawn)
+            return undefined;
+
         let rendered = MustacheIt.render(this.templateVarName, {
             name: this.observable.name,
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        this.elementEverDrawn = true;
 
         return this.htmlElement;
+    }
+
+    public updatePendingDraws() {
+        if (this.pendingDraw != DrawnElement.undefined) {
+            this.redraw(this.pendingDraw);
+            this.pendingDraw = DrawnElement.undefined;
+        }
     }
 
     private needsDraw(): boolean {
@@ -409,6 +422,11 @@ export class VariableVisualizer extends VariableChangeCbk {
     override onSetReferenceEvent(_observable: ObservableVariable, oldReference: string, newReference: any): void {
         this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
 
+        if (!this.elementEverDrawn) {
+            this.pendingDraw = DrawnElement.Reference;
+            return;
+        }
+
         if (this.needsRedraw(DrawnElement.Reference)) {
             this.redraw(DrawnElement.Reference);
 
@@ -426,6 +444,11 @@ export class VariableVisualizer extends VariableChangeCbk {
 
     override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {
         this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+
+        if (!this.elementEverDrawn) {
+            this.pendingDraw = DrawnElement.Primitive;
+            return;
+        }
 
         if (this.needsRedraw(DrawnElement.Primitive)) {
             this.redraw(DrawnElement.Primitive);
@@ -452,6 +475,11 @@ export class VariableVisualizer extends VariableChangeCbk {
 
     override onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
         this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+
+        if (!this.elementEverDrawn) {
+            this.pendingDraw = DrawnElement.Array;
+            return;
+        }
 
         if (this.needsRedraw(DrawnElement.Array)) {
             this.redraw(DrawnElement.Array);
@@ -496,6 +524,11 @@ export class VariableVisualizer extends VariableChangeCbk {
     }
 
     override onSetArrayAtIndexEvent(observable: ObservableVariable, _oldValue: any, newValue: any, index_r: number, index_c?: number): void {
+        if (!this.elementEverDrawn) {
+            this.pendingDraw = DrawnElement.Array;
+            return;
+        }
+
         let arrayData = observable.getValue() as any[];
         let isMultiArray = this.checkIsMultiArray(arrayData);
 
@@ -506,6 +539,11 @@ export class VariableVisualizer extends VariableChangeCbk {
     }
 
     override onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
+        if (!this.elementEverDrawn) {
+            this.pendingDraw = DrawnElement.Object;
+            return;
+        }
+
         if (this.needsRedraw(DrawnElement.Object)) {
             this.redraw(DrawnElement.Object);
             return;
@@ -524,6 +562,11 @@ export class VariableVisualizer extends VariableChangeCbk {
 
     override onSetObjectPropertyEvent(_observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {
         this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+        
+        if (!this.elementEverDrawn) {
+            this.pendingDraw = DrawnElement.Object;
+            return;
+        }
 
         if (key in this.keyValueElements) {
             this.fitText(this.keyValueElements[key], newValue, this.width, this.height);

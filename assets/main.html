@@ -1,8 +1,9 @@
-<div class="halfScreen">
+<div id="{{leftPaneId}}" class="halfScreen">
     <div class="btn-group btn-group-sm" id="buttons-{{codeEditorId}}">
-        <button av-bind-onclick="onAdvance" type="button" class="btn btn-light btn-overrides">
+        <button av-bind-onclick="onAdvance" type="button" class="rounded-right btn btn-light btn-overrides"
+        style="background-color: var(--bs-blue) !important; color: var(--bs-white);">
             <i class="bi bi-play-fill"></i>
-            <span av-bind-text="LangStrId.4">Execute line</span>
+            <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
         </button>
         <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides">
             <i class="bi bi-fast-forward-fill" av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
@@ -22,10 +23,10 @@
     <div style="position:relative;" id="comments-{{codeEditorId}}" 
         data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">    
     </div>
-    <div id="{{codeEditorId}}">{{code}}</div>
+    <div id="{{codeEditorId}}" style="height: 100%;">{{code}}</div>
 </div>
 
-<div id="{{appVisId}}" class="halfScreen">
+<div id="{{rightPaneId}}" class="halfScreen">
     <ul class="list-group">
         <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.5">Compilation</span>
         <button type="button" class="btn btn-success btn-sm" style="vertical-align: baseline;" av-bind-class='{compilationStatus: btn-success, !compilationStatus: btn-danger}' av-bind-text='{compilationStatus: OK, !compilationStatus: compilationErrorMessage()}'></button>

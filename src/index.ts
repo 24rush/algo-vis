@@ -1,6 +1,8 @@
 import { LangEnum, Localize } from "./localization";
 import { Scene } from "./scene";
 
+var Split = require('split.js').default
+
 require('@popperjs/core')
 require('bootstrap')
 var MustacheIt = require('mustache')
@@ -15,13 +17,15 @@ for (let widget of document.querySelectorAll("[class=algovis]")) {
     let indexStr = (index++).toString();
 
     let codeId = widget.getAttribute('code-id');
-    let appVisId = "app-vis-" + indexStr;
+    let leftPaneId = "av-left-pane-" + indexStr;
+    let rightPaneId = "av-right-pane-" + indexStr;
     let codeEditorId = "code-editor-" + indexStr;
 
-    let innerHtml = MustacheIt.render(htmlTemplate, { codeEditorId: codeEditorId, appVisId: appVisId, code: widget.innerHTML, index: index });
+    let innerHtml = MustacheIt.render(htmlTemplate, { codeEditorId: codeEditorId, leftPaneId: leftPaneId, rightPaneId: rightPaneId, code: widget.innerHTML, index: index });
     widget.innerHTML = innerHtml;
 
-    new Scene(widget as HTMLElement, appVisId, codeEditorId, codeId);
+    new Scene(widget as HTMLElement, rightPaneId, codeEditorId, codeId);
+    Split(["#"+leftPaneId, "#"+rightPaneId]);
 }
 
 let styles = document.createElement('style');

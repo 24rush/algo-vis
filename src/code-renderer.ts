@@ -1,6 +1,5 @@
 var ace = require('ace-builds/src-min-noconflict/ace')
 require('ace-builds/src-min-noconflict/mode-javascript')
-var theme_monokai = require('ace-builds/src-min-noconflict/theme-monokai')
 
 export interface CodeRendererEventNotifier {
     onSourceCodeUpdated(newCode: string): void;
@@ -25,9 +24,10 @@ export class CodeRenderer {
         };
         
         this.editor = ace.edit(this.elementId);
-        this.editor.setShowPrintMargin(false);
-        this.editor.setOptions({ useWorker: false });        
-       // this.editor.setTheme(theme_monokai);
+        this.editor.setShowPrintMargin(false);    
+        this.editor.setAutoScrollEditorIntoView(true);  
+        //this.editor.setReadOnly(true);
+
         this.editor.session.setMode("ace/mode/javascript");        
         this.editor.session.setValue(convert(newCode));
 
@@ -42,8 +42,9 @@ export class CodeRenderer {
             };
         });
         
-        this.editor.setOptions({
-            maxLines: 30,
+        this.editor.setOptions({  
+            useWorker: false,          
+            maxLines: {Infinity},
             minLines: 12
         }); 
     }

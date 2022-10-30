@@ -779,7 +779,8 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                         break;
                     }
                     case "ArrayExpression":
-                    case "ObjectExpression": { console.log(decl.init.name);
+                    case "ObjectExpression": {
+                        console.log(decl.init.name);
                         this.noMarkLineZone.push(new IndexRange(decl.init.range[0] - 1, decl.init.range[1] + 1));
                         break;
                     }
@@ -920,6 +921,20 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                         break;
                     }
 
+                case "UnaryExpression":
+                    {
+                        if (item.operator && item.operator == "delete") {
+                            let varName = item.argument.object.name;
+
+                            let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
+
+                            if (vardeclaration.length > 0) {
+                                this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
+                            }
+                        }
+
+                        break;
+                    }
                 case "UpdateExpression":
                 case "AssignmentExpression": {
                     let varName = '';

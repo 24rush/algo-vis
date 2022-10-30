@@ -87,8 +87,7 @@ export class UIBinder {
         let styleTargetProp: string = undefined;
 
         for (let bindingAttr of bindingAttrs) {
-            for (let element of widget.querySelectorAll("[" + bindingAttr + "]")) {
-                console.log(element);
+            for (let element of widget.querySelectorAll("[" + bindingAttr + "]")) {                
                 let htmlElement = element as HTMLElement;
                 let bindingText = htmlElement.getAttribute(bindingAttr);
 
@@ -325,7 +324,7 @@ export class UIBinder {
     }
 
     static propertyChanged(object: any, property: string | symbol, newValue: any, viewModel: any) {
-        console.log("%s changed to: %s", property as string, newValue);
+        //console.log("%s changed to: %s", property as string, newValue);
         UIBinder.notifyObservers(viewModel, property, newValue);
     }
 }

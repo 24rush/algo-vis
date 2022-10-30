@@ -14,7 +14,10 @@ var en_langMap : Record<number, string> = {
     6: "Restart",
     7: "Variables",
     8: "Console output",
-    9: "reference to "
+    9: "reference to ",
+    10: "function ",
+    11: "local scope in",
+    12: "local scope"
 }
 
 var ro_langMap : Record<number, string> = {
@@ -22,12 +25,15 @@ var ro_langMap : Record<number, string> = {
     1: "Executa tot",
     2: "Pauza",
     3: "Arata comentarii",
-    4: "Executa o linie",
+    4: "Executa linie",
     5: "Compilare",
     6: "Reincepe",
     7: "Variabile",
     8: "Consola de iesire",
-    9: "refera pe "
+    9: "refera pe ",
+    10: "functia ",
+    11: "scop local in ",
+    12: "scop local"
 }
 
 export class Localize

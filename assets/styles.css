@@ -1,65 +1,98 @@
 .algovis {
-    width: 100%;
-    display: flex;
-    justify-content: center;
+  width: 100%;
+  resize: both;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.split {
+  display: flex;
+  flex-direction: row;
+}
+
+/* BEGIN SPLITTER */
+.gutter {
+  background-color: #eee;
+  background-repeat: no-repeat;
+  background-position: 50%;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.gutter.gutter-horizontal {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUAAAAeCAYAAADkftS9AAAAIklEQVQoU2M4c+bMfxAGAgYYmwGrIIiDjrELjpo5aiZeMwF+yNnOs5KSvgAAAABJRU5ErkJggg==');
+  cursor: col-resize;
+}
+
+/* END SPLITTER */
+
+.btn-overrides {
+  padding: 3px !important;
+}
+
+.halfScreen {
+  width: 50%;
+ /* padding-right: 2px;
+  padding-left: 1px;*/
+}
+
+.list-group-mine {
+  margin-bottom: 5px !important;
+  border: 2px solid #0d6efd;
+}
+
+.var-box {
+  padding: 3px;
+}
+
+.var-name {
+  vertical-align: middle;
+  padding-right: 5px;
+  font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
+}
+
+.var-value {
+  display: table-cell;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid;
+  font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
+}
+
+.myMarker {
+  position: absolute;
+  background: #0d6dfd3e;
+  z-index: 20
+}
+
+.blink {
+  animation: blinker 0.2s linear 3;
+}
+
+@keyframes blinker {
+  0% {
+    color: rgb(207, 74, 74);
   }
 
-  .btn-overrides {
-    padding: 3px !important;
+  50% {
+    opacity: 0;
+    color: rgb(207, 74, 74);
   }
 
-  .halfScreen {
-    width: 50%;
-    padding-right: 2px;
-    padding-left: 1px;
+  100% {
+    color: black;
   }
+}
 
-  .list-group-mine {
-    padding-bottom: 5px;
-  }
-  
-  .var-box {
-    padding: 3px;
-  }
+* {
+  border-radius: 1px !important;
+}
 
-  .var-name {
-    vertical-align: middle;
-    padding-right: 5px;        
-    font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
-  }
+.fade-out {
+  visibility: hidden;
+  background-color: lightgrey;
+  opacity: 0;
+  transition: visibility 0s 1s, opacity 0.9s ease-out;
+}
 
-  .var-value {
-    display: table-cell;
-    text-align: center;
-    vertical-align: middle;    
-    border: 1px solid;
-    font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
-  }
-
-  .myMarker {
-    position: absolute;
-    background: #0d6dfd3e;
-    z-index: 20
-  }
-
-  .blink {
-    animation: blinker 0.2s linear 3;
-  }
-
-  @keyframes blinker {
-    0% {
-      color: rgb(207, 74, 74);
-    }
-
-    50% {
-      opacity: 0;
-      color: rgb(207, 74, 74);
-    }
-
-    100% {
-      color: black;
-    }
-  }
-  * {
-      border-radius: 1px !important;
-  }
