@@ -12,8 +12,8 @@ export class CodeRenderer {
     private eventListeners: CodeRendererEventNotifier[] = [];
     private lineComments: string[] = [];
 
-    constructor(private elementId: string) {
-        let currentCode = document.getElementById(elementId).textContent;                
+    constructor(codeEditorHtmlElement: HTMLElement, isReadonly: boolean = false) {        
+        let currentCode = codeEditorHtmlElement.textContent;                
         let newCode = "";
         if (currentCode !== "") {            
             [this.lineComments, newCode] = this.extractComments(currentCode);            
@@ -23,10 +23,10 @@ export class CodeRenderer {
             return convert.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
         };
         
-        this.editor = ace.edit(this.elementId);
+        this.editor = ace.edit(codeEditorHtmlElement.id);
         this.editor.setShowPrintMargin(false);    
-        this.editor.setAutoScrollEditorIntoView(true);  
-        //this.editor.setReadOnly(true);
+        this.editor.setAutoScrollEditorIntoView(true);          
+        this.editor.setReadOnly(isReadonly);
 
         this.editor.session.setMode("ace/mode/javascript");        
         this.editor.session.setValue(convert(newCode));

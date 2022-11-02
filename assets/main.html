@@ -1,5 +1,5 @@
-<div id="{{leftPaneId}}" class="halfScreen">
-    <div class="btn-group btn-group-sm" id="buttons-{{codeEditorId}}">
+<div id="{{leftPaneId}}" class="halfScreen leftPane">
+    <div class="btn-group btn-group-sm buttonsBar">
         <button av-bind-onclick="onAdvance" type="button" class="rounded-right btn btn-light btn-overrides"
         style="background-color: var(--bs-blue) !important; color: var(--bs-white);">
             <i class="bi bi-play-fill"></i>
@@ -20,19 +20,18 @@
             </label>
         </div>
     </div>        
-    <div style="position:relative;" id="comments-{{codeEditorId}}" 
-        data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">    
+    <div class="commentsPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">    
     </div>
-    <div id="{{codeEditorId}}" style="height: 100%;">{{code}}</div>
+    <div id="{{codeEditorId}}" class="codeEditor">{{code}}</div>
 </div>
 
-<div id="{{rightPaneId}}" class="halfScreen">
+<div id="{{rightPaneId}}" class="halfScreen rightPane">
     <ul class="list-group">
-        <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.5">Compilation</span>
+        <li class="list-group-item fw-semibold" av-bind-style-display="{isReadonlyCodeEditor : none}"><span av-bind-text="LangStrId.5">Compilation</span>
         <button type="button" class="btn btn-success btn-sm" style="vertical-align: baseline;" av-bind-class='{compilationStatus: btn-success, !compilationStatus: btn-danger}' av-bind-text='{compilationStatus: OK, !compilationStatus: compilationErrorMessage()}'></button>
         </li>
         <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.7">Variables</span>
-            <div id="panelVariables-{{codeEditorId}}">
+            <div class="panelVariables">
             </div>
         </li>
         <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.8">Console output</span>

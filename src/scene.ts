@@ -9,6 +9,7 @@ var bootstrap = require('bootstrap')
 
 class AVViewModel {
     consoleOutput: string = "";
+    isReadonlyCodeEditor: boolean = false;
 
     showComments: boolean = true;
     onShowComments(): any { }
@@ -25,6 +26,7 @@ class AVViewModel {
 
     public setDefaults() {
         this.consoleOutput = "";
+        this.isReadonlyCodeEditor = false;
         this.isPaused = true;
         this.showComments = false; // needs sync with UI checked
         this.compilationStatus = true;
@@ -42,29 +44,22 @@ export class Scene {
 
     private operationRecorder = new OperationRecorder();
 
-    constructor(widget: HTMLElement, private appId: string, private codeEditorId: string, private codeId?: string) {
-        let parent = document.getElementById(this.appId);
-        if (!parent) {
-            console.error('%s does not exist', this.appId);
-            return;
-        }
-
-        let variablesPanel = DOMmanipulator.elementStartsWithId(parent, "panelVariables-" + codeEditorId);
-        if (!variablesPanel) {
-            console.error('Cannont find panelVariables');
-            return;
-        }
+    constructor(widget: HTMLElement, codeId?: string) {
+        let rightPane = widget.querySelector("[class*=rightPane]");
+        let variablesPanel = widget.querySelector("[class*=panelVariables]") as HTMLElement;
+        let codeEditor = widget.querySelector("[class*=codeEditor]") as HTMLElement;
+        let buttonsBar = widget.querySelector("[class*=buttonsBar]");
         
-        this.codeRenderer = new CodeRenderer(this.codeEditorId);        
+        let isReadonlyCodeEditor = widget.hasAttribute('av-ro');
+        this.codeRenderer = new CodeRenderer(codeEditor, isReadonlyCodeEditor);        
         let layout = new Layout(variablesPanel);
 
-        let viewModelObs = new ObservableViewModel(this.viewModel);
-
-        let buttonsWidget = DOMmanipulator.elementStartsWithId(widget, "buttons-" + codeEditorId);
-        new UIBinder(viewModelObs).bindTo(buttonsWidget).bindTo(parent);
+        let viewModelObs = new ObservableViewModel(this.viewModel);        
+        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane);
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);        
         avViewModel.setDefaults();
+        avViewModel.isReadonlyCodeEditor = isReadonlyCodeEditor;
 
         this.viewModel.onShowComments = () => {
             avViewModel.showComments = !avViewModel.showComments;
@@ -174,7 +169,7 @@ export class Scene {
                     return;
 
                 if (self.commentsPopover) self.commentsPopover.dispose();
-                let commentsElement = document.getElementById("comments-" + codeEditorId);
+                let commentsElement = widget.querySelector("[class*=commentsPopover]") as HTMLElement;
 
                 commentsElement.style['left'] = aceCursor.style['left'];
                 commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
@@ -200,7 +195,7 @@ export class Scene {
                 }
 
                 checkerFunc();
-            }
+            } else options.content = "";
         };
 
         let advance = () => {

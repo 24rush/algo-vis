@@ -6,6 +6,14 @@
   justify-content: center;
 }
 
+.codeEditor {
+  height: 100%;
+}
+
+.commentsPopover {
+  position:relative;
+}
+
 .split {
   display: flex;
   flex-direction: row;

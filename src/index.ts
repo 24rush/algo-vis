@@ -14,18 +14,14 @@ Localize.setLang(LangEnum.Ro);
 
 let index = 0;
 for (let widget of document.querySelectorAll("[class=algovis]")) {
-    let indexStr = (index++).toString();
-
     let codeId = widget.getAttribute('code-id');
-    let leftPaneId = "av-left-pane-" + indexStr;
-    let rightPaneId = "av-right-pane-" + indexStr;
-    let codeEditorId = "code-editor-" + indexStr;
+    let codeEditorId = "code-editor-" + (index++).toString();
 
-    let innerHtml = MustacheIt.render(htmlTemplate, { codeEditorId: codeEditorId, leftPaneId: leftPaneId, rightPaneId: rightPaneId, code: widget.innerHTML, index: index });
+    let innerHtml = MustacheIt.render(htmlTemplate, { codeEditorId: codeEditorId, code: widget.innerHTML });
     widget.innerHTML = innerHtml;
 
-    new Scene(widget as HTMLElement, rightPaneId, codeEditorId, codeId);
-    Split(["#"+leftPaneId, "#"+rightPaneId]);
+    new Scene(widget as HTMLElement, codeId);
+    Split([widget.children[0], widget.children[1]]);
 }
 
 let styles = document.createElement('style');
