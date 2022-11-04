@@ -1,6 +1,6 @@
 import { DOMmanipulator } from "./dom-manipulator";
 import { Localize } from "./localization";
-import { ObservableVariable } from "./observable-type";
+import { ObservableType } from "./observable-type";
 import { VariableVisualizer } from "./visualizers";
 var MustacheIt = require('mustache');
 
@@ -10,13 +10,13 @@ enum LayoutOperation {
 }
 
 class LayoutOperationContext {
-    constructor(public type: LayoutOperation, public scopeName: string, public observable: ObservableVariable) { }
+    constructor(public type: LayoutOperation, public scopeName: string, public observable: ObservableType) { }
 
-    static newAddOperation(scopeName: string, observable: ObservableVariable): LayoutOperationContext {
+    static newAddOperation(scopeName: string, observable: ObservableType): LayoutOperationContext {
         return new LayoutOperationContext(LayoutOperation.Add, scopeName, observable);
     }
 
-    static newRemoveOperation(scopeName: string, observable: ObservableVariable): LayoutOperationContext {
+    static newRemoveOperation(scopeName: string, observable: ObservableType): LayoutOperationContext {
         return new LayoutOperationContext(LayoutOperation.Remove, scopeName, observable);
     }
 }
@@ -71,7 +71,7 @@ export class Layout {
         }
     }
 
-    public add(scopeName: string, observable: ObservableVariable) {
+    public add(scopeName: string, observable: ObservableType) {
         if (this.layoutAnimationsPending) {
             this.pendingLayoutOperations.push(LayoutOperationContext.newAddOperation(scopeName, observable));
 
@@ -123,7 +123,7 @@ export class Layout {
 
             let visualizer = this.observableToVisualizer[key];
             let scopeHtmlElement: HTMLElement = this.scopes.get(scopeName);
-            let htmlElement = visualizer.draw();
+            let htmlElement = visualizer.drawVarName();
             if (htmlElement)
                 scopeHtmlElement.children[1].prepend(htmlElement);
 
@@ -131,7 +131,7 @@ export class Layout {
         }
     }
 
-    public remove(scopeName: string, observable: ObservableVariable, queueRequest: boolean = true) {
+    public remove(scopeName: string, observable: ObservableType, queueRequest: boolean = true) {
         if (this.layoutAnimationsPending && queueRequest) {
             this.pendingLayoutOperations.push(LayoutOperationContext.newRemoveOperation(scopeName, observable));
             return;

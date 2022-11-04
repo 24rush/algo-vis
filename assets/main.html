@@ -25,7 +25,7 @@
     <div id="{{codeEditorId}}" class="codeEditor">{{code}}</div>
 </div>
 
-<div id="{{rightPaneId}}" class="halfScreen rightPane">
+<div class="halfScreen rightPane">
     <ul class="list-group">
         <li class="list-group-item fw-semibold" av-bind-style-display="{isReadonlyCodeEditor : none}"><span av-bind-text="LangStrId.5">Compilation</span>
         <button type="button" class="btn btn-success btn-sm" style="vertical-align: baseline;" av-bind-class='{compilationStatus: btn-success, !compilationStatus: btn-danger}' av-bind-text='{compilationStatus: OK, !compilationStatus: compilationErrorMessage()}'></button>

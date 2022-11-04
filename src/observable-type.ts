@@ -1,22 +1,25 @@
-type DictionaryKeyType = string | number | symbol;
+import { ObservableGraphTypes } from "./predefined-types";
 
-export class VariableChangeCbk {
+type DictionaryKeyType = string | number | symbol;
+export type ObservableType = ObservableJSVariable | ObservableGraphTypes;
+
+export class JSVariableChangeCbk {
     // set Reference + Primitive
-    onSetReferenceEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
-    onSetEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
+    onSetReferenceEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
+    onSetEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
     
     // set Array and array at index
-    onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
-    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index_r: number, index_c: number) { /*console.log("Method not implemented.");*/ };
+    onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+    onSetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, newValue: any, index_r: number, index_c: number) { /*console.log("Method not implemented.");*/ };
 
     // set object and object propery
-    onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
-    onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
+    onSetObjectValueEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+    onSetObjectPropertyEvent(observable: ObservableJSVariable, value: any, newValue: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
 
     // get primitive and array at index and object property
-    onGetEvent(observable: ObservableVariable, value: any) { /*console.log("Method not implemented.");*/ }
-    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index_r: number, index_c?: number) { /*console.log("Method not implemented.");*/ };
-    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };    
+    onGetEvent(observable: ObservableJSVariable, value: any) { /*console.log("Method not implemented.");*/ }
+    onGetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, index_r: number, index_c?: number) { /*console.log("Method not implemented.");*/ };
+    onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };    
 }
 
 export class BaseObservableType<NotifyCbkType>
@@ -42,10 +45,13 @@ export enum VariableType {
     Primitive,
     Array,
     Object,
-    Reference
+    Reference,
+
+    Graph,
+    Tree
 }
 
-export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
+export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk>
 {
     protected initValue: any;
 
@@ -117,7 +123,7 @@ export class ObservableVariable extends BaseObservableType<VariableChangeCbk>
     private determineType(object: any): VariableType {
         if (!object)
             return VariableType.undefined;
-
+            
         let variableType = Object.prototype.toString.call(object);
 
         let isArray = (variableType == "[object Array]");

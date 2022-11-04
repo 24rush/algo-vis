@@ -1,7 +1,12 @@
 import { DOMmanipulator } from "./dom-manipulator";
 var MustacheIt = require('mustache');
 
-import { ObservableVariable, VariableChangeCbk } from "./observable-type"
+var Cytoscape = require('cytoscape');
+var dagre = require('cytoscape-dagre');
+Cytoscape.use(dagre);
+
+import { ObservableJSVariable, JSVariableChangeCbk, ObservableType } from "./observable-type"
+import { GraphVariableChangeCbk, ObservableGraph, ObservableGraphTypes, ObservableTree } from "./predefined-types";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
 
 class FontSizeCache {
@@ -27,7 +32,8 @@ enum DrawnElement {
     Primitive,
     Array,
     Object,
-    Reference
+    Reference,
+    Graph
 }
 
 class VisualizerViewModel {
@@ -36,8 +42,15 @@ class VisualizerViewModel {
     isNotQueueOrStack: boolean = true;
     isEmpty: boolean = false;
 
-    public reset(value : any, varname: string) {      
+    public reset(value: any, varname: string) {
         this.isEmpty = value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0);
+
+        if (value instanceof ObservableGraph)
+            this.isEmpty = (value as ObservableGraph).isEmpty();
+
+        if (value instanceof ObservableTree)
+            this.isEmpty = (value as ObservableTree).isEmpty();
+
         this.isMultiArray = this.checkIsMultiArray(value);
         this.isNotStack = varname.indexOf('stack') == -1;
         this.isNotQueueOrStack = this.isNotStack && varname.indexOf('queue') == -1;
@@ -48,7 +61,7 @@ class VisualizerViewModel {
         }
     }
 
-    private checkIsMultiArray(array : any): boolean {
+    private checkIsMultiArray(array: any): boolean {
         let isArray = (Object.prototype.toString.call(array) == "[object Array]");
 
         if (!isArray)
@@ -64,7 +77,7 @@ class VisualizerViewModel {
     }
 };
 
-export class VariableVisualizer extends VariableChangeCbk {
+export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
         '<div class="var-box" style="display: table-row;"> \
         <span id="var-name" class="var-name" style="display: table-cell; text-align: right; width: 20%;">{{name}}:</span> \
@@ -109,6 +122,13 @@ export class VariableVisualizer extends VariableChangeCbk {
     {{/data}} \
     </span>';
 
+    protected readonly templateEmptyGraph = '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}"> \
+        <span id="var-value" style="vertical-align:middle;"></span> \
+    </span>';
+
+    protected readonly templateGraph = '<div style="display: table-cell; margin-left:3px; margin-top: 3px; resize:vertical; overflow:auto; width: {{width}}px; height:{{height}}px;"> \
+    </div>';
+
     protected readonly height: number = 35;
     protected readonly width: number = 35;
 
@@ -116,25 +136,35 @@ export class VariableVisualizer extends VariableChangeCbk {
     protected keyValueElements: Record<string | number | symbol, HTMLElement> = {};
     protected indextValueElements: HTMLElement[] = [];
     protected text: HTMLElement = undefined;
+    protected graphVis: any = undefined; // Cytoscape
+    protected layout: any = undefined;
 
-    protected elementEverDrawn = false;
-    protected drawn: boolean = false;
-    protected drawnElement: DrawnElement = DrawnElement.undefined;
+    protected varNameDrawn = false;
+    protected varValueDrawn: boolean = false;
+    protected elementToDrawType: DrawnElement = DrawnElement.undefined;
     protected pendingDraw: DrawnElement = DrawnElement.undefined;
 
     protected viewModel: VisualizerViewModel = new VisualizerViewModel();
     protected uiBinder: UIBinder = undefined;
     protected clientViewModel: VisualizerViewModel = undefined;
 
-    constructor(protected observable: ObservableVariable) {
-        super();
-
+    constructor(protected observable: ObservableType) {
         this.observable.registerObserver(this);
 
         let viewModel = new ObservableViewModel(this.viewModel);
 
         this.clientViewModel = clientViewModel<typeof this.viewModel>(viewModel);
         this.uiBinder = new UIBinder(viewModel);
+    }
+
+    onGetEvent(observable: ObservableJSVariable, value: any): void {
+        //throw new Error("Method not implemented.");
+    }
+    onGetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, index_r: number, index_c?: number): void {
+        // throw new Error("Method not implemented.");
+    }
+    onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: string | number | symbol): void {
+        //  throw new Error("Method not implemented.");
     }
 
     public getHTMLElement(): HTMLElement { return this.htmlElement; }
@@ -175,7 +205,15 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
 
         if (typeof objectToPrint == 'object') {
-            if (objectToPrint.length == 0 || (objectToPrint.length == undefined && Object.keys(objectToPrint).length == 0)) {
+            let isEmptyObject: boolean = false;
+            if (objectToPrint instanceof ObservableGraph || objectToPrint instanceof ObservableTree) {
+                isEmptyObject = ((objectToPrint as ObservableGraphTypes).isEmpty());
+            } else
+                if (objectToPrint.length == 0 || (objectToPrint.length == undefined && Object.keys(objectToPrint).length == 0)) {
+                    isEmptyObject = true;
+                }
+
+            if (isEmptyObject) {
                 text.textContent = 'empty';
                 this.resetFontSize(text);
                 return;
@@ -236,8 +274,8 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.uiBinder.unbind();
     }
 
-    public draw(): HTMLElement {
-        if (this.elementEverDrawn)
+    public drawVarName(): HTMLElement {
+        if (this.varNameDrawn)
             return undefined;
 
         let rendered = MustacheIt.render(this.templateVarName, {
@@ -246,7 +284,7 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
-        this.elementEverDrawn = true;
+        this.varNameDrawn = true;
 
         return this.htmlElement;
     }
@@ -259,14 +297,14 @@ export class VariableVisualizer extends VariableChangeCbk {
     }
 
     private needsDraw(): boolean {
-        return !this.drawn;
+        return !this.varValueDrawn;
     }
 
     private needsRedraw(requestedDraw: DrawnElement): boolean {
-        if (!this.drawn)
+        if (!this.varValueDrawn)
             return true;
 
-        if (this.drawn && this.drawnElement != requestedDraw)
+        if (this.varValueDrawn && this.elementToDrawType != requestedDraw)
             return true;
 
         return false;
@@ -283,16 +321,19 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.indextValueElements = [];
         this.keyValueElements = {};
         this.text = undefined;
-    
-        if (redrawType == DrawnElement.Primitive) this.drawPrimitive();
-        if (redrawType == DrawnElement.Array) this.drawArray();
-        if (redrawType == DrawnElement.Object) this.drawObject();
-        if (redrawType == DrawnElement.Reference) this.drawReference();
+
+        if (redrawType == DrawnElement.Primitive) this.drawPrimitive(this.observable as ObservableJSVariable);
+        if (redrawType == DrawnElement.Array) this.drawArray(this.observable as ObservableJSVariable);
+        if (redrawType == DrawnElement.Object) this.drawObject(this.observable as ObservableJSVariable);
+        if (redrawType == DrawnElement.Reference) this.drawReference(this.observable as ObservableJSVariable);
+        if (redrawType == DrawnElement.Graph) this.drawGraph(this.observable as ObservableGraphTypes);
 
         this.uiBinder.bindTo(this.htmlElement);
     }
 
-    private drawPrimitive() {
+    private drawPrimitive(observable: ObservableJSVariable | ObservableGraphTypes) {
+        this.clientViewModel.reset(observable.getValue(), observable.getName());
+
         let rendered = MustacheIt.render(this.templatePrimitive, {
             width: 35, height: 35
         });
@@ -300,16 +341,16 @@ export class VariableVisualizer extends VariableChangeCbk {
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
 
-        this.htmlElement.append(valuesHtmlElement);        
+        this.htmlElement.append(valuesHtmlElement);
 
         this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
-        this.fitText(this.text, this.observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
+        this.fitText(this.text, observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
 
-        this.drawn = true;
-        this.drawnElement = DrawnElement.Primitive;
+        this.varValueDrawn = true;
+        this.elementToDrawType = DrawnElement.Primitive;
     }
 
-    public drawReference() {
+    public drawReference(observable: ObservableJSVariable) {
         let rendered = MustacheIt.render(this.templateReference, {
             width: 30, height: 30
         });
@@ -320,14 +361,14 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.htmlElement.append(valuesHtmlElement);
 
         this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
-        this.fitText(this.text, this.referenceToUIStr(this.observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
+        this.fitText(this.text, this.referenceToUIStr(observable.getValue()), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
 
-        this.drawn = true;
-        this.drawnElement = DrawnElement.Reference;
+        this.varValueDrawn = true;
+        this.elementToDrawType = DrawnElement.Reference;
     }
 
-    private drawArray() {                        
-        let arrayData = this.observable.getValue() as any[];
+    private drawArray(observable: ObservableJSVariable) {
+        let arrayData = observable.getValue() as any[];
         let rows: any = [];
         let nr_cols: number;
 
@@ -367,20 +408,20 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         this.indextValueElements = this.indextValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value'));
         for (let [index, textElement] of this.indextValueElements.entries()) { //TODO handle jagged arrays
-            let value = this.clientViewModel.isMultiArray ? this.observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) :
-                (this.clientViewModel.isNotStack ? this.observable.getAtIndex(index) : this.observable.getAtIndex(nr_cols - index - 1));
+            let value = this.clientViewModel.isMultiArray ? observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) :
+                (this.clientViewModel.isNotStack ? observable.getAtIndex(index) : observable.getAtIndex(nr_cols - index - 1));
             value = this.clientViewModel.isEmpty ? [] : value;
             this.fitText(textElement, value, this.width, this.height, this.clientViewModel.isEmpty);
         }
 
-        this.drawn = true;
-        this.drawnElement = DrawnElement.Array;
+        this.varValueDrawn = true;
+        this.elementToDrawType = DrawnElement.Array;
     }
 
-    private drawObject() {
-        this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+    private drawObject(observable: ObservableJSVariable) {
+        this.clientViewModel.reset(observable.getValue(), this.observable.getName());
 
-        let keysToRender = this.observable.getKeys();
+        let keysToRender = observable.getKeys();
 
         let isEmpty: boolean = keysToRender.length == 0;
 
@@ -411,18 +452,72 @@ export class VariableVisualizer extends VariableChangeCbk {
 
         for (let key of keysToRender) {
             this.keyValueElements[key] = domElements[domIndex++];
-            let value = isEmpty ? {} : this.observable.getAtIndex(key);
+            let value = isEmpty ? {} : observable.getAtIndex(key);
             this.fitText(this.keyValueElements[key], value, this.width, this.height, isEmpty);
         }
 
-        this.drawn = true;
-        this.drawnElement = DrawnElement.Object;
+        this.varValueDrawn = true;
+        this.elementToDrawType = DrawnElement.Object;
     }
 
-    override onSetReferenceEvent(_observable: ObservableVariable, oldReference: string, newReference: any): void {
-        this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+    private createGraphVis(container: HTMLElement, directed: boolean = true) {
+        if (this.graphVis)
+            return;
 
-        if (!this.elementEverDrawn) {
+        this.graphVis = Cytoscape({
+            container: container,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#0d6efd',
+                        'label': 'data(id)'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 3,
+                        'line-color': '#ccc',
+                        'target-arrow-color': '#ccc',
+                        'target-arrow-shape': (directed ? 'triangle' : 'none'),
+                        'curve-style': 'bezier',
+                    }
+                }
+            ],
+
+            zoomingEnabled: false,
+            userZoomingEnabled: false
+        });
+    }
+
+    private drawGraph(observable: ObservableGraphTypes) {
+        this.clientViewModel.reset(observable.getValue(), observable.getName());
+
+        let rendered = MustacheIt.render(observable.isEmpty() ? this.templateEmptyGraph : this.templateGraph, {
+            width: observable.isEmpty() ? 35 : this.htmlElement.clientWidth, height: observable.isEmpty() ? 35 : 35*10
+        });
+
+        let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+
+        this.htmlElement.append(valuesHtmlElement);
+
+        if (observable.isEmpty()) {
+            this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
+            this.fitText(this.text, observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
+        } else {
+            this.createGraphVis(valuesHtmlElement, observable.hasDirectedEdges());
+        }
+
+        this.varValueDrawn = true;
+        this.elementToDrawType = DrawnElement.Graph;
+    }
+
+    onSetReferenceEvent(observable: ObservableJSVariable, oldReference: string, newReference: any): void {
+        this.clientViewModel.reset(observable.getValue(), observable.getName());
+
+        if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Reference;
             return;
         }
@@ -434,7 +529,7 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
 
         if (this.needsDraw()) {
-            this.drawReference();
+            this.drawReference(observable);
         }
         else {
             this.fitText(this.text, this.referenceToUIStr(newReference), this.htmlElement.clientWidth, this.htmlElement.clientHeight, true);
@@ -442,30 +537,35 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
     }
 
-    override onSetEvent(_observable: ObservableVariable, _currValue: any, newValue: any): void {
-        this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+    onSetEvent(observable: ObservableJSVariable | ObservableGraphTypes, _currValue: any, newValue: any): void {
+        this.clientViewModel.reset(observable.getValue(), observable.getName());
 
-        if (!this.elementEverDrawn) {
-            this.pendingDraw = DrawnElement.Primitive;
+        let isPrimitiveType = !(observable instanceof ObservableGraph || observable instanceof ObservableTree);
+        let drawnElement = isPrimitiveType ? DrawnElement.Primitive : DrawnElement.Graph;
+
+        if (!this.varNameDrawn) {
+            this.pendingDraw = drawnElement;
             return;
         }
 
-        if (this.needsRedraw(DrawnElement.Primitive)) {
-            this.redraw(DrawnElement.Primitive);
+        if (this.needsRedraw(drawnElement)) {
+            this.redraw(drawnElement);
 
             return;
         }
 
-        if (this.needsDraw()) {
-            this.drawPrimitive();
-        }
-        else {
-            this.fitText(this.text, newValue, this.width, this.height);
-            this.resetAnimation(this.text);
+        if (isPrimitiveType) {
+            if (this.needsDraw()) {
+                this.drawPrimitive(observable);
+            }
+            else {
+                this.fitText(this.text, newValue, this.width, this.height);
+                this.resetAnimation(this.text);
+            }
         }
     }
 
-    private checkIsMultiArray(array : any): boolean {
+    private checkIsMultiArray(array: any): boolean {
         let arrayData = array as any[];
 
         if (arrayData.length > 0) {
@@ -473,10 +573,10 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
     }
 
-    override onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
-        this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
+    onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
+        this.clientViewModel.reset(observable.getValue(), observable.getName());
 
-        if (!this.elementEverDrawn) {
+        if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Array;
             return;
         }
@@ -523,8 +623,8 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
     }
 
-    override onSetArrayAtIndexEvent(observable: ObservableVariable, _oldValue: any, newValue: any, index_r: number, index_c?: number): void {
-        if (!this.elementEverDrawn) {
+    onSetArrayAtIndexEvent(observable: ObservableJSVariable, _oldValue: any, newValue: any, index_r: number, index_c?: number): void {
+        if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Array;
             return;
         }
@@ -538,8 +638,8 @@ export class VariableVisualizer extends VariableChangeCbk {
         this.resetAnimation(this.indextValueElements[index_r]);
     }
 
-    override onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
-        if (!this.elementEverDrawn) {
+    onSetObjectValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
+        if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Object;
             return;
         }
@@ -560,10 +660,10 @@ export class VariableVisualizer extends VariableChangeCbk {
         }
     }
 
-    override onSetObjectPropertyEvent(_observable: ObservableVariable, _value: any, newValue: any, key: string | number | symbol): void {
-        this.clientViewModel.reset(this.observable.getValue(), this.observable.getName());
-        
-        if (!this.elementEverDrawn) {
+    onSetObjectPropertyEvent(observable: ObservableJSVariable, _value: any, newValue: any, key: string | number | symbol): void {
+        this.clientViewModel.reset(observable.getValue(), observable.getName());
+
+        if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Object;
             return;
         }
@@ -574,5 +674,116 @@ export class VariableVisualizer extends VariableChangeCbk {
         } else {
             this.redraw(DrawnElement.Object);
         }
+    }
+
+    private forceGraphRefresh(observable: ObservableGraphTypes) {
+        let isTree = observable instanceof ObservableTree;
+
+        if (this.layout) {
+            this.layout.stop();
+            this.layout.destroy();
+        }
+
+        if (!isTree) {
+            this.layout = this.graphVis.layout({
+                name: 'grid',
+                infinite: true,
+                fit: true,
+            });
+        } else {
+            this.layout = this.graphVis.layout({
+                name: 'dagre', 
+                animate: true,
+                animationDuration: 300,
+                animationEasing: 'ease-in-out-sine',
+                fit: true,
+                sort: function (a : any, b : any) { return parseFloat(a.id()) - parseFloat(b.id()); },
+                transform: (node : any, pos : any) => {                    
+                    pos.y+=20;                    
+
+                    let nodeId = parseFloat(node.id());
+                    let tree = observable as ObservableTree;
+                    let treeNode = tree.find(nodeId);                    
+                    let isOnlyChild = tree.isNodeOnlyChild(treeNode);
+
+                    let offsetComputed = 40;
+                    if (!treeNode.isRoot()) {                        
+                        let parentPos = this.graphVis.nodes().filter(`[id="${treeNode.parent.value}"]`).position();
+                        offsetComputed = Math.abs(parentPos.y - pos.y) * 0.5;                        
+                    }
+
+                    let sideOffSet = 0;
+                    if (isOnlyChild) {                                   
+                        sideOffSet = treeNode.isLeftChild() ? -offsetComputed : +offsetComputed;                        
+                    } 
+
+                    treeNode.offset = (treeNode.parent ? treeNode.parent.offset : 0) + sideOffSet;
+                    pos.x += treeNode.offset;
+
+                    return pos;
+                }                    
+            });            
+        }
+        
+        this.layout.run();
+    }
+
+    private ensureGraphDrawn() {
+        if (this.graphVis == undefined) {
+            this.redraw(DrawnElement.Graph);
+        }
+    }
+
+    onAddEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
+        this.ensureGraphDrawn();
+
+        this.graphVis.add(
+            [
+                {
+                    data: { id: source }
+                },
+                {
+                    data: { id: destination }
+                },
+                {
+                    data: { id: source * 10 + destination, source: source, target: destination }
+                }
+            ]
+        );
+
+        this.forceGraphRefresh(observable);
+    }
+
+    onAddNode(observable: ObservableGraphTypes, vertex: any): void {
+        this.ensureGraphDrawn();
+
+        this.graphVis.add([{ data: { id: vertex } }]);
+        this.forceGraphRefresh(observable);
+    }
+    onRemoveNode(observable: ObservableGraphTypes, vertex: any): void {
+        this.ensureGraphDrawn();
+        
+        this.graphVis.remove(this.graphVis.filter(`[id = "${vertex}"]`));
+
+        this.forceGraphRefresh(observable);
+    }
+    onRemoveEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
+        this.ensureGraphDrawn();
+
+        this.graphVis.remove(
+            [
+                {
+                    data: { id: source }
+                },
+                {
+                    data: { id: destination }
+                },
+                {
+                    data: { id: source * 10 + destination, source: source, target: destination }
+                }
+            ]
+        );
+
+        this.forceGraphRefresh(observable);
     }
 }

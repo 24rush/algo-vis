@@ -1,4 +1,5 @@
-import { ObservableVariable, VariableChangeCbk } from "./observable-type";
+import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
+import { GraphType, GraphVariableChangeCbk, ObservableGraph, ObservableGraphTypes, ObservableTree } from "./predefined-types";
 
 var MustacheIt = require('mustache');
 var esprima = require('esprima')
@@ -18,6 +19,11 @@ enum OperationType {
     SCOPE_END,
     CREATE_VAR,
     CREATE_REF,
+
+    GRAPH_ADD_EDGE,
+    GRAPH_ADD_VERTEX,
+    GRAPH_REMOVE_EDGE,
+    GRAPH_REMOVE_VERTEX,
 
     TRACE
 }
@@ -55,34 +61,102 @@ class PushFuncParams {
  OPERATION PAYLOADS
  */
 
-class RWPrimitiveOperationPayload {
-    constructor(public observable: any, public oldValue: any, public newValue: any) { }
+class OperationPayload {
+    execute(_operationType: OperationType): void { };
 }
 
-class RWIndexedObjectOperationPayload {
-    constructor(public observable: any, public oldValue: any, public newValue: any, public property: any) { }
+class RWPrimitiveOperationPayload extends OperationPayload {
+    constructor(public observable: any, public oldValue: any, public newValue: any) { super(); }
+
+    override execute(operationType: OperationType): void {
+        switch (operationType) {
+            case OperationType.READ:
+                this.observable.getValue(this.oldValue);
+                break;
+            case OperationType.WRITE:
+                this.observable.setValue(this.newValue);
+                break;
+            case OperationType.WRITE_REF:
+                this.observable.setReference(this.newValue);
+                break;
+            default:
+                throw 'Cannot process operation type: ' + operationType;
+        }
+    }
 }
 
-class ScopeOperationPayload {
-    constructor(public scopeName: string) { }
+class RWIndexedObjectOperationPayload extends OperationPayload {
+    constructor(public observable: any, public oldValue: any, public newValue: any, public property: any) { super(); }
+
+    execute(operationType: OperationType): void {
+        switch (operationType) {
+            case OperationType.WRITE_AT:
+                this.observable.setValueAtIndex(this.newValue, this.property);
+                break;
+            case OperationType.READ_AT:
+                this.observable.getAtIndex(this.property);
+                break;
+            default:
+                throw 'Cannot process operation type: ' + operationType;
+        }
+    }
 }
 
-class VarCreationOperationPayload {
-    constructor(public scopeName: string, public varName: string) { }
+class GraphObjectOperationPayload extends OperationPayload {
+    constructor(public observable: ObservableGraphTypes, public source: any, public destination?: any) { super(); }
+
+    public execute(operationType: OperationType) {
+        if (this.observable instanceof ObservableGraph)
+            this.executeOperationOnGraph(operationType, this.observable as ObservableGraph);
+
+        if (this.observable instanceof ObservableTree)
+            this.executeOperationOnTree(operationType, this.observable as ObservableTree);
+    }
+
+    private executeOperationOnGraph(operationType: OperationType, observableGraph : ObservableGraph) {
+        switch (operationType) {
+            case OperationType.GRAPH_ADD_EDGE:
+                observableGraph.addEdge(this.source, this.destination);
+                break;
+            case OperationType.GRAPH_ADD_VERTEX:
+                observableGraph.addNode(this.source);
+                break;
+            case OperationType.GRAPH_REMOVE_EDGE:
+                observableGraph.removeEdge(this.source, this.destination);
+                break;
+            case OperationType.GRAPH_REMOVE_VERTEX:
+                observableGraph.removeNode(this.source);
+                break;
+            default:
+                throw 'Cannot process operation type: ' + operationType;
+        }
+    }
+
+    private executeOperationOnTree(operationType: OperationType, observableGraph : ObservableTree) {
+        switch (operationType) {
+            case OperationType.GRAPH_ADD_VERTEX:
+                observableGraph.add(this.source);
+                break;
+            case OperationType.GRAPH_REMOVE_VERTEX:
+                observableGraph.remove(this.source);
+                break;
+            default:
+                //throw 'Cannot process operation type: ' + operationType;
+        }
+    }
 }
 
-class RefCreationOperationPayload {
-    constructor(public scopeName: string, public varName: string, public dstScopeVarName: string) { }
+class VarScopeLifetimeOperationPayload extends OperationPayload {
+    constructor(public scopeName: string, public varName?: string) { super(); }
 }
 
-class TraceOperationPayload {
-    constructor(public message: string) { }
+class TraceOperationPayload extends OperationPayload {
+    constructor(public message: string) { super(); }
 }
 
-type OperationAttributeType = RWPrimitiveOperationPayload | RWIndexedObjectOperationPayload | ScopeOperationPayload | VarCreationOperationPayload | RefCreationOperationPayload | TraceOperationPayload;
 
 class Operation {
-    constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationAttributeType) {
+    constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationPayload) {
     }
 
     public toString(): string {
@@ -102,8 +176,8 @@ enum OperationRecorderStatus {
 }
 
 export interface VariableScopingNotification {
-    onEnterScopeVariable(scopeName: string, observable: ObservableVariable): void;
-    onExitScopeVariable(scopeName: string, observable: ObservableVariable): void;
+    onEnterScopeVariable(scopeName: string, observable: ObservableJSVariable): void;
+    onExitScopeVariable(scopeName: string, observable: ObservableJSVariable): void;
 }
 
 export interface TraceMessageNotification {
@@ -132,12 +206,12 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         this.compilationStatusObservers.push(notifier);
     }
 
-    onEnterScopeVariable(scopeName: string, observable: ObservableVariable): void {
+    onEnterScopeVariable(scopeName: string, observable: ObservableJSVariable): void {
         for (const notifier of this.variableScopeObservers) {
             notifier.onEnterScopeVariable(scopeName, observable);
         }
     }
-    onExitScopeVariable(scopeName: string, observable: ObservableVariable): void {
+    onExitScopeVariable(scopeName: string, observable: ObservableJSVariable): void {
         for (const notifier of this.variableScopeObservers) {
             notifier.onExitScopeVariable(scopeName, observable);
         };
@@ -156,33 +230,47 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
     }
 }
 
-export class OperationRecorder extends NotificationEmitter implements VariableChangeCbk {
-    onSetArrayValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
+export class OperationRecorder extends NotificationEmitter implements JSVariableChangeCbk, GraphVariableChangeCbk {
+    onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue))));
     }
-    onSetReferenceEvent(observable: ObservableVariable, value: any, newValue: any): void {
+    onSetReferenceEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE_REF, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onSetEvent(observable: ObservableVariable, value: any, newValue: any): void {
+    onSetEvent(observable: ObservableJSVariable | ObservableGraphTypes, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onGetEvent(observable: ObservableVariable, value: any): void {
+    onGetEvent(observable: ObservableJSVariable, value: any): void {
         this.addOperation(OperationType.READ, new RWPrimitiveOperationPayload(observable, value, value));
     }
-    onSetArrayAtIndexEvent(observable: ObservableVariable, value: any, newValue: any, index: number): void {
+    onSetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, newValue: any, index: number): void {
         this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, index));
     }
-    onGetArrayAtIndexEvent(observable: ObservableVariable, value: any, index: number): void {
+    onGetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, index: number): void {
         this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, index));
     }
-    onSetObjectValueEvent(observable: ObservableVariable, value: any, newValue: any): void {
+    onSetObjectValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onSetObjectPropertyEvent(observable: ObservableVariable, value: any, newValue: any, key: string | number | symbol): void {
+    onSetObjectPropertyEvent(observable: ObservableJSVariable, value: any, newValue: any, key: string | number | symbol): void {
         this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, key));
     }
-    onGetObjectPropertyEvent(observable: ObservableVariable, value: any, key: string | number | symbol): void {
+    onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: string | number | symbol): void {
         this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, key));
+    }
+
+    // Graph
+    onAddEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
+        this.addOperation(OperationType.GRAPH_ADD_EDGE, new GraphObjectOperationPayload(observable, source, destination));
+    }
+    onAddNode(observable: ObservableGraphTypes, vertex: any): void {
+        this.addOperation(OperationType.GRAPH_ADD_VERTEX, new GraphObjectOperationPayload(observable, vertex));
+    }
+    onRemoveNode(observable: ObservableGraphTypes, vertex: any): void {
+        this.addOperation(OperationType.GRAPH_REMOVE_VERTEX, new GraphObjectOperationPayload(observable, vertex));
+    }
+    onRemoveEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
+        this.addOperation(OperationType.GRAPH_REMOVE_EDGE, new GraphObjectOperationPayload(observable, source, destination));
     }
 
     constructor() {
@@ -204,7 +292,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
 
-    protected variableObservers: ObservableVariable[] = [];
+    protected variableObservers: ObservableJSVariable[] = [];
     private runtimeObservables: Map<string, any> = new Map();
 
     protected code: string;
@@ -224,7 +312,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished() { return this.status == OperationRecorderStatus.ReplayEnded; }
 
-    protected addOperation(type: OperationType, attributes?: OperationAttributeType) {
+    protected addOperation(type: OperationType, attributes?: OperationPayload) {
         this.operations.push(new Operation(type, this.lastExecutedCodeLineNumber, attributes));
     }
 
@@ -261,12 +349,12 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         }
     }
 
-    public registerVariableObservers(observables: ObservableVariable[]) {
+    public registerVariableObservers(observables: ObservableJSVariable[]) {
         for (let observable of observables)
             this.registerVariableObserver(observable);
     }
 
-    public registerVariableObserver(observable: ObservableVariable) {
+    public registerVariableObserver(observable: ObservableJSVariable) {
         if (this.variableObservers.indexOf(observable) != -1)
             return;
 
@@ -306,18 +394,20 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         scopeName = this.scopeNameToFunctionScope(scopeName);
 
         this.currentScope.push(scopeName);
-        this.addOperation(OperationType.SCOPE_START, new ScopeOperationPayload(this.currentScope.join('.')));
+        this.addOperation(OperationType.SCOPE_START, new VarScopeLifetimeOperationPayload(this.currentScope.join('.')));
     }
 
     public endScope(scopeName: string) {
         scopeName = this.scopeNameToFunctionScope(scopeName);
 
-        this.addOperation(OperationType.SCOPE_END, new ScopeOperationPayload(this.currentScope.join('.')));
+        this.addOperation(OperationType.SCOPE_END, new VarScopeLifetimeOperationPayload(this.currentScope.join('.')));
 
         if (this.currentScope[this.currentScope.length - 1] == scopeName)
             this.currentScope.pop();
-        else
-            throw ('LAST SCOPE IS NOT AS EXPECTED');
+        else {
+            console.log(this.currentScope + " vs. "+ scopeName );
+           //TODO throw ('LAST SCOPE IS NOT AS EXPECTED');
+        }
     }
 
     public pushParams(params: [string, string][]) {
@@ -344,7 +434,9 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         try {
             this.hookConsoleLog();
-            (1, eval)(this.code);
+            var Types = { Graph: ObservableGraph, GraphType: GraphType,
+                          Tree : ObservableTree };
+            eval(this.code);
             this.hookConsoleLog(false);
 
             this.compilationStatus = true;
@@ -363,7 +455,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        //console.log("OPERATIONS: "); console.log(this.operations);
+        console.log("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -471,107 +563,27 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             return;
         }
 
+        if (operation.type == OperationType.TRACE) {
+            let operationAttributes = operation.attributes as TraceOperationPayload;
+            this.onTraceMessage(operationAttributes.message);
+        }
+
         switch (operation.type) {
-            case OperationType.TRACE:
-                {
-                    let operationAttributes = operation.attributes as TraceOperationPayload;
-                    this.onTraceMessage(operationAttributes.message);
-                    break;
-                }
             case OperationType.CREATE_REF:
             case OperationType.CREATE_VAR:
             case OperationType.SCOPE_START:
             case OperationType.SCOPE_END:
                 {
-                    var scopeName: string;
-                    let varName: string;
+                    let operationAttributes = operation.attributes as VarScopeLifetimeOperationPayload;
+                    let scopeName = operationAttributes.scopeName;
+                    let varName = operationAttributes.varName;
 
-                    switch (operation.type) {
-                        case OperationType.CREATE_REF: {
-                            let operationAttributes = operation.attributes as RefCreationOperationPayload;
-                            scopeName = operationAttributes.scopeName;
-                            varName = operationAttributes.varName;
-
-                            break;
-                        }
-                        case OperationType.CREATE_VAR: {
-                            let operationAttributes = operation.attributes as VarCreationOperationPayload;
-                            scopeName = operationAttributes.scopeName;
-                            varName = operationAttributes.varName;
-
-                            break;
-                        }
-                        case OperationType.SCOPE_START:
-                        case OperationType.SCOPE_END:
-                            let operationAttributes = operation.attributes as ScopeOperationPayload;
-                            scopeName = operationAttributes.scopeName;
-
-                            break;
-                    }
-
-                    let scopeChain = scopeName.split('.');
-                    let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
-                    this.setRuntimeExecutionScope(operation.type, lastScope);
-
-                    let varTypeFilter: VarType = undefined;
-                    if (operation.type != OperationType.SCOPE_END) // ending scope for all types of variables
-                        varTypeFilter = (operation.type == OperationType.CREATE_VAR || operation.type == OperationType.CREATE_REF) ? VarType.let : VarType.var;
-
-                    let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
-
-                    let runtimeObservables = this.getRuntimeObservables(scopeName + (varName ? '.' + varName : ""));
-
-                    for (let runtimeObservable of runtimeObservables) {
-                        // Check to see if there is any variable declared in the scope
-                        // so we don't create an empty scope
-                        if (varDecls.indexOf(runtimeObservable.name) == -1)
-                            continue;
-
-                        if (operation.type == OperationType.SCOPE_START) {
-                            runtimeObservable.empty();
-                        }
-
-                        // var variables enter in scope already and it also creates the templates for scopes
-                        if (operation.type == OperationType.SCOPE_END) {
-                            this.onExitScopeVariable(scopeName, runtimeObservable);
-                        }
-                        else {
-                            this.onEnterScopeVariable(scopeName, runtimeObservable)
-                            if (varTypeFilter == VarType.var) { // set var variables to undefined                        
-                                runtimeObservable.setValue(undefined);
-                            }
-                        }
-                    }
+                    this.executeVarScopeLifetimeOperation(operation.type, varName, scopeName);
                     break;
                 }
-            case OperationType.READ:
+            default:
                 {
-                    let operationAttributes = operation.attributes as RWPrimitiveOperationPayload;
-                    operationAttributes.observable.getValue(operationAttributes.oldValue);
-                    break;
-                }
-            case OperationType.READ_AT:
-                {
-                    let operationAttributes = operation.attributes as RWIndexedObjectOperationPayload;
-                    operationAttributes.observable.getAtIndex(operationAttributes.property);
-                    break;
-                }
-            case OperationType.WRITE:
-                {
-                    let operationAttributes = operation.attributes as RWPrimitiveOperationPayload;
-                    operationAttributes.observable.setValue(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
-                    break;
-                }
-            case OperationType.WRITE_AT:
-                {
-                    let operationAttributes = operation.attributes as RWIndexedObjectOperationPayload;
-                    operationAttributes.observable.setValueAtIndex(reverse ? operationAttributes.oldValue : operationAttributes.newValue, operationAttributes.property);
-                    break;
-                }
-            case OperationType.WRITE_REF:
-                {
-                    let operationAttributes = operation.attributes as RWPrimitiveOperationPayload;
-                    operationAttributes.observable.setReference(reverse ? operationAttributes.oldValue : operationAttributes.newValue);
+                    if (operation.attributes) operation.attributes.execute(operation.type);
                     break;
                 }
         }
@@ -587,6 +599,48 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             this.nextOperationIndex = this.operations.length;
     }
 
+    private executeVarScopeLifetimeOperation(operationType: OperationType, varName: string, scopeName: string) {
+        let scopeChain = scopeName.split('.');
+        let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
+        
+        this.setRuntimeExecutionScope(operationType, lastScope);
+
+        let varTypeFilter: VarType = undefined; // ending scope for all types of variables
+        if (operationType != OperationType.SCOPE_END) {
+            varTypeFilter = VarType.var;
+            
+            if (operationType == OperationType.CREATE_VAR || operationType == OperationType.CREATE_REF)
+                varTypeFilter = VarType.let            
+        }
+
+        let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
+        let runtimeObservables = this.getRuntimeObservables(scopeName + (varName ? '.' + varName : ""));
+
+        for (let runtimeObservable of runtimeObservables) {
+            // Check to see if there is any variable declared in the scope
+            // so we don't create an empty scope
+            if (varDecls.indexOf(runtimeObservable.name) == -1)
+                continue;
+
+            if (operationType == OperationType.SCOPE_START) {
+                runtimeObservable.empty();
+            }
+
+            switch (operationType) {
+                case OperationType.SCOPE_END:
+                    // var variables enter in scope already and it also creates the templates for scopes
+                    this.onExitScopeVariable(scopeName, runtimeObservable);
+                    break;
+                default:
+                    this.onEnterScopeVariable(scopeName, runtimeObservable)
+                    if (varTypeFilter == VarType.var) { // set var variables to undefined                        
+                        runtimeObservable.setValue(undefined);
+                    }
+                    break;
+            }              
+        }
+    }
+
     private setRuntimeExecutionScope(type: OperationType, scopeName: string) {
         if (type == OperationType.SCOPE_START) {
             this.currentScope.push(scopeName);
@@ -596,8 +650,8 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
             if (this.currentScope[this.currentScope.length - 1] == scopeName)
                 this.currentScope.pop();
             else {
-                console.log('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
-                console.log(this.currentScope);
+                console.log(this.currentScope + " vs. "+ scopeName );
+                console.log('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);                
             }
         }
     }
@@ -620,7 +674,14 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         if (this.runtimeObservables.has(runtimeScope))
             return [false, this.runtimeObservables.get(runtimeScope)];
 
-        let runtimeObservable = new ObservableVariable(varname, object);
+        let runtimeObservable: any;
+        if (object instanceof ObservableGraph || object instanceof ObservableTree) {
+            runtimeObservable = object;
+            object.name = varname;
+        }
+        else
+            runtimeObservable = new ObservableJSVariable(varname, object);
+
         this.setInstrumentationObservable(runtimeScope, runtimeObservable);
 
         return [true, runtimeObservable];
@@ -665,7 +726,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
                 let [isNew, runtimeObservable] = this.createRuntimeObservable(/*scopeName*/this.getCurrentRuntimeScope(), varname, dstScopedVar);
 
                 if (isNew) {
-                    this.addOperation(OperationType.CREATE_REF, new RefCreationOperationPayload(/*scopeName*/this.getCurrentRuntimeScope(), varname, dstScopedVar));
+                    this.addOperation(OperationType.CREATE_REF, new VarScopeLifetimeOperationPayload(/*scopeName*/this.getCurrentRuntimeScope(), varname));
                 }
 
                 runtimeObservable.setReference(dstScopedVar);
@@ -680,7 +741,7 @@ export class OperationRecorder extends NotificationEmitter implements VariableCh
         let [isNew, runtimeObservable] = this.createRuntimeObservable(scopeName, varname, object);
 
         if (isNew) {
-            this.addOperation(OperationType.CREATE_VAR, new VarCreationOperationPayload(this.getCurrentRuntimeScope(), varname));
+            this.addOperation(OperationType.CREATE_VAR, new VarScopeLifetimeOperationPayload(this.getCurrentRuntimeScope(), varname));
         }
 
         runtimeObservable.setValue(object);
