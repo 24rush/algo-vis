@@ -1,7 +1,7 @@
-import { ObservableGraphTypes } from "./predefined-types";
+import { ObservableGraph } from "./predefined-types";
 
 type DictionaryKeyType = string | number | symbol;
-export type ObservableType = ObservableJSVariable | ObservableGraphTypes;
+export type ObservableType = ObservableJSVariable | ObservableGraph;
 
 export class JSVariableChangeCbk {
     // set Reference + Primitive
@@ -25,7 +25,8 @@ export class JSVariableChangeCbk {
 export class BaseObservableType<NotifyCbkType>
 {
     protected observers: NotifyCbkType[] = [];
-    protected name: string;
+    
+    public name: string;
 
     registerObserver(notifyCbk: NotifyCbkType) {
         this.observers.push(notifyCbk);

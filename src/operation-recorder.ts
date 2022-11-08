@@ -1,5 +1,5 @@
 import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
-import { GraphType, GraphVariableChangeCbk, ObservableGraph, ObservableGraphTypes, ObservableTree } from "./predefined-types";
+import { Graph, NodeBase, GraphType, GraphVariableChangeCbk, ObservableGraph, ParentSide, BinaryTree, BinarySearchTree, BinaryTreeNode, GraphNodePayloadType } from "./predefined-types";
 
 var MustacheIt = require('mustache');
 var esprima = require('esprima')
@@ -24,6 +24,11 @@ enum OperationType {
     GRAPH_ADD_VERTEX,
     GRAPH_REMOVE_EDGE,
     GRAPH_REMOVE_VERTEX,
+
+    BINARY_TREE_ADD_NODE,
+    BINARY_TREE_ADD_EDGE, // Visualizer purposes
+    BINARY_TREE_REMOVE_NODE,
+    BINARY_TREE_REMOVE_EDGE, // Visualizer purposes
 
     TRACE
 }
@@ -103,45 +108,41 @@ class RWIndexedObjectOperationPayload extends OperationPayload {
 }
 
 class GraphObjectOperationPayload extends OperationPayload {
-    constructor(public observable: ObservableGraphTypes, public source: any, public destination?: any) { super(); }
+    constructor(public observable: ObservableGraph, public source: GraphNodePayloadType, public destinationOrParent?: GraphNodePayloadType, public side?: ParentSide) { super(); }
 
     public execute(operationType: OperationType) {
-        if (this.observable instanceof ObservableGraph)
-            this.executeOperationOnGraph(operationType, this.observable as ObservableGraph);
-
-        if (this.observable instanceof ObservableTree)
-            this.executeOperationOnTree(operationType, this.observable as ObservableTree);
+        this.executeOperationOnGraph(operationType, this.observable);
     }
 
-    private executeOperationOnGraph(operationType: OperationType, observableGraph : ObservableGraph) {
+    private executeOperationOnGraph(operationType: OperationType, observableGraph: ObservableGraph) {
         switch (operationType) {
             case OperationType.GRAPH_ADD_EDGE:
-                observableGraph.addEdge(this.source, this.destination);
+                (observableGraph as Graph).addEdge(this.source, this.destinationOrParent);
                 break;
             case OperationType.GRAPH_ADD_VERTEX:
-                observableGraph.addNode(this.source);
+                (observableGraph as Graph).addVertex(this.source);
                 break;
             case OperationType.GRAPH_REMOVE_EDGE:
-                observableGraph.removeEdge(this.source, this.destination);
+                (observableGraph as Graph).removeEdge(this.source, this.destinationOrParent);
                 break;
             case OperationType.GRAPH_REMOVE_VERTEX:
-                observableGraph.removeNode(this.source);
+                (observableGraph as Graph).removeVertex(this.source);
+                break;
+            case OperationType.BINARY_TREE_ADD_NODE:        
+                if (observableGraph instanceof BinarySearchTree)
+                    (observableGraph as BinarySearchTree).add(this.source);
+                else
+                    (observableGraph as BinaryTree).add(this.source, this.destinationOrParent, this.side);
+                break;
+            case OperationType.BINARY_TREE_REMOVE_NODE:
+                (observableGraph as BinaryTree).remove(this.source);
+                break;
+            case OperationType.BINARY_TREE_ADD_EDGE:
+            case OperationType.BINARY_TREE_REMOVE_EDGE:
+                // Nothing to do
                 break;
             default:
                 throw 'Cannot process operation type: ' + operationType;
-        }
-    }
-
-    private executeOperationOnTree(operationType: OperationType, observableGraph : ObservableTree) {
-        switch (operationType) {
-            case OperationType.GRAPH_ADD_VERTEX:
-                observableGraph.add(this.source);
-                break;
-            case OperationType.GRAPH_REMOVE_VERTEX:
-                observableGraph.remove(this.source);
-                break;
-            default:
-                //throw 'Cannot process operation type: ' + operationType;
         }
     }
 }
@@ -237,7 +238,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     onSetReferenceEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE_REF, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
-    onSetEvent(observable: ObservableJSVariable | ObservableGraphTypes, value: any, newValue: any): void {
+    onSetEvent(observable: ObservableJSVariable | ObservableGraph, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
     }
     onGetEvent(observable: ObservableJSVariable, value: any): void {
@@ -260,17 +261,21 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     }
 
     // Graph
-    onAddEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
-        this.addOperation(OperationType.GRAPH_ADD_EDGE, new GraphObjectOperationPayload(observable, source, destination));
+    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
+        let isGraph = observable instanceof Graph;
+        this.addOperation(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, new GraphObjectOperationPayload(observable, source.value, destination.value));
     }
-    onAddNode(observable: ObservableGraphTypes, vertex: any): void {
-        this.addOperation(OperationType.GRAPH_ADD_VERTEX, new GraphObjectOperationPayload(observable, vertex));
+    onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ParentSide): void {
+        let isGraph = observable instanceof Graph;
+        this.addOperation(isGraph ? OperationType.GRAPH_ADD_VERTEX : OperationType.BINARY_TREE_ADD_NODE, new GraphObjectOperationPayload(observable, vertex.value, parentValue ? parentValue.value : undefined, side));
     }
-    onRemoveNode(observable: ObservableGraphTypes, vertex: any): void {
-        this.addOperation(OperationType.GRAPH_REMOVE_VERTEX, new GraphObjectOperationPayload(observable, vertex));
+    onRemoveNode(observable: ObservableGraph, vertex: NodeBase): void {
+        let isGraph = observable instanceof Graph;
+        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_VERTEX : OperationType.BINARY_TREE_REMOVE_NODE, new GraphObjectOperationPayload(observable, vertex.value));
     }
-    onRemoveEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
-        this.addOperation(OperationType.GRAPH_REMOVE_EDGE, new GraphObjectOperationPayload(observable, source, destination));
+    onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
+        let isGraph = observable instanceof Graph;
+        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, new GraphObjectOperationPayload(observable, source.value, destination.value));
     }
 
     constructor() {
@@ -405,8 +410,8 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         if (this.currentScope[this.currentScope.length - 1] == scopeName)
             this.currentScope.pop();
         else {
-            console.log(this.currentScope + " vs. "+ scopeName );
-           //TODO throw ('LAST SCOPE IS NOT AS EXPECTED');
+            console.log(this.currentScope + " vs. " + scopeName);
+            //TODO throw ('LAST SCOPE IS NOT AS EXPECTED');
         }
     }
 
@@ -434,8 +439,18 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         try {
             this.hookConsoleLog();
-            var Types = { Graph: ObservableGraph, GraphType: GraphType,
-                          Tree : ObservableTree };
+            var Types = {
+                Graph: Graph, GraphType: GraphType, GraphNode: NodeBase, BinaryTreeNode: BinaryTreeNode,
+                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree,
+            };
+
+            this.code = "let BinarySearchTree = Types.BinarySearchTree; \
+                         let BinaryTree = Types.BinaryTree;\
+                         let Graph = Types.Graph;\
+                         let GraphType = Types.GraphType; \
+                         let GraphNode = Types.GraphNode; \
+                         let BinaryTreeNode = Types.BinaryTreeNode; \
+                        " + this.code;
             eval(this.code);
             this.hookConsoleLog(false);
 
@@ -602,15 +617,15 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     private executeVarScopeLifetimeOperation(operationType: OperationType, varName: string, scopeName: string) {
         let scopeChain = scopeName.split('.');
         let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
-        
+
         this.setRuntimeExecutionScope(operationType, lastScope);
 
         let varTypeFilter: VarType = undefined; // ending scope for all types of variables
         if (operationType != OperationType.SCOPE_END) {
             varTypeFilter = VarType.var;
-            
+
             if (operationType == OperationType.CREATE_VAR || operationType == OperationType.CREATE_REF)
-                varTypeFilter = VarType.let            
+                varTypeFilter = VarType.let
         }
 
         let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
@@ -637,7 +652,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                         runtimeObservable.setValue(undefined);
                     }
                     break;
-            }              
+            }
         }
     }
 
@@ -650,8 +665,8 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
             if (this.currentScope[this.currentScope.length - 1] == scopeName)
                 this.currentScope.pop();
             else {
-                console.log(this.currentScope + " vs. "+ scopeName );
-                console.log('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);                
+                console.log(this.currentScope + " vs. " + scopeName);
+                console.log('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
             }
         }
     }
@@ -675,7 +690,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
             return [false, this.runtimeObservables.get(runtimeScope)];
 
         let runtimeObservable: any;
-        if (object instanceof ObservableGraph || object instanceof ObservableTree) {
+        if (object instanceof ObservableGraph) {
             runtimeObservable = object;
             object.name = varname;
         }
@@ -708,6 +723,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     private getCurrentRuntimeScope() { return this.currentScope.join('.'); }
 
     public setVar(varname: string, object: any, varsource: string) {
+        if (object instanceof NodeBase || object instanceof BinaryTreeNode)
+            return;
+
         let scopeName = this.getCurrentRuntimeScope();
 
         if (this.isReferenceObject(object)) {

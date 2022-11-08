@@ -6,7 +6,7 @@ var dagre = require('cytoscape-dagre');
 Cytoscape.use(dagre);
 
 import { ObservableJSVariable, JSVariableChangeCbk, ObservableType } from "./observable-type"
-import { GraphVariableChangeCbk, ObservableGraph, ObservableGraphTypes, ObservableTree } from "./predefined-types";
+import { BinaryTree, Graph, GraphNodePayloadType, GraphVariableChangeCbk, NodeBase, ObservableGraph } from "./predefined-types";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
 
 class FontSizeCache {
@@ -47,9 +47,6 @@ class VisualizerViewModel {
 
         if (value instanceof ObservableGraph)
             this.isEmpty = (value as ObservableGraph).isEmpty();
-
-        if (value instanceof ObservableTree)
-            this.isEmpty = (value as ObservableTree).isEmpty();
 
         this.isMultiArray = this.checkIsMultiArray(value);
         this.isNotStack = varname.indexOf('stack') == -1;
@@ -206,8 +203,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         if (typeof objectToPrint == 'object') {
             let isEmptyObject: boolean = false;
-            if (objectToPrint instanceof ObservableGraph || objectToPrint instanceof ObservableTree) {
-                isEmptyObject = ((objectToPrint as ObservableGraphTypes).isEmpty());
+            if (objectToPrint instanceof ObservableGraph) {
+                isEmptyObject = ((objectToPrint as ObservableGraph).isEmpty());
             } else
                 if (objectToPrint.length == 0 || (objectToPrint.length == undefined && Object.keys(objectToPrint).length == 0)) {
                     isEmptyObject = true;
@@ -326,12 +323,12 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         if (redrawType == DrawnElement.Array) this.drawArray(this.observable as ObservableJSVariable);
         if (redrawType == DrawnElement.Object) this.drawObject(this.observable as ObservableJSVariable);
         if (redrawType == DrawnElement.Reference) this.drawReference(this.observable as ObservableJSVariable);
-        if (redrawType == DrawnElement.Graph) this.drawGraph(this.observable as ObservableGraphTypes);
+        if (redrawType == DrawnElement.Graph) this.drawGraph(this.observable as ObservableGraph);
 
         this.uiBinder.bindTo(this.htmlElement);
     }
 
-    private drawPrimitive(observable: ObservableJSVariable | ObservableGraphTypes) {
+    private drawPrimitive(observable: ObservableJSVariable | ObservableGraph) {
         this.clientViewModel.reset(observable.getValue(), observable.getName());
 
         let rendered = MustacheIt.render(this.templatePrimitive, {
@@ -471,7 +468,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                     selector: 'node',
                     style: {
                         'background-color': '#0d6efd',
-                        'label': 'data(id)'
+                        'label': 'data(label)'
                     }
                 },
                 {
@@ -491,11 +488,11 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         });
     }
 
-    private drawGraph(observable: ObservableGraphTypes) {
+    private drawGraph(observable: ObservableGraph) {
         this.clientViewModel.reset(observable.getValue(), observable.getName());
 
         let rendered = MustacheIt.render(observable.isEmpty() ? this.templateEmptyGraph : this.templateGraph, {
-            width: observable.isEmpty() ? 35 : this.htmlElement.clientWidth, height: observable.isEmpty() ? 35 : 35*10
+            width: observable.isEmpty() ? 35 : this.htmlElement.clientWidth, height: observable.isEmpty() ? 35 : 35 * 10
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
@@ -507,7 +504,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
             this.fitText(this.text, observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
         } else {
-            this.createGraphVis(valuesHtmlElement, observable.hasDirectedEdges());
+            let hasDirectedEdges = (observable instanceof Graph) && (observable as Graph).hasDirectedEdges();
+            this.createGraphVis(valuesHtmlElement, hasDirectedEdges);
         }
 
         this.varValueDrawn = true;
@@ -537,10 +535,10 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
     }
 
-    onSetEvent(observable: ObservableJSVariable | ObservableGraphTypes, _currValue: any, newValue: any): void {
+    onSetEvent(observable: ObservableJSVariable | ObservableGraph, _currValue: any, newValue: any): void {
         this.clientViewModel.reset(observable.getValue(), observable.getName());
 
-        let isPrimitiveType = !(observable instanceof ObservableGraph || observable instanceof ObservableTree);
+        let isPrimitiveType = !(observable instanceof ObservableGraph);
         let drawnElement = isPrimitiveType ? DrawnElement.Primitive : DrawnElement.Graph;
 
         if (!this.varNameDrawn) {
@@ -676,15 +674,13 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
     }
 
-    private forceGraphRefresh(observable: ObservableGraphTypes) {
-        let isTree = observable instanceof ObservableTree;
-
+    private forceGraphRefresh(observable: ObservableGraph) {        
         if (this.layout) {
             this.layout.stop();
             this.layout.destroy();
         }
 
-        if (!isTree) {
+        if (!(observable instanceof BinaryTree)) {
             this.layout = this.graphVis.layout({
                 name: 'grid',
                 infinite: true,
@@ -692,39 +688,38 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             });
         } else {
             this.layout = this.graphVis.layout({
-                name: 'dagre', 
+                name: 'dagre',
                 animate: true,
                 animationDuration: 300,
                 animationEasing: 'ease-in-out-sine',
                 fit: true,
-                sort: function (a : any, b : any) { return parseFloat(a.id()) - parseFloat(b.id()); },
-                transform: (node : any, pos : any) => {                    
-                    pos.y+=20;                    
-
-                    let nodeId = parseFloat(node.id());
-                    let tree = observable as ObservableTree;
-                    let treeNode = tree.find(nodeId);                    
-                    let isOnlyChild = tree.isNodeOnlyChild(treeNode);
+                transform: (node: any, pos: any) => {
+                    pos.y += 20;
+                    
+                    let treeNode = observable.findNodeWithId(node.id());
+                    let isOnlyChild = treeNode.isOnlyChild();
 
                     let offsetComputed = 40;
-                    if (!treeNode.isRoot()) {                        
-                        let parentPos = this.graphVis.nodes().filter(`[id="${treeNode.parent.value}"]`).position();
-                        offsetComputed = Math.abs(parentPos.y - pos.y) * 0.5;                        
+                    if (!treeNode.isRoot()) {                     
+                        let parent = this.graphVis.nodes().filter(`[id="${treeNode.parent.id}"]`);
+                        let parentPos = parent.position();
+                        
+                        offsetComputed = Math.abs(parentPos.y - pos.y) * 0.5;
                     }
 
                     let sideOffSet = 0;
-                    if (isOnlyChild) {                                   
-                        sideOffSet = treeNode.isLeftChild() ? -offsetComputed : +offsetComputed;                        
-                    } 
+                    if (isOnlyChild) {
+                        sideOffSet = treeNode.isLeftChild() ? -offsetComputed : offsetComputed;
+                    }
 
                     treeNode.offset = (treeNode.parent ? treeNode.parent.offset : 0) + sideOffSet;
                     pos.x += treeNode.offset;
 
                     return pos;
-                }                    
-            });            
+                }
+            });
         }
-        
+
         this.layout.run();
     }
 
@@ -734,19 +729,19 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
     }
 
-    onAddEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
+    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         this.ensureGraphDrawn();
 
         this.graphVis.add(
             [
                 {
-                    data: { id: source }
+                    data: { id: source.id }
                 },
                 {
-                    data: { id: destination }
+                    data: { id: destination.id }
                 },
                 {
-                    data: { id: source * 10 + destination, source: source, target: destination }
+                    data: { id: source.id + '-' + destination.id, source: source.id, target: destination.id }
                 }
             ]
         );
@@ -754,32 +749,31 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         this.forceGraphRefresh(observable);
     }
 
-    onAddNode(observable: ObservableGraphTypes, vertex: any): void {
+    onAddNode(observable: ObservableGraph, node: NodeBase): void {
         this.ensureGraphDrawn();
 
-        this.graphVis.add([{ data: { id: vertex } }]);
+        this.graphVis.add([{ data: { id: node.id, label: node.label } }]);
         this.forceGraphRefresh(observable);
     }
-    onRemoveNode(observable: ObservableGraphTypes, vertex: any): void {
+    onRemoveNode(_observable: ObservableGraph, node: NodeBase): void {
         this.ensureGraphDrawn();
-        
-        this.graphVis.remove(this.graphVis.filter(`[id = "${vertex}"]`));
+        this.graphVis.remove(this.graphVis.filter(`[id = "${node.id}"]`));
 
-        this.forceGraphRefresh(observable);
+        //this.forceGraphRefresh(observable);
     }
-    onRemoveEdge(observable: ObservableGraphTypes, source: any, destination: any): void {
+    onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         this.ensureGraphDrawn();
 
         this.graphVis.remove(
             [
                 {
-                    data: { id: source }
+                    data: { id: source.id }
                 },
                 {
-                    data: { id: destination }
+                    data: { id: destination.id }
                 },
                 {
-                    data: { id: source * 10 + destination, source: source, target: destination }
+                    data: { id: source.id + '-' + destination.id, source: source.id, target: destination.id }
                 }
             ]
         );
