@@ -1,12 +1,14 @@
 import { DOMmanipulator } from "./dom-manipulator";
-var MustacheIt = require('mustache');
 
+var MustacheIt = require('mustache');
 var Cytoscape = require('cytoscape');
+
 var dagre = require('cytoscape-dagre');
 Cytoscape.use(dagre);
 
 import { ObservableJSVariable, JSVariableChangeCbk, ObservableType } from "./observable-type"
-import { BinaryTree, Graph, GraphNodePayloadType, GraphVariableChangeCbk, NodeBase, ObservableGraph } from "./predefined-types";
+import { GraphVariableChangeCbk, NodeBase, ObservableGraph } from "./av-types-interfaces";
+import { BinaryTree, Graph } from "./av-types";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
 
 class FontSizeCache {
@@ -166,7 +168,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
     public getHTMLElement(): HTMLElement { return this.htmlElement; }
 
-    public textWidth(text: HTMLElement): { w: number, h: number } {
+    private textWidth(text: HTMLElement): { w: number, h: number } {
         let fontFamily = window.getComputedStyle(text, null).getPropertyValue('font-family');
         let fontSize = window.getComputedStyle(text, null).getPropertyValue('font-size');
 
@@ -194,7 +196,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         text.classList.remove('blink'); text.classList.add('blink');
     }
 
-    public fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
+    private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         if (objectToPrint == undefined) {
             text.textContent = 'undefined';
             this.resetFontSize(text);
@@ -729,6 +731,24 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
     }
 
+    onAccessNode(_observable: ObservableGraph, node: NodeBase): void {
+        let graphNode = this.graphVis.filter(`[id = "${node.id}"]`);
+
+        graphNode.animate({
+            style: { opacity: 1},
+            duration: 100,
+            easing: 'ease-in-sine'
+        }).delay(100).animate({
+            style: { opacity: 0, 'background-color': 'black'},
+            duration: 100,
+            easing: 'ease-in-sine'
+        }).delay(0).animate({
+            style: { opacity: 1, 'background-color': '#0d6efd'},
+            duration: 100,
+            easing: 'ease-in-sine'
+        });
+    }
+
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         this.ensureGraphDrawn();
 
@@ -757,9 +777,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
     onRemoveNode(_observable: ObservableGraph, node: NodeBase): void {
         this.ensureGraphDrawn();
-        this.graphVis.remove(this.graphVis.filter(`[id = "${node.id}"]`));
-
-        //this.forceGraphRefresh(observable);
+        this.graphVis.remove(this.graphVis.filter(`[id = "${node.id}"]`));        
     }
     onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         this.ensureGraphDrawn();

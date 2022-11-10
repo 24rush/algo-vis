@@ -1,7 +1,7 @@
 import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
-import { Graph, NodeBase, GraphType, GraphVariableChangeCbk, ObservableGraph, ParentSide, BinaryTree, BinarySearchTree, BinaryTreeNode, GraphNodePayloadType } from "./predefined-types";
+import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
+import { NodeBase, GraphType, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType} from './av-types-interfaces'
 
-var MustacheIt = require('mustache');
 var esprima = require('esprima')
 
 enum OperationType {
@@ -14,7 +14,6 @@ enum OperationType {
     WRITE_AT,
     WRITE_REF,
 
-    LINE_NUMBER,
     SCOPE_START,
     SCOPE_END,
     CREATE_VAR,
@@ -29,6 +28,8 @@ enum OperationType {
     BINARY_TREE_ADD_EDGE, // Visualizer purposes
     BINARY_TREE_REMOVE_NODE,
     BINARY_TREE_REMOVE_EDGE, // Visualizer purposes
+
+    GRAPH_ACCESS_NODE,
 
     TRACE
 }
@@ -128,7 +129,7 @@ class GraphObjectOperationPayload extends OperationPayload {
             case OperationType.GRAPH_REMOVE_VERTEX:
                 (observableGraph as Graph).removeVertex(this.source);
                 break;
-            case OperationType.BINARY_TREE_ADD_NODE:        
+            case OperationType.BINARY_TREE_ADD_NODE:
                 if (observableGraph instanceof BinarySearchTree)
                     (observableGraph as BinarySearchTree).add(this.source);
                 else
@@ -140,6 +141,9 @@ class GraphObjectOperationPayload extends OperationPayload {
             case OperationType.BINARY_TREE_ADD_EDGE:
             case OperationType.BINARY_TREE_REMOVE_EDGE:
                 // Nothing to do
+                break;
+            case OperationType.GRAPH_ACCESS_NODE:
+                observableGraph.accessValue(this.source);
                 break;
             default:
                 throw 'Cannot process operation type: ' + operationType;
@@ -261,6 +265,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     }
 
     // Graph
+    onAccessNode(observable: ObservableGraph, node: NodeBase): void {        
+        this.addOperation(OperationType.GRAPH_ACCESS_NODE, new GraphObjectOperationPayload(observable, node.value));
+    }    
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let isGraph = observable instanceof Graph;
         this.addOperation(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, new GraphObjectOperationPayload(observable, source.value, destination.value));
@@ -280,7 +287,6 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
     constructor() {
         super();
-        MustacheIt.escape = (text: any) => { return text; };
         (<any>window).oprec = this;
 
         this.reset();
@@ -291,7 +297,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     private scopes: ScopeDeclaration[] = [];
     private refs: Record<string, string> = {}; // [funcName.paramName] = [scopeName.varName]
     private funcDefs: Record<string, string[]>; // [funcName] = [param...]
-    private pushFuncParams: PushFuncParams[] = []; // [PushFuncParams]
+    private pushFuncParams: PushFuncParams[] = [];
     private emptyCodeLineNumbers: number[] = [];
     private fcnReturns: number[] = [];
     private markLineOverrides: number[] = [];
@@ -410,8 +416,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         if (this.currentScope[this.currentScope.length - 1] == scopeName)
             this.currentScope.pop();
         else {
-            console.log(this.currentScope + " vs. " + scopeName);
-            //TODO throw ('LAST SCOPE IS NOT AS EXPECTED');
+            throw ('LAST SCOPE IS NOT AS EXPECTED');
         }
     }
 
@@ -441,15 +446,17 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
             this.hookConsoleLog();
             var Types = {
                 Graph: Graph, GraphType: GraphType, GraphNode: NodeBase, BinaryTreeNode: BinaryTreeNode,
-                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree,
+                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ParentSide,
             };
 
-            this.code = "let BinarySearchTree = Types.BinarySearchTree; \
+            this.code = "\"use strict\"; \
+                         let BinarySearchTree = Types.BinarySearchTree; \
                          let BinaryTree = Types.BinaryTree;\
                          let Graph = Types.Graph;\
                          let GraphType = Types.GraphType; \
                          let GraphNode = Types.GraphNode; \
                          let BinaryTreeNode = Types.BinaryTreeNode; \
+                         let TreeNodeSide = Types.ParentSide;       \
                         " + this.code;
             eval(this.code);
             this.hookConsoleLog(false);
@@ -470,7 +477,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        console.log("OPERATIONS: "); console.log(this.operations);
+        //console.log("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -598,8 +605,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 }
             default:
                 {
-                    if (operation.attributes) operation.attributes.execute(operation.type);
-                    break;
+                    if (operation.attributes) operation.attributes.execute(operation.type);                    
                 }
         }
 
@@ -666,7 +672,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 this.currentScope.pop();
             else {
                 console.log(this.currentScope + " vs. " + scopeName);
-                console.log('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
+                throw('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
             }
         }
     }
@@ -946,8 +952,12 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 case "ForOfStatement":
                 case "ForInStatement":
                     {
-                        this.scopes.push(new ScopeDeclaration("local", item.body.range[0] + 1, item.body.range[1]));
-                        this.createVariable(scopeName + ".local", item.left.name, VarType.let, item.body.range[0] + 1);
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
+
+                        if (item.left && item.left.declarations && item.left.declarations.length > 0) {
+                            this.createVariable(scopeName + ".local", item.left.declarations[0].id.name, VarType.let, item.body.range[0] + 1);
+                        }
+
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
@@ -958,6 +968,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
                         this.parseVariable(scopeName + ".local", item.init, item.body.range[0] + 1);
+
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
@@ -1112,7 +1123,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         // Scope start setting
         for (const scope of this.scopes) {
-            let injectedCode = MustacheIt.render(";startScope('{{scope}}');", { scope: scope.name });
+            let injectedCode = `;startScope('${scope.name}');`;
             addCodeInjection(scope.startOfDefinitionIndex, injectedCode);
         };
 
@@ -1123,9 +1134,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 for (const endOfDefinitionIndex of vardata.endOfDefinitionIndexes) {
                     let injectedCode = "";
                     if (vardata.source === "")
-                        injectedCode = MustacheIt.render(";setVar('{{name}}', {{name}});", { name: vardata.name });
+                        injectedCode = `;setVar('${vardata.name}', ${vardata.name});`;
                     else
-                        injectedCode = MustacheIt.render(";setVar('{{name}}', {{name}}, '{{source}}');", { name: vardata.name, source: vardata.source });
+                        injectedCode = `;setVar('${vardata.name}', ${vardata.name}, '${vardata.source}');`;
 
                     addCodeInjection(endOfDefinitionIndex, injectedCode);
                 };
@@ -1134,16 +1145,16 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         // Scope end setting
         for (const scope of this.scopes) {
-            let injectedCode = MustacheIt.render(";endScope('{{scope}}');", { scope: scope.name });
+            let injectedCode = `;endScope('${scope.name}');`;
             addCodeInjection(scope.endOfDefinitionIndex, injectedCode);
         };
 
         // Push function parameters
         for (const pushParams of this.pushFuncParams) {
-            let injectedCode = MustacheIt.render(";pushParams({{params}});", { params: JSON.stringify(pushParams.varToParams) });
+            let injectedCode = `;pushParams(${JSON.stringify(pushParams.varToParams)});`;
             addCodeInjection(pushParams.startOfDefinitionIndex, injectedCode);
 
-            injectedCode = MustacheIt.render(";popParams({{params}});", { params: JSON.stringify(pushParams.varToParams) });
+            injectedCode = `;popParams(${JSON.stringify(pushParams.varToParams)});`;
             addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);
         }
 
@@ -1235,7 +1246,8 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         }
 
         // Mark lines with no code
-        let skippedLineMarkers = ['{', '}', '/*', '*/'];
+        let skippedLineMarkers = ['{', '}'];
+
         let codeLineByLine = this.code.split('\n');
         this.code = "";
         for (let [lineIndex, line] of codeLineByLine.entries()) {
@@ -1246,18 +1258,28 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 this.emptyCodeLineNumbers.push(lineIndex + 1);
             }
 
+            if ((trimmedLine.startsWith('/*') && trimmedLine.indexOf('*/') == -1) || (trimmedLine.startsWith('/*') && trimmedLine.endsWith('*/'))) {
+                this.emptyCodeLineNumbers.push(lineIndex + 1);
+            }
+
             line = line + '\n';
 
             if (!this.isEmptyLine(lineIndex + 1)) {
-                let codeLineMarker = MustacheIt.render(";markcl({{lineNo}});", { lineNo: lineIndex + 1 });
+                let codeLineMarker = `;markcl(${lineIndex + 1});`;
                 line = replaceTokens("<FCNRET>", codeLineMarker, line);
 
-                let codeLineMarker2 = MustacheIt.render(";forcemarkcl({{lineNo}});", { lineNo: lineIndex + 1 });
+                let codeLineMarker2 = `forcemarkcl(${lineIndex + 1});`;
                 line = replaceTokens("<FORCEMARKLINE>", codeLineMarker2, line);
 
-                if (line.indexOf("case") == -1) {
-                    line = insertInLine(codeLineMarker, line.trim()[0] == '{' ? line.indexOf('{') + 1 : 0, line);
+                let indxOfCommentEnding = line.indexOf('*/'); // Don't put line marker in comment section
+                if (indxOfCommentEnding != -1 && indxOfCommentEnding < line.length - 3) {
+                    line = insertInLine(codeLineMarker, indxOfCommentEnding + 2, line);
                 }
+                else
+                    if (line.indexOf("case") == -1) {
+                        line = insertInLine(codeLineMarker, line.trim()[0] == '{' ? line.indexOf('{') + 1 : 0, line);
+                    }
+
             }
 
             this.code += line;

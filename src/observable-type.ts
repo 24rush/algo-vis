@@ -1,4 +1,4 @@
-import { ObservableGraph } from "./predefined-types";
+import { ObservableGraph } from "./av-types-interfaces";
 
 type DictionaryKeyType = string | number | symbol;
 export type ObservableType = ObservableJSVariable | ObservableGraph;

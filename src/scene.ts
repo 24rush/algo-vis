@@ -203,6 +203,19 @@ export class Scene {
             highlightLine(this.operationRecorder.getNextCodeLineNumber());
         };
 
+        // Avoid mismatches between actual html content and .textContent used later on
+        let code = this.codeRenderer.getSourceCode();        
+        let codeLines = code.split('\n');
+
+        if (codeLines && codeLines.length) {            
+            if (codeLines[0].trim() == '')
+                codeLines.shift();
+
+            code = codeLines.join('\n');
+        }
+
+        this.codeRenderer.setSourceCode(code);
+
         this.operationRecorder.setSourceCode(this.codeRenderer.getSourceCode());
         this.operationRecorder.startReplay();
         highlightLine(this.operationRecorder.getFirstCodeLineNumber());

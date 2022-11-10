@@ -1,30 +1,6 @@
-import { BaseObservableType } from "./observable-type";
+import { GraphNodePayloadType, GraphType, NodeBase, ObservableGraph, ParentSide } from "./av-types-interfaces";
 
-export enum GraphType {
-    DIRECTED,
-    UNDIRECTED,
-    BST,
-    BT
-}
-
-export enum ParentSide {
-    LEFT,
-    RIGHT
-}
-
-export type GraphNodePayloadType = string | number;
-
-export class GraphVariableChangeCbk {
-    onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any) { console.log("Method not implemented."); };
-
-    onAddNode(_observable: ObservableGraph, _vertex: NodeBase, _parentValue?: NodeBase, _side?: ParentSide) { console.log("Method onAddVertex not implemented."); }
-    onRemoveNode(_observable: ObservableGraph, _vertex: NodeBase) { console.log("Method onRemoveVertex not implemented."); }
-
-    onAddEdge(_observable: ObservableGraph, _source: NodeBase, _destination: NodeBase) { console.log("Method onAddEdge not implemented."); };
-    onRemoveEdge(_observable: ObservableGraph, _source: NodeBase, _destination: NodeBase) { console.log("Method onRemoveEdge not implemented."); };
-}
-
-export class BinaryTreeNodeProxy {
+class BinaryTreeNodeProxy {
     constructor(protected target: any) {
         return new Proxy(target, {
             set: (target, property, newValue, proxy) => {
@@ -39,25 +15,13 @@ export class BinaryTreeNodeProxy {
                 return true;
             },
             get: (target: any, property: any, _receiver: any) => {
+                if (property === 'value') {
+                    target.onGetValue();
+                }
+
                 return property in target ? target[property] : target;
             }
         });
-    }
-}
-
-export class NodeBase {
-    protected graph: ObservableGraph = undefined;
-
-    public label: string = "";
-    public id: string = "";
-
-    constructor(public value: GraphNodePayloadType) {
-        this.label = value.toString();
-        this.id = value.toString();
-    }
-
-    setParentGraph(graph: ObservableGraph) {
-        this.graph = graph;
     }
 }
 
@@ -106,6 +70,10 @@ export class BinaryTreeNode extends NodeBase {
         this.graph.onEdgeAdded(this, addedNode);
     }
 
+    onGetValue() {
+        this.graph?.onAccessNode(this);
+    }
+
     isRoot() { return this.parent === undefined; }
 
     isLeftChild() { return this.parentSide === ParentSide.LEFT; }
@@ -144,67 +112,8 @@ export class GraphNode extends NodeBase {
     }
 }
 
-export class ObservableGraph extends BaseObservableType<GraphVariableChangeCbk> {
-
-    constructor(protected type: GraphType) {
-        super();
-    }
-
-    empty() { throw "Not implemented"; }
-    isEmpty(): boolean { throw "Not implemented"; }
-    find(_value: any): NodeBase { throw "Not implemented"; }
-
-    getType(): GraphType { return this.type; }
-
-    getValue(): any { return this; }
-    setValue(value: any) {
-        for (let observer of this.observers) {
-            observer.onSetEvent(this, undefined, value);
-        }
-    }
-
-    // EVENTS
-    onNodeAdded(node: NodeBase, side?: ParentSide) {
-        if (!node)
-            return;
-
-        let isGraphNode = (node instanceof NodeBase);
-
-        for (let observer of this.observers) {
-            if (isGraphNode)
-                observer.onAddNode(this, node);
-            else
-                observer.onAddNode(this, node, (node as BinaryTreeNode).parent, side);
-        }
-    }
-
-    onEdgeAdded(source: NodeBase, destination: NodeBase) {
-        if (!source || !destination) return;
-
-        for (let observer of this.observers) {
-            observer.onAddEdge(this, source, destination);
-        }
-    }
-
-    onNodeRemoved(node: NodeBase) {
-        if (!node) return;
-
-        for (let observer of this.observers) {
-            observer.onRemoveNode(this, node);
-        }
-    }
-
-    onEdgeRemoved(source: NodeBase, destination: NodeBase) {
-        if (!source || !destination) return;
-
-        for (let observer of this.observers) {
-            observer.onRemoveEdge(this, source, destination);
-        }
-    }
-}
-
 export class Graph extends ObservableGraph {
-    private nodes: Map<any, GraphNode> = new Map();
+    private nodes: Map<GraphNodePayloadType, GraphNode> = new Map();
 
     constructor(type: GraphType = GraphType.UNDIRECTED) {
         super(type);
@@ -212,10 +121,17 @@ export class Graph extends ObservableGraph {
 
     override empty() { this.nodes.clear(); }
     override isEmpty(): boolean { return this.nodes.size == 0; }
-    override find(_value: any): GraphNode { throw "Not implemented"; }
+    override find(value: any): GraphNode { return this.nodes.get(value); }
+    override accessValue(value: GraphNodePayloadType) {
+        let node = this.find(value);
+
+        if (node) {
+            this.onAccessNode(node);
+        }
+    }
 
     hasDirectedEdges(): boolean { return this.type == GraphType.DIRECTED; }
-
+    
     addVertex(value: GraphNodePayloadType): GraphNode {
         if (this.nodes.has(value)) {
             return this.nodes.get(value);
@@ -286,6 +202,13 @@ export class BinaryTree extends ObservableGraph {
     override find(value: any): BinaryTreeNode {
         return this.findExhaustive(value);
     }
+    override accessValue(value: GraphNodePayloadType) {
+        let node = this.find(value);
+
+        if (node) {
+            this.onAccessNode(node);
+        }
+    }
 
     createRoot(value: any): BinaryTreeNode {
         if (this.root)
@@ -300,6 +223,9 @@ export class BinaryTree extends ObservableGraph {
 
     add(valueToAdd: BinaryTreeNode | GraphNodePayloadType, forcedParentValue: GraphNodePayloadType, forcedSideToAdd: ParentSide) {
         let value = (valueToAdd instanceof BinaryTreeNode) ? valueToAdd.value : valueToAdd;
+
+        if (this.root && (forcedParentValue == undefined || forcedSideToAdd == undefined))
+            throw 'Adding in binary trees requires specifying the parent and the side to add to'
 
         if (!this.root) {
             this.root = this.createRoot(value);
@@ -432,6 +358,14 @@ export class BinarySearchTree extends BinaryTree {
 
     override find(value: any): BinaryTreeNode {
         return this.findNodeAndFutureParent(value, this.root)[0];
+    }
+
+    override accessValue(value: GraphNodePayloadType) {
+        let node = this.find(value);
+
+        if (node) {
+            this.onAccessNode(node);
+        }
     }
 
     // PRIVATES
