@@ -733,7 +733,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
     onAccessNode(_observable: ObservableGraph, node: NodeBase): void {
         let graphNode = this.graphVis.filter(`[id = "${node.id}"]`);
-
+/*
         graphNode.animate({
             style: { opacity: 1},
             duration: 100,
@@ -746,7 +746,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             style: { opacity: 1, 'background-color': '#0d6efd'},
             duration: 100,
             easing: 'ease-in-sine'
-        });
+        });*/
     }
 
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {

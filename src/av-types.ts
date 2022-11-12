@@ -132,6 +132,18 @@ export class Graph extends ObservableGraph {
 
     hasDirectedEdges(): boolean { return this.type == GraphType.DIRECTED; }
     
+    fromAdjacencyMatrix(matrix: GraphNodePayloadType[][]) {
+        for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
+            for (let colIndex = this.type == GraphType.UNDIRECTED ? rowIndex : 0; colIndex < matrix[rowIndex].length; colIndex++) {
+                let element = matrix[rowIndex][colIndex];
+                
+                if (element != 0) {
+                    this.addEdge(rowIndex, colIndex);
+                }
+            }
+        }
+    }
+
     addVertex(value: GraphNodePayloadType): GraphNode {
         if (this.nodes.has(value)) {
             return this.nodes.get(value);
@@ -154,7 +166,7 @@ export class Graph extends ObservableGraph {
     }
 
     addEdge(source: GraphNodePayloadType, destination: GraphNodePayloadType) {
-        if (!source || !destination) {
+        if (source == undefined || destination == undefined) {
             throw 'You must specify both source and destination';
         }
 

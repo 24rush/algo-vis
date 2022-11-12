@@ -1,6 +1,6 @@
 import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphType, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType} from './av-types-interfaces'
+import { NodeBase, GraphType, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType } from './av-types-interfaces'
 
 var esprima = require('esprima')
 
@@ -177,7 +177,8 @@ class Operation {
 enum OperationRecorderStatus {
     Idle,
     Recording,
-    ReplayEnded
+    ReplayEnded,
+    Waiting
 }
 
 export interface VariableScopingNotification {
@@ -190,49 +191,96 @@ export interface TraceMessageNotification {
 }
 
 export interface CompilationStatusNotification {
-    onCompilationStatus(status: boolean, message?: string): void;
+    onCompilationError(status: boolean, message?: string): void;
 }
 
-class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification {
+export interface ExceptionNotification {
+    onExceptionMessage(status: boolean, message: string): void;
+}
 
-    private variableScopeObservers: VariableScopingNotification[] = [];
-    private traceMessageObservers: TraceMessageNotification[] = [];
-    private compilationStatusObservers: CompilationStatusNotification[] = [];
+type NotificationTypes = VariableScopingNotification | TraceMessageNotification | CompilationStatusNotification | ExceptionNotification;
 
-    public registerVarScopeNotifier(notifier: VariableScopingNotification) {
-        this.variableScopeObservers.push(notifier);
+class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification, ExceptionNotification {
+
+    private notificationObservers: NotificationTypes[] = [];
+
+    public registerNotificationObserver(notifier: NotificationTypes) {
+        this.notificationObservers.push(notifier);
     }
 
-    public registerTraceNotifier(notifier: TraceMessageNotification) {
-        this.traceMessageObservers.push(notifier);
+    private variableScopingNotifications(): VariableScopingNotification[] {
+        let notifiers: VariableScopingNotification[] = [];
+
+        for (const notifier of this.notificationObservers) {
+            if ('onEnterScopeVariable' in notifier)
+                notifiers.push(notifier as VariableScopingNotification);
+        }
+
+        return notifiers;
     }
 
-    public registerCompilationStatusNotifier(notifier: CompilationStatusNotification) {
-        this.compilationStatusObservers.push(notifier);
+    private traceMessageNotifications(): TraceMessageNotification[] {
+        let notifiers: TraceMessageNotification[] = [];
+
+        for (const notifier of this.notificationObservers) {
+            if ('onTraceMessage' in notifier)
+                notifiers.push(notifier as TraceMessageNotification);
+        }
+
+        return notifiers;
+    }
+
+    private compilationStatusNotifications(): CompilationStatusNotification[] {
+        let notifiers: CompilationStatusNotification[] = [];
+
+        for (const notifier of this.notificationObservers) {
+            if ('onCompilationError' in notifier)
+                notifiers.push(notifier as CompilationStatusNotification);
+        }
+
+        return notifiers;
+    }
+
+    private exceptionNotifications(): ExceptionNotification[] {
+        let notifiers: ExceptionNotification[] = [];
+
+        for (const notifier of this.notificationObservers) {
+            if ('onExceptionMessage' in notifier)
+                notifiers.push(notifier as ExceptionNotification);
+        }
+
+        return notifiers;
     }
 
     onEnterScopeVariable(scopeName: string, observable: ObservableJSVariable): void {
-        for (const notifier of this.variableScopeObservers) {
+        for (const notifier of this.variableScopingNotifications()) {
             notifier.onEnterScopeVariable(scopeName, observable);
         }
     }
     onExitScopeVariable(scopeName: string, observable: ObservableJSVariable): void {
-        for (const notifier of this.variableScopeObservers) {
+        for (const notifier of this.variableScopingNotifications()) {
             notifier.onExitScopeVariable(scopeName, observable);
         };
     }
 
     onTraceMessage(message: string): void {
-        for (const notifier of this.traceMessageObservers) {
+        for (const notifier of this.traceMessageNotifications()) {
             notifier.onTraceMessage(message);
         };
     }
 
-    onCompilationStatus(status: boolean, message?: string): void {
-        for (const notifier of this.compilationStatusObservers) {
-            notifier.onCompilationStatus(status, message);
+    onCompilationError(status: boolean, message?: string): void {
+        for (const notifier of this.compilationStatusNotifications()) {
+            notifier.onCompilationError(status, message);
         };
     }
+
+    onExceptionMessage(status: boolean, message?: string): void {
+        for (const notifier of this.exceptionNotifications()) {
+            notifier.onExceptionMessage(status, message);
+        };
+    }
+
 }
 
 export class OperationRecorder extends NotificationEmitter implements JSVariableChangeCbk, GraphVariableChangeCbk {
@@ -265,9 +313,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     }
 
     // Graph
-    onAccessNode(observable: ObservableGraph, node: NodeBase): void {        
+    onAccessNode(observable: ObservableGraph, node: NodeBase): void {
         this.addOperation(OperationType.GRAPH_ACCESS_NODE, new GraphObjectOperationPayload(observable, node.value));
-    }    
+    }
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let isGraph = observable instanceof Graph;
         this.addOperation(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, new GraphObjectOperationPayload(observable, source.value, destination.value));
@@ -306,8 +354,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     protected variableObservers: ObservableJSVariable[] = [];
     private runtimeObservables: Map<string, any> = new Map();
 
-    protected code: string;
-    protected compilationStatus: boolean;
+    protected code: string;    
     protected operations: Operation[] = [];
     protected nextOperationIndex: number = 0;
     protected firstExecutedCodeLineNumber: number = -1;
@@ -329,7 +376,6 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
     private reset() {
         this.code = "";
-        this.compilationStatus = true;
 
         for (let primitiveObservers of this.variableObservers) {
             primitiveObservers.empty();
@@ -349,6 +395,11 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         this.firstExecutedCodeLineNumber = -1;
         this.lastExecutedCodeLineNumber = -1;
         this.lastExecutedOperationIndex = -1;
+    }
+
+    public isWaiting(): boolean { return this.status == OperationRecorderStatus.Waiting; }
+    public setWaiting(status: boolean) {
+        this.status = status ? OperationRecorderStatus.Waiting : OperationRecorderStatus.Idle;
     }
 
     public setSourceCode(code: string) {
@@ -442,6 +493,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         console.log(this.code);
 
+        this.onCompilationError(false);
+        this.onExceptionMessage(false);
+
         try {
             this.hookConsoleLog();
             var Types = {
@@ -459,16 +513,11 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                          let TreeNodeSide = Types.ParentSide;       \
                         " + this.code;
             eval(this.code);
-            this.hookConsoleLog(false);
-
-            this.compilationStatus = true;
-            this.onCompilationStatus(this.compilationStatus, "");
+            this.hookConsoleLog(false);            
         } catch (e) {
-            this.hookConsoleLog(false);
-            this.compilationStatus = false;
-
-            this.onCompilationStatus(this.compilationStatus, e.message);
-            throw e;
+            this.hookConsoleLog(false);            
+            let message = (typeof e == 'object' && 'message' in e) ? e.message : e;            
+            this.onExceptionMessage(true, message); 
         }
 
         for (let primitiveObservers of this.variableObservers) {
@@ -477,7 +526,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         this.status = OperationRecorderStatus.Idle;
         this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        //console.log("OPERATIONS: "); console.log(this.operations);
+        console.log("OPERATIONS: "); console.log(this.operations);
     }
 
     public startReplay() {
@@ -531,17 +580,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         return this.emptyCodeLineNumbers.indexOf(lineNumber) != -1;
     }
 
-    private checkRecoverExecutionEdges(reverse: boolean = false) {
-        if (reverse) { // Advance from start
-            if (this.nextOperationIndex == -1) {
-                this.nextOperationIndex = 0;
-                this.status = OperationRecorderStatus.ReplayEnded;
-            }
-        } else {
-            if (this.nextOperationIndex == this.operations.length) {
-                this.nextOperationIndex = this.operations.length - 1;
-                this.status = OperationRecorderStatus.ReplayEnded;
-            }
+    private checkRecoverExecutionEdges(_reverse: boolean = false) {
+        if (this.nextOperationIndex == this.operations.length) {
+            this.status = OperationRecorderStatus.ReplayEnded;
         }
     }
 
@@ -554,6 +595,9 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
     private executeOneCodeLine(reverse: boolean = false) {
         this.checkRecoverExecutionEdges(reverse);
+
+        if (this.status == OperationRecorderStatus.ReplayEnded)
+            return;
 
         let currentOperationToExecute = this.getNextOperation();
         if (!currentOperationToExecute)
@@ -605,7 +649,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 }
             default:
                 {
-                    if (operation.attributes) operation.attributes.execute(operation.type);                    
+                    if (operation.attributes) operation.attributes.execute(operation.type);
                 }
         }
 
@@ -672,7 +716,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 this.currentScope.pop();
             else {
                 console.log(this.currentScope + " vs. " + scopeName);
-                throw('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
+                throw ('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
             }
         }
     }
@@ -1053,7 +1097,8 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
                 }
                 case "CallExpression":
                     {
-                        this.fcnReturns.push(item.range[1] + 1);
+                        // TODO : INVESTIGATE
+                        //this.fcnReturns.push(item.range[1] + 1);
 
                         if (item.callee && item.callee.object && item.callee.object.name) {
                             let varName = item.callee.object.name;
@@ -1190,13 +1235,15 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         let syntax = undefined;
 
+        this.onCompilationError(false);
+        this.onExceptionMessage(false);
+
         try {
             syntax = esprima.parseScript(this.code, { range: true });
             console.log(syntax);
-
         } catch (error) {
-            this.onCompilationStatus(false, "line " + error.lineNumber + " " + error.description);
-            throw error;
+            this.onCompilationError(true, "line " + error.lineNumber + ": " + error.description);
+            return;
         }
 
         this.varDeclarations = {};

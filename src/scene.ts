@@ -1,4 +1,3 @@
-import { DOMmanipulator } from "./dom-manipulator"
 import { ObservableJSVariable } from "./observable-type"
 import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
@@ -8,37 +7,45 @@ import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
 var bootstrap = require('bootstrap')
 
 class AVViewModel {
-    consoleOutput: string = "";
-    isReadonlyCodeEditor: boolean = false;
+    consoleOutput: string = "";    
 
     showComments: boolean = true;
     onShowComments(): any { }
 
     isPaused = true;
+    isFinished = false;
     onAutoplayToggled(): any { }
 
-    compilationStatus: boolean = true;
-    compilatonMessage: string = "";
-    compilationErrorMessage(): string { return "error: " + this.compilatonMessage; };
+    hasCompilationError: boolean = false;
+    compilatonErrorMessage: string = "";
+    compilationErrorMessage(): string { return this.compilatonErrorMessage; };
+
+    hasException: boolean = false;
+    exceptionMessage: string = "";
 
     onAdvance(): any { }
     onRestart(): any { }
 
+    onPlaybackSpeedChangedSSlow(): any { }
+    onPlaybackSpeedChangedSlow(): any { }
+    onPlaybackSpeedChangedRealtime(): any { }
+
     public setDefaults() {
-        this.consoleOutput = "";
-        this.isReadonlyCodeEditor = false;
+        this.consoleOutput = "";        
         this.isPaused = true;
         this.showComments = false; // needs sync with UI checked
-        this.compilationStatus = true;
-        this.compilatonMessage = "";
+        this.hasCompilationError = false;
+        this.compilatonErrorMessage = "";
+        this.hasException = false;
+        this.exceptionMessage = "";
     }
 }
 
 export class Scene {
     private codeRenderer: CodeRenderer;
     private commentsPopover: any = undefined;
-    private autoReplayInterval = 200;        
-    private autoplayTimer: NodeJS.Timer = undefined;        
+    private autoReplayInterval = 200;
+    private autoplayTimer: NodeJS.Timer = undefined;
 
     private viewModel: AVViewModel = new AVViewModel();
 
@@ -50,16 +57,14 @@ export class Scene {
         let codeEditor = widget.querySelector("[class*=codeEditor]") as HTMLElement;
         let buttonsBar = widget.querySelector("[class*=buttonsBar]");
         
-        let isReadonlyCodeEditor = widget.hasAttribute('av-ro');
-        this.codeRenderer = new CodeRenderer(codeEditor, isReadonlyCodeEditor);        
+        this.codeRenderer = new CodeRenderer(codeEditor, widget.hasAttribute('av-ro'));
         let layout = new Layout(variablesPanel);
 
-        let viewModelObs = new ObservableViewModel(this.viewModel);        
+        let viewModelObs = new ObservableViewModel(this.viewModel);
         new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane);
 
-        let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);        
-        avViewModel.setDefaults();
-        avViewModel.isReadonlyCodeEditor = isReadonlyCodeEditor;
+        let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
+        avViewModel.setDefaults();        
 
         this.viewModel.onShowComments = () => {
             avViewModel.showComments = !avViewModel.showComments;
@@ -74,40 +79,68 @@ export class Scene {
 
         this.viewModel.onAutoplayToggled = () => {
             if (this.operationRecorder.isReplayFinished()) {
-                avViewModel.isPaused = true;
-                return;
+                this.viewModel.onRestart();                
             }
 
             avViewModel.isPaused = !avViewModel.isPaused;
 
+            clearInterval(this.autoplayTimer);
+
             if (!avViewModel.isPaused) {
                 this.autoplayTimer = setInterval(() => {
-                    advance();
+                    avViewModel.isPaused = this.operationRecorder.isReplayFinished();
+                    avViewModel.isFinished = this.operationRecorder.isReplayFinished();
 
-                    if (this.operationRecorder.isReplayFinished() || avViewModel.isPaused) {
+                    if (avViewModel.isPaused) {                        
                         clearInterval(this.autoplayTimer);
                     }
+                    else {
+                        if (!this.operationRecorder.isWaiting())
+                            advance();
+                        else {
+                            setTimeout(advance, 20);
+                        }
+                    }
                 }, this.autoReplayInterval);
-            }
-            else {
-                clearInterval(this.autoplayTimer);
             }
         }
 
         this.viewModel.onAdvance = () => {
-            if (avViewModel.isPaused)                
+            if (avViewModel.isPaused)
                 advance();
         }
 
+        let advance = () => {
+            if (this.operationRecorder.isWaiting()) {
+                return;
+            }
+
+            this.operationRecorder.advanceOneCodeLine();
+            highlightLine(this.operationRecorder.getNextCodeLineNumber());
+            avViewModel.isFinished = this.operationRecorder.isReplayFinished();
+        };
+
         this.viewModel.onRestart = () => {
             avViewModel.isPaused = true;
+            avViewModel.isFinished = false;
             avViewModel.consoleOutput = "";
 
-            clearInterval(this.autoplayTimer);            
+            clearInterval(this.autoplayTimer);
+            this.autoplayTimer = undefined;
             layout.clearAll();
-            
+
             this.operationRecorder.startReplay();
             highlightLine(this.operationRecorder.getFirstCodeLineNumber());
+        }
+
+        this.viewModel.onPlaybackSpeedChangedSSlow = () => {
+            this.autoReplayInterval = 400;
+        }
+        this.viewModel.onPlaybackSpeedChangedSlow = () => {
+            this.autoReplayInterval = 200;
+        }
+        this.viewModel.onPlaybackSpeedChangedRealtime = () => {
+            this.autoReplayInterval = 0;
         }
 
         let self = this;
@@ -136,25 +169,34 @@ export class Scene {
             }
         });
 
-        this.operationRecorder.registerVarScopeNotifier({
+        this.operationRecorder.registerNotificationObserver({
             onEnterScopeVariable: (scopeName: string, observable: ObservableJSVariable) => {
                 layout.add(scopeName, observable);
             },
             onExitScopeVariable: (scopeName: string, observable: ObservableJSVariable) => {
-                layout.remove(scopeName, observable);
+                layout.remove(scopeName, observable, (status): void => {
+                    self.operationRecorder.setWaiting(status);
+                });
             }
         });
 
-        this.operationRecorder.registerTraceNotifier({
-            onTraceMessage(message: string): void {                
+        this.operationRecorder.registerNotificationObserver({
+            onTraceMessage(message: string): void {
                 avViewModel.consoleOutput += message + '\r\n';
             }
         });
 
-        this.operationRecorder.registerCompilationStatusNotifier({
-            onCompilationStatus(status: boolean, message: string): void {
-                avViewModel.compilatonMessage = message;
-                avViewModel.compilationStatus = status;
+        this.operationRecorder.registerNotificationObserver({
+            onCompilationError(status: boolean, message?: string): void {                
+                avViewModel.compilatonErrorMessage = message;
+                avViewModel.hasCompilationError = status;                
+            }
+        });
+
+        this.operationRecorder.registerNotificationObserver({
+            onExceptionMessage(status: boolean, message?: string) : void { 
+                avViewModel.exceptionMessage = message;
+                avViewModel.hasException = status;               
             }
         });
 
@@ -198,16 +240,11 @@ export class Scene {
             } else options.content = "";
         };
 
-        let advance = () => {
-            this.operationRecorder.advanceOneCodeLine();
-            highlightLine(this.operationRecorder.getNextCodeLineNumber());
-        };
-
         // Avoid mismatches between actual html content and .textContent used later on
-        let code = this.codeRenderer.getSourceCode();        
+        let code = this.codeRenderer.getSourceCode();
         let codeLines = code.split('\n');
 
-        if (codeLines && codeLines.length) {            
+        if (codeLines && codeLines.length) {
             if (codeLines[0].trim() == '')
                 codeLines.shift();
 
@@ -215,9 +252,6 @@ export class Scene {
         }
 
         this.codeRenderer.setSourceCode(code);
-
-        this.operationRecorder.setSourceCode(this.codeRenderer.getSourceCode());
-        this.operationRecorder.startReplay();
-        highlightLine(this.operationRecorder.getFirstCodeLineNumber());
+        highlightLine(1);
     }
 }

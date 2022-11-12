@@ -196,8 +196,8 @@ export class UIBinder {
             let propertyBound = htmlElement.getAttribute('av-bind-onclick');
 
             if (propertyBound in this.viewModel) {
-                htmlElement.addEventListener('click', (_event) => {
-                    (this.viewModel as any)[propertyBound]();
+                htmlElement.addEventListener('click', (event) => {
+                    (this.viewModel as any)[propertyBound](event.target);
                 });
             } else {
                 throw "Property '" + propertyBound + "' does not exist on view model";

@@ -21,6 +21,8 @@ class LayoutOperationContext {
     }
 }
 
+type OnLayoutOperationsStatus = (hasPendingOperations: boolean) => void;
+
 export class Layout {
     protected readonly scopeTemplate = '\
     <ul class="list-group list-group-mine" av-scope="{{scope}}"> \
@@ -40,9 +42,6 @@ export class Layout {
     private observableToVisualizer: Record<string, VariableVisualizer> = {}; // {key = scope.varname, {Visualizer}}
     private scopes: Map<string, HTMLElement> = new Map(); // {key = scope, {HTMLElement}}    
 
-    private layoutAnimationsPending: boolean = false;
-    private pendingLayoutOperations: LayoutOperationContext[] = [];
-
     private codeScopeToUiScope(codeScope: string): string {
         let functionScopesList = codeScope.replace('global.', '').split('!').join('').split('.');
         let uiScopeName = functionScopesList.pop();
@@ -60,33 +59,7 @@ export class Layout {
         return uiScopeName;
     }
 
-    private processPendingLayoutOperations() {
-        while (this.pendingLayoutOperations.length > 0) {
-            let operation = this.pendingLayoutOperations.shift();
-            if (operation.type == LayoutOperation.Add) {
-                this.add(operation.scopeName, operation.observable);
-            } else {
-                this.remove(operation.scopeName, operation.observable, false);
-            }
-        }
-    }
-
-    public add(scopeName: string, observable: ObservableType) {
-        if (this.layoutAnimationsPending) {
-            this.pendingLayoutOperations.push(LayoutOperationContext.newAddOperation(scopeName, observable));
-
-            if (observable) {
-                let key = scopeName + "." + observable.name;
-
-                if (!(key in this.observableToVisualizer)) {
-                    let visualizer = new VariableVisualizer(observable);
-                    this.observableToVisualizer[key] = visualizer;
-                }
-            }
-
-            return;
-        }
-
+    public add(scopeName: string, observable: ObservableType) : boolean {
         if (!this.scopes.has(scopeName)) {
             let isLocalScope = false;
 
@@ -124,19 +97,17 @@ export class Layout {
             let visualizer = this.observableToVisualizer[key];
             let scopeHtmlElement: HTMLElement = this.scopes.get(scopeName);
             let htmlElement = visualizer.drawVarName();
-            if (htmlElement)
+            if (htmlElement) {                
                 scopeHtmlElement.children[1].prepend(htmlElement);
+            }
 
             visualizer.updatePendingDraws();
         }
+
+        return true;
     }
 
-    public remove(scopeName: string, observable: ObservableType, queueRequest: boolean = true) {
-        if (this.layoutAnimationsPending && queueRequest) {
-            this.pendingLayoutOperations.push(LayoutOperationContext.newRemoveOperation(scopeName, observable));
-            return;
-        }
-
+    public remove(scopeName: string, observable: ObservableType, onLayoutOperationsStatus: OnLayoutOperationsStatus = undefined) {
         let key = scopeName + "." + observable.name;
 
         if (!(key in this.observableToVisualizer))
@@ -152,8 +123,10 @@ export class Layout {
                 let wholeScopeRemoval = parentScopeHtmlElement.children[1].children.length == 1;
                 let fadingHtmlElem = wholeScopeRemoval ? parentScopeHtmlElement : htmlElement;
 
-                this.layoutAnimationsPending = true;
-                fadingHtmlElem.ontransitionend = () => { console.log('sss');
+                if (onLayoutOperationsStatus)
+                    onLayoutOperationsStatus(true);
+
+                fadingHtmlElem.ontransitionend = () => {
                     parentScopeHtmlElement.children[1].removeChild(htmlElement);
                     visualizer.detach();
 
@@ -163,9 +136,10 @@ export class Layout {
                         this.scopes.delete(scopeName);
                     }
 
-                    this.layoutAnimationsPending = false;
-                    this.processPendingLayoutOperations();
+                    if (onLayoutOperationsStatus)
+                        onLayoutOperationsStatus(false);
                 };
+
                 fadingHtmlElem.classList.add('fade-out');
 
                 break;
