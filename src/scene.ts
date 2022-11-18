@@ -145,27 +145,16 @@ export class Scene {
 
         let self = this;
 
-        if (codeId) {
-            fetch(codeId)
-                .then((response) => {
-                    if (!response.ok)
-                        return;
-
-                    response.text().then((code: string) => {
-                        this.codeRenderer.setSourceCode(code);
-                    });
-                });
-        }
-
         this.codeRenderer.registerEventNotifier({
             onSourceCodeUpdated(newCode: string) {
                 avViewModel.consoleOutput = "";
                 layout.clearAll();
 
-                self.operationRecorder.setSourceCode(newCode);
-                self.operationRecorder.startReplay();
+                if (self.operationRecorder.setSourceCode(newCode)) {                
+                    self.codeRenderer.highlightLine(self.operationRecorder.getFirstCodeLineNumber());
+                }
 
-                self.codeRenderer.highlightLine(self.operationRecorder.getFirstCodeLineNumber());
+                self.operationRecorder.startReplay();
             }
         });
 
@@ -199,6 +188,19 @@ export class Scene {
                 avViewModel.hasException = status;               
             }
         });
+
+        // Actual code start
+        if (codeId) {
+            fetch(codeId)
+                .then((response) => {
+                    if (!response.ok)
+                        return;
+
+                    response.text().then((code: string) => {
+                        this.codeRenderer.setSourceCode(code);
+                    });
+                });
+        }
 
         var options = {
             'content': "",
