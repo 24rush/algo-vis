@@ -3,11 +3,12 @@ import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
+import { CodeExecutorProxy } from "./code-executor-proxy";
 
 var bootstrap = require('bootstrap')
 
 class AVViewModel {
-    consoleOutput: string = "";    
+    consoleOutput: string = "";
 
     showComments: boolean = true;
     onShowComments(): any { }
@@ -31,7 +32,7 @@ class AVViewModel {
     onPlaybackSpeedChangedRealtime(): any { }
 
     public setDefaults() {
-        this.consoleOutput = "";        
+        this.consoleOutput = "";
         this.isPaused = true;
         this.showComments = false; // needs sync with UI checked
         this.hasCompilationError = false;
@@ -56,7 +57,7 @@ export class Scene {
         let variablesPanel = widget.querySelector("[class*=panelVariables]") as HTMLElement;
         let codeEditor = widget.querySelector("[class*=codeEditor]") as HTMLElement;
         let buttonsBar = widget.querySelector("[class*=buttonsBar]");
-        
+
         this.codeRenderer = new CodeRenderer(codeEditor, widget.hasAttribute('av-ro'));
         let layout = new Layout(variablesPanel);
 
@@ -64,7 +65,7 @@ export class Scene {
         new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane);
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
-        avViewModel.setDefaults();        
+        avViewModel.setDefaults();
 
         this.viewModel.onShowComments = () => {
             avViewModel.showComments = !avViewModel.showComments;
@@ -79,7 +80,7 @@ export class Scene {
 
         this.viewModel.onAutoplayToggled = () => {
             if (this.operationRecorder.isReplayFinished()) {
-                this.viewModel.onRestart();                
+                this.viewModel.onRestart();
             }
 
             avViewModel.isPaused = !avViewModel.isPaused;
@@ -91,7 +92,7 @@ export class Scene {
                     avViewModel.isPaused = this.operationRecorder.isReplayFinished();
                     avViewModel.isFinished = this.operationRecorder.isReplayFinished();
 
-                    if (avViewModel.isPaused) {                        
+                    if (avViewModel.isPaused) {
                         clearInterval(this.autoplayTimer);
                     }
                     else {
@@ -150,7 +151,10 @@ export class Scene {
                 avViewModel.consoleOutput = "";
                 layout.clearAll();
 
-                if (self.operationRecorder.setSourceCode(newCode)) {                
+                var doc = new DOMParser().parseFromString(newCode, "text/html");
+                newCode = doc.documentElement.textContent;
+
+                if (self.operationRecorder.setSourceCode(newCode)) {
                     self.codeRenderer.highlightLine(self.operationRecorder.getFirstCodeLineNumber());
                 }
 
@@ -176,16 +180,16 @@ export class Scene {
         });
 
         this.operationRecorder.registerNotificationObserver({
-            onCompilationError(status: boolean, message?: string): void {                
+            onCompilationError(status: boolean, message?: string): void {
                 avViewModel.compilatonErrorMessage = message;
-                avViewModel.hasCompilationError = status;                
+                avViewModel.hasCompilationError = status;
             }
         });
 
         this.operationRecorder.registerNotificationObserver({
-            onExceptionMessage(status: boolean, message?: string) : void { 
+            onExceptionMessage(status: boolean, message?: string): void {
                 avViewModel.exceptionMessage = message;
-                avViewModel.hasException = status;               
+                avViewModel.hasException = status;
             }
         });
 

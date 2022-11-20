@@ -33,8 +33,23 @@ export class NodeBase {
 
 export class ObservableGraph extends BaseObservableType<GraphVariableChangeCbk> {
 
+    public __isGraphType__: boolean = true;
+    public id: number = 0;
+    
+    private static id_counter: number = 0;
+
     constructor(protected type: GraphType) {
         super();
+
+        this.id = ObservableGraph.id_counter++;
+    }
+
+    copyFrom(other: ObservableGraph) {
+        this.__isGraphType__ = true;
+
+        this.id = other.id;        
+        this.type = other.type;
+        this.name = other.name;
     }
 
     empty() { throw "Not implemented"; }

@@ -1,6 +1,9 @@
 import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphType, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType } from './av-types-interfaces'
+import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType } from './av-types-interfaces'
+import { CodeExecutorEvents, CodeExecutorProxy } from "./code-executor-proxy";
+
+type NotificationTypes = VariableScopingNotification | TraceMessageNotification | CompilationStatusNotification | ExceptionNotification;
 
 var esprima = require('esprima')
 
@@ -160,7 +163,6 @@ class TraceOperationPayload extends OperationPayload {
     constructor(public message: string) { super(); }
 }
 
-
 class Operation {
     constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationPayload) {
     }
@@ -199,10 +201,7 @@ export interface ExceptionNotification {
     onExceptionMessage(status: boolean, message: string): void;
 }
 
-type NotificationTypes = VariableScopingNotification | TraceMessageNotification | CompilationStatusNotification | ExceptionNotification;
-
 class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification, ExceptionNotification {
-
     private notificationObservers: NotificationTypes[] = [];
 
     public registerNotificationObserver(notifier: NotificationTypes) {
@@ -280,11 +279,10 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         for (const notifier of this.exceptionNotifications()) {
             notifier.onExceptionMessage(status, message);
         };
-    }
-
+    } 
 }
 
-export class OperationRecorder extends NotificationEmitter implements JSVariableChangeCbk, GraphVariableChangeCbk {
+export class OperationRecorder extends NotificationEmitter implements CodeExecutorEvents, JSVariableChangeCbk, GraphVariableChangeCbk {
     onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
         this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue))));
     }
@@ -317,26 +315,33 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     onAccessNode(observable: ObservableGraph, node: NodeBase): void {
         this.addOperation(OperationType.GRAPH_ACCESS_NODE, new GraphObjectOperationPayload(observable, node.value));
     }
-    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
-        let isGraph = observable instanceof Graph;
-        this.addOperation(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, new GraphObjectOperationPayload(observable, source.value, destination.value));
+    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {        
+        let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
+        let isGraph = runtimeObservable instanceof Graph;
+
+        this.addOperation(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, new GraphObjectOperationPayload(runtimeObservable, source.value, destination.value));
     }
     onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ParentSide): void {
-        let isGraph = observable instanceof Graph;
-        this.addOperation(isGraph ? OperationType.GRAPH_ADD_VERTEX : OperationType.BINARY_TREE_ADD_NODE, new GraphObjectOperationPayload(observable, vertex.value, parentValue ? parentValue.value : undefined, side));
+        let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
+        let isGraph = runtimeObservable instanceof Graph;
+
+        this.addOperation(isGraph ? OperationType.GRAPH_ADD_VERTEX : OperationType.BINARY_TREE_ADD_NODE, new GraphObjectOperationPayload(runtimeObservable, vertex.value, parentValue ? parentValue.value : undefined, side));
     }
     onRemoveNode(observable: ObservableGraph, vertex: NodeBase): void {
-        let isGraph = observable instanceof Graph;
-        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_VERTEX : OperationType.BINARY_TREE_REMOVE_NODE, new GraphObjectOperationPayload(observable, vertex.value));
+        let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
+        let isGraph = runtimeObservable instanceof Graph;
+
+        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_VERTEX : OperationType.BINARY_TREE_REMOVE_NODE, new GraphObjectOperationPayload(runtimeObservable, vertex.value));
     }
     onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
-        let isGraph = observable instanceof Graph;
-        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, new GraphObjectOperationPayload(observable, source.value, destination.value));
+        let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
+        let isGraph = runtimeObservable instanceof Graph;
+
+        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, new GraphObjectOperationPayload(runtimeObservable, source.value, destination.value));
     }
 
     constructor() {
         super();
-        (<any>window).oprec = this;
 
         this.reset();
     }
@@ -356,6 +361,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     private runtimeObservables: Map<string, any> = new Map();
 
     protected code: string;
+    protected codex: CodeExecutorProxy = new CodeExecutorProxy(this);
     protected operations: Operation[] = [];
     protected nextOperationIndex: number = 0;
     protected firstExecutedCodeLineNumber: number = -1;
@@ -363,13 +369,11 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     protected lastExecutedOperationIndex: number = -1;
     protected maxLineNumber: number = 0;
 
-    protected consoleLogFcn: any = undefined;
-
     protected currentScope: string[] = [];
     protected funcParamsStack: string[] = [];
 
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
-    public isReplayFinished() { return this.status == OperationRecorderStatus.ReplayEnded; }
+    public isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
 
     protected addOperation(type: OperationType, attributes?: OperationPayload) {
         this.operations.push(new Operation(type, this.lastExecutedCodeLineNumber, attributes));
@@ -403,12 +407,12 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         this.status = status ? OperationRecorderStatus.Waiting : OperationRecorderStatus.Idle;
     }
 
-    public setSourceCode(code: string): boolean {
+    public async setSourceCode(code: string): Promise<boolean> {
         this.reset();
 
         this.code = code;
         if (this.parseCode()) {
-            return this.recordSourceCode();
+            return await this.recordSourceCode();
         }
 
         return false;
@@ -462,7 +466,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         this.addOperation(OperationType.SCOPE_START, new VarScopeLifetimeOperationPayload(this.currentScope.join('.')));
     }
 
-    public endScope(scopeName: string) {
+    public endScope(scopeName: string) {    
         scopeName = this.scopeNameToFunctionScope(scopeName);
 
         this.addOperation(OperationType.SCOPE_END, new VarScopeLifetimeOperationPayload(this.currentScope.join('.')));
@@ -474,19 +478,19 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         }
     }
 
-    public pushParams(params: [string, string][]) {
+    public pushParams(params: [string, string][]) {        
         for (let varToParamPair of params) {
             this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]] = this.getCurrentRuntimeScope() + '.' + varToParamPair[1];
         }
     }
 
-    public popParams(params: [string, string][]) {
+    public popParams(params: [string, string][]) {        
         for (let varToParamPair of params) {
             delete this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]];
         }
     }
 
-    private recordSourceCode(): boolean {
+    private async recordSourceCode(): Promise<boolean> {
         this.status = OperationRecorderStatus.Recording;
 
         console.log("VARS: "); console.log(this.varDeclarations);
@@ -502,25 +506,11 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         this.onExceptionMessage(false);
 
         try {
-            this.hookConsoleLog();
-            var Types = {
-                Graph: Graph, GraphType: GraphType, GraphNode: NodeBase, BinaryTreeNode: BinaryTreeNode,
-                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ParentSide,
-            };
+            await this.codex.setSourceCode(this.code);
+            await this.codex.execute();
 
-            this.code = "\"use strict\"; \
-                         let BinarySearchTree = Types.BinarySearchTree; \
-                         let BinaryTree = Types.BinaryTree;\
-                         let Graph = Types.Graph;\
-                         let GraphType = Types.GraphType; \
-                         let GraphNode = Types.GraphNode; \
-                         let BinaryTreeNode = Types.BinaryTreeNode; \
-                         let TreeNodeSide = Types.ParentSide;       \
-                        " + this.code;
-            eval(this.code);
-            this.hookConsoleLog(false);
         } catch (e) {
-            this.hookConsoleLog(false);
+            console.log(e);
             let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
             this.onExceptionMessage(true, message);
 
@@ -570,20 +560,6 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     /*
         PRIVATES
     */
-
-    private hookConsoleLog(hook: boolean = true) {
-        if (hook) {
-            if (this.consoleLogFcn == undefined)
-                this.consoleLogFcn = console.log;
-
-            console.log = (message: any) => {
-                this.addOperation(OperationType.TRACE, new TraceOperationPayload(message));
-                this.consoleLogFcn.apply(console, [message]);
-            };
-        } else {
-            console.log = this.consoleLogFcn;
-        }
-    }
 
     private isEmptyLine(lineNumber: number): boolean {
         return this.emptyCodeLineNumbers.indexOf(lineNumber) != -1;
@@ -730,6 +706,14 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         }
     }
 
+    private getRuntimeObservableWithId(id: number) : any {
+        for (let [_observableScope, observable] of this.runtimeObservables) {
+            if (observable.id == id) {
+                return observable;
+            }
+        }
+    }
+
     private getRuntimeObservables(runtimeScope: string): any[] {
         let observables: any[] = [];
 
@@ -749,9 +733,22 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
             return [false, this.runtimeObservables.get(runtimeScope)];
 
         let runtimeObservable: any;
-        if (object instanceof ObservableGraph) {
-            runtimeObservable = object;
+        if (typeof object == 'object' && '__isGraphType__' in object) {
+            switch (object.type) {
+                case GraphType.DIRECTED:
+                case GraphType.UNDIRECTED:
+                    runtimeObservable = new Graph(object.type);
+                    break;
+                case GraphType.BT:
+                    runtimeObservable = new BinaryTree(object.type);
+                    break;
+                case GraphType.BST:
+                    runtimeObservable = new BinarySearchTree();
+                    break;
+            }
+
             object.name = varname;
+            runtimeObservable.copyFrom(object);            
         }
         else
             runtimeObservable = new ObservableJSVariable(varname, object);
@@ -781,7 +778,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
     private getCurrentRuntimeScope() { return this.currentScope.join('.'); }
 
-    public setVar(varname: string, object: any, varsource: string) {
+    public setVar(varname: string, object: any, varsource: string) {        
         if (object instanceof NodeBase || object instanceof BinaryTreeNode)
             return;
 
@@ -896,7 +893,6 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
     }
 
     private addNoMarklineZone(start: number, end: number) {
-        console.log(`adding zone ${start} ${end}`);
         this.noMarkLineZone.push(new IndexRange(start, end));
     }
 
@@ -959,7 +955,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         let body = [scope];
 
         if (scope.body)
-            body = !(length in scope.body) && scope.body.body ? scope.body.body : (!(length in scope.body) ? [scope.body] : scope.body);
+            body = !('length' in scope.body) && scope.body.body ? scope.body.body : (!('length' in scope.body) ? [scope.body] : scope.body);
 
         for (let item of body) {
             switch (item.type) {
@@ -1241,9 +1237,6 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
         this.code += ";";
 
-        var doc = new DOMParser().parseFromString(this.code, "text/html");
-        this.code = doc.documentElement.textContent;
-
         let syntax = undefined;
 
         this.onCompilationError(false);
@@ -1346,7 +1339,7 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
         return true;
     }
 }
-
+/*
 (<any>window)['markcl'] = (lineNo: number) => {
     (<any>window).oprec.markStartCodeLine(lineNo);
 };
@@ -1373,4 +1366,4 @@ export class OperationRecorder extends NotificationEmitter implements JSVariable
 
 (<any>window)['popParams'] = (params: [string, string][]) => {
     (<any>window).oprec.popParams(params);
-};
+};*/
