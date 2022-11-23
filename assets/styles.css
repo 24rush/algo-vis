@@ -1,6 +1,6 @@
 .algovis {
-  width: 100%;
-  height: 500px;
+  max-width: 100% !important;
+  height: 500px !important;
   resize: both;
   overflow: auto;
   display: flex;
@@ -8,7 +8,8 @@
 }
 
 .codeEditor {
-  height: 100%;
+  height: 100% !important;
+  max-width: 100% !important;
 }
 
 .commentsPopover {

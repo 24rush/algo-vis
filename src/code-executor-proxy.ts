@@ -15,38 +15,45 @@ export interface CodeExecutorEvents extends GraphVariableChangeCbk {
 }
 
 export class CodeExecutorProxy {
+    sendSharedMem(sharedMem: SharedArrayBuffer) {
+        return this.promiseWrapperDirectPassParams<void>(CodeExecutorCommands.sharedMem, sharedMem);
+    }
     getFirstCodeLineNumber(): Promise<number> {
-        return this.promiseWrapper<number>(CodeExecutorCommands.getFirstCodeLineNumber);
+        return this.promiseWrapperCopyParams<number>(CodeExecutorCommands.getFirstCodeLineNumber);
     }
     getNextCodeLineNumber(): Promise<number> {
-        return this.promiseWrapper<number>(CodeExecutorCommands.getNextCodeLineNumber);
+        return this.promiseWrapperCopyParams<number>(CodeExecutorCommands.getNextCodeLineNumber);
     }
     isReplayFinished(): Promise<boolean> {
-        return this.promiseWrapper<boolean>(CodeExecutorCommands.isReplayFinished);
+        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.isReplayFinished);
     }
     isWaiting(): Promise<boolean> {
-        return this.promiseWrapper<boolean>(CodeExecutorCommands.isWaiting);
+        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.isWaiting);
     }
     advanceOneCodeLine() {
-        return this.promiseWrapper<void>(CodeExecutorCommands.advanceOneCodeLine);
+        Atomics.store(this.advanceFlag, 0, 1);
+        Atomics.notify(this.advanceFlag, 0);
+
+        return this.promiseWrapperCopyParams<void>(CodeExecutorCommands.advanceOneCodeLine);
     }
     startReplay(...args: any[]): Promise<void> {
-        return this.promiseWrapper<void>(CodeExecutorCommands.startReplay, ...args);
+        return this.promiseWrapperCopyParams<void>(CodeExecutorCommands.startReplay, ...args);
     }
     execute(): Promise<boolean> {
-        return this.promiseWrapper<boolean>(CodeExecutorCommands.execute);
+        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.execute);
     }
     setSourceCode(...args: any[]): Promise<boolean> {
-        return this.promiseWrapper<boolean>(CodeExecutorCommands.setSourceCode, ...args);
+        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.setSourceCode, ...args);
     }
 
-    private promiseWrapper<T>(cmd: CodeExecutorCommands, ...args: any[]): Promise<T> {
+    private promiseWrapperDirectPassParams<T>(cmd: CodeExecutorCommands, sharedMem: SharedArrayBuffer): Promise<T> {
         return new Promise((result, reject) => {
             const channel = new MessageChannel();
 
             channel.port1.onmessage = ({ data }) => {
                 channel.port1.close();
                 if (data.error) {
+                    console.log(data.error);
                     reject(data.error);
                 } else {
                     console.log(`RET cmd: ${data.cmd} result = ${data.result}`);
@@ -54,7 +61,29 @@ export class CodeExecutorProxy {
                 }
             };
 
-            this.oprecWorker.postMessage({
+            this.codexWorker.postMessage({
+                cmd: cmd,
+                params: sharedMem
+            }, [channel.port2]);
+        });
+    }
+
+    private promiseWrapperCopyParams<T>(cmd: CodeExecutorCommands, ...args: any[]): Promise<T> {
+        return new Promise((result, reject) => {
+            const channel = new MessageChannel();
+
+            channel.port1.onmessage = ({ data }) => {
+                channel.port1.close();
+                if (data.error) {
+                    console.log(data.error);
+                    reject(data.error);
+                } else {
+                    console.log(`RET cmd: ${data.cmd} result = ${data.result}`);
+                    result(data.result);
+                }
+            };
+
+            this.codexWorker.postMessage({
                 cmd: cmd,
                 params: Array.from(args)
             }, [channel.port2]);
@@ -66,14 +95,17 @@ export class CodeExecutorProxy {
     }
 
     //@ts-ignore
-    private oprecWorker = new Worker(new URL('./code-executor.ts', import.meta.url));
+    private codexWorker = new Worker(new URL('./code-executor.ts', import.meta.url));
     private codeExecutorEventHandler: CodeExecutorEvents = undefined;
+    private sharedMem = new SharedArrayBuffer(1 * Int32Array.BYTES_PER_ELEMENT);
+    private advanceFlag = new Int32Array(this.sharedMem);
 
     constructor(eventHandler: CodeExecutorEvents) {
+        Atomics.store(this.advanceFlag, 0, 0);
+
         this.codeExecutorEventHandler = eventHandler;
 
-        this.oprecWorker.onmessage = (event) => {
-            console.log("Message from worker:", event.data);
+        this.codexWorker.onmessage = (event) => {            
             let params = event.data.params;
 
             switch (event.data.cmd) {
@@ -81,6 +113,7 @@ export class CodeExecutorProxy {
                     this.codeExecutorEventHandler.setVar(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.markStartCodeLine:
+                    Atomics.store(this.advanceFlag, 0, 0);
                     this.codeExecutorEventHandler.markStartCodeLine(params[0]);
                     break;
                 case CodeExecutorCommands.forceMarkLine:
@@ -114,5 +147,9 @@ export class CodeExecutorProxy {
                     throw 'Cant handle ' + event.data.cmd;
             }
         };
+    }
+
+    public init() {
+        return this.sendSharedMem(this.sharedMem);
     }
 }

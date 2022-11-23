@@ -1,10 +1,9 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
 import { NodeBase, GraphType, ParentSide, GraphVariableChangeCbk, ObservableGraph } from './av-types-interfaces'
 
-
-
-
 export enum CodeExecutorCommands {
+    sharedMem,
+
     setSourceCode,
     execute,
     startReplay,
@@ -41,10 +40,9 @@ let codeExec = () => {
 }
 
 self.onmessage = (event) => {
+    console.log(event.data);
     if (event.data.cmd === undefined)
         return;
-
-    console.log(event.data);
 
     let wrapMessageHandler = (event: MessageEvent<any>, handler: any) => {
         try {
@@ -62,6 +60,9 @@ self.onmessage = (event) => {
         let codex = codeExec();
 
         switch (event.data.cmd) {
+            case CodeExecutorCommands.sharedMem:
+                codex.advanceFlag = new Int32Array(event.data.params);
+                break;
             case CodeExecutorCommands.setSourceCode:
                 codex.setSourceCode(event.data.params);
                 break;
@@ -70,6 +71,7 @@ self.onmessage = (event) => {
                 break;
             case CodeExecutorCommands.startReplay:
                 codex.startReplay();
+                break;
 
             case CodeExecutorCommands.getFirstCodeLineNumber:
                 return codex.getFirstCodeLineNumber();
@@ -126,6 +128,11 @@ export class CodeExecutor implements GraphVariableChangeCbk {
     }
 
     protected code: string;
+    protected advanceOneLineReceived: boolean = false;
+    protected advanceFlag: Int32Array = undefined;
+
+    constructor() {
+    }
 
     public setSourceCode(code: string) {
         this.code = code;
@@ -168,7 +175,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                         " + this.code;
 
             eval(this.code);
-
+            console.log('DONE');
             this.hookConsoleLog(prevFcn, false);
         } catch (e) {
             console.log(e);
@@ -195,7 +202,30 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
+    public advanceOneCodeLine() {
+        let codex = codeExec();
+
+        console.log('Advance received');
+        codex.advanceOneLineReceived = true;
+    }
+
     public markStartCodeLine(lineNumber: number) {
+        let codex = codeExec();
+
+        if (!codex.advanceFlag) {
+            throw 'AdvanceFlag not received';
+        }
+
+        while (true) {
+            let status = Atomics.wait(codex.advanceFlag, 0, 0);
+
+            if (status != 'not-equal') {                
+                break;
+            }
+        }
+
+        console.log('markStartCodeLine ' + lineNumber);
+
         self.postMessage({
             cmd: CodeExecutorCommands.markStartCodeLine,
             params: Array.from(arguments)

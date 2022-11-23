@@ -1,0 +1,45 @@
+style.css:1676
+-removed
+.content div {
+  max-width: 100%;
+  height: auto;
+}
+
+styles.css: 780 
+/* Links
+--------------------------------------------- */
+a {
+  color: var(--askella-link-color);
++updated  text-decoration: none !important;
+  transition: ease-in-out 0.05s;
+}
+
+=================
+functions.php:152
+
++added
+function algo_vis() {    
+    wp_enqueue_script(
+        'js-algovis',
+        get_template_directory_uri() . '/js/bundle.js', array(), filemtime(get_template_directory_uri() . '/js/bundle.js'), true 
+    );
+}
+add_action('wp_enqueue_scripts', 'algo_vis');
+
+=================
+.htaccess
+
+<IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin: *
+    Header set Cross-Origin-Opener-Policy "same-origin"
+    Header set Cross-Origin-Embedder-Policy "require-corp" 
+</IfModule>
+
+<FilesMatch "\.(js)$">
+    Header set Cross-Origin-Opener-Policy "same-origin"
+    Header set Cross-Origin-Embedder-Policy "require-corp" 
+</FilesMatch>
+
+<FilesMatch "\.(eot|ttf|otf|woff|gif)$">
+   Header set Access-Control-Allow-Origin "*"
+</FilesMatch>

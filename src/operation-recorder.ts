@@ -506,6 +506,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.onExceptionMessage(false);
 
         try {
+            console.log('worker send execute');
+            await this.codex.init();
             await this.codex.setSourceCode(this.code);
             await this.codex.execute();
 
@@ -550,11 +552,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     public advanceOneCodeLine(): void {
-        this.executeOneCodeLine(false);
-    }
-
-    public reverseOneCodeLine(): void {
-        this.executeOneCodeLine(true);
+  //      this.executeOneCodeLine(false);
+        this.codex.advanceOneCodeLine();
     }
 
     /*
@@ -565,7 +564,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         return this.emptyCodeLineNumbers.indexOf(lineNumber) != -1;
     }
 
-    private checkRecoverExecutionEdges(_reverse: boolean = false) {
+    private checkRecoverExecutionEdges() {
         if (this.nextOperationIndex == this.operations.length) {
             this.status = OperationRecorderStatus.ReplayEnded;
         }
@@ -578,8 +577,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         return undefined;
     }
 
-    private executeOneCodeLine(reverse: boolean = false) {
-        this.checkRecoverExecutionEdges(reverse);
+    private executeOneCodeLine() {
+        this.checkRecoverExecutionEdges();
 
         if (this.status == OperationRecorderStatus.ReplayEnded)
             return;
@@ -591,7 +590,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         let codeLineToExecute = currentOperationToExecute.codeLineNumber;
 
         do {
-            this.executeCurrentOperation(reverse);
+            this.executeCurrentOperation();
 
             currentOperationToExecute = this.getNextOperation();
             if (!currentOperationToExecute)
@@ -601,13 +600,13 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                 return;
 
             if (this.isEmptyLine(this.operations[this.nextOperationIndex].codeLineNumber)) {
-                this.executeOneCodeLine(reverse);
+                this.executeOneCodeLine();
             }
         }
         while (codeLineToExecute == currentOperationToExecute.codeLineNumber);
     }
 
-    private executeCurrentOperation(reverse: boolean = false): void {
+    private executeCurrentOperation(): void {
         let operation = this.getNextOperation();
 
         if (!operation) {
@@ -641,7 +640,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.lastExecutedOperationIndex = this.nextOperationIndex;
         this.lastExecutedCodeLineNumber = operation.codeLineNumber;
 
-        this.nextOperationIndex += (reverse ? -1 : 1);
+        this.nextOperationIndex += 1;
         if (this.nextOperationIndex < 0)
             this.nextOperationIndex = -1;
 
