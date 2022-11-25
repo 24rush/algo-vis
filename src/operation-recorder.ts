@@ -3,8 +3,6 @@ import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types"
 import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType } from './av-types-interfaces'
 import { CodeExecutorEvents, CodeExecutorProxy } from "./code-executor-proxy";
 
-type NotificationTypes = VariableScopingNotification | TraceMessageNotification | CompilationStatusNotification | ExceptionNotification;
-
 var esprima = require('esprima')
 
 enum OperationType {
@@ -179,7 +177,7 @@ class Operation {
 
 enum OperationRecorderStatus {
     Idle,
-    Recording,
+    Executing,
     ReplayEnded,
     Waiting
 }
@@ -201,7 +199,14 @@ export interface ExceptionNotification {
     onExceptionMessage(status: boolean, message: string): void;
 }
 
-class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification, ExceptionNotification {
+export interface ExecutionStatus {
+    onLineExecuted(lineNo: number): void;
+    onExecutionFinished(): void;
+}
+
+type NotificationTypes = VariableScopingNotification | TraceMessageNotification | CompilationStatusNotification | ExceptionNotification | ExecutionStatus;
+
+class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification, ExceptionNotification, ExecutionStatus {
     private notificationObservers: NotificationTypes[] = [];
 
     public registerNotificationObserver(notifier: NotificationTypes) {
@@ -252,6 +257,17 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         return notifiers;
     }
 
+    private executionStatusNotifications(): ExecutionStatus[] {
+        let notifiers: ExecutionStatus[] = [];
+
+        for (const notifier of this.notificationObservers) {
+            if ('onLineExecuted' in notifier)
+                notifiers.push(notifier as ExecutionStatus);
+        }
+
+        return notifiers;
+    }
+
     onEnterScopeVariable(scopeName: string, observable: ObservableJSVariable): void {
         for (const notifier of this.variableScopingNotifications()) {
             notifier.onEnterScopeVariable(scopeName, observable);
@@ -279,7 +295,20 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         for (const notifier of this.exceptionNotifications()) {
             notifier.onExceptionMessage(status, message);
         };
-    } 
+    }
+
+    onLineExecuted(lineNo: number): void {
+        for (const notifier of this.executionStatusNotifications()) {
+            notifier.onLineExecuted(lineNo);
+        }
+    }
+
+    onExecutionFinished(): void {
+        for (const notifier of this.executionStatusNotifications()) {
+            notifier.onExecutionFinished();
+        }
+    }
+
 }
 
 export class OperationRecorder extends NotificationEmitter implements CodeExecutorEvents, JSVariableChangeCbk, GraphVariableChangeCbk {
@@ -315,7 +344,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     onAccessNode(observable: ObservableGraph, node: NodeBase): void {
         this.addOperation(OperationType.GRAPH_ACCESS_NODE, new GraphObjectOperationPayload(observable, node.value));
     }
-    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {        
+    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
         let isGraph = runtimeObservable instanceof Graph;
 
@@ -343,7 +372,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     constructor() {
         super();
 
-        this.reset();
+        this.resetCodeParsingState();
     }
 
     // CODE Parsing
@@ -357,49 +386,45 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
 
-    protected variableObservers: ObservableJSVariable[] = [];
+    protected observedVariables: ObservableJSVariable[] = [];
     private runtimeObservables: Map<string, any> = new Map();
 
     protected code: string;
-    protected codex: CodeExecutorProxy = new CodeExecutorProxy(this);
-    protected operations: Operation[] = [];
-    protected nextOperationIndex: number = 0;
-    protected firstExecutedCodeLineNumber: number = -1;
-    protected lastExecutedCodeLineNumber: number = -1;
-    protected lastExecutedOperationIndex: number = -1;
-    protected maxLineNumber: number = 0;
+    protected codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy(this);
 
-    protected currentScope: string[] = [];
-    protected funcParamsStack: string[] = [];
+    protected operations: Operation[] = [];
+    protected nextOperationIndex: number = 0;    
+    protected lastExecutedCodeLineNumber: number = -1;
+
+    protected currentScope: string[] = [];    
 
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
 
     protected addOperation(type: OperationType, attributes?: OperationPayload) {
         this.operations.push(new Operation(type, this.lastExecutedCodeLineNumber, attributes));
+        this.executeCurrentOperation();
     }
 
-    private reset() {
-        this.code = "";
-
-        for (let primitiveObservers of this.variableObservers) {
-            primitiveObservers.empty();
-        }
-
-        this.nextOperationIndex = 0;
-        this.operations = [];
+    private resetCodeParsingState() {
         this.emptyCodeLineNumbers = [];
         this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
         this.refs = {}; this.funcDefs = {}; this.pushFuncParams = [];
         this.markLineOverrides = []; this.noMarkLineZone = [];
+    }
 
-        this.currentScope = []; this.funcParamsStack = [];
+    private resetExecutionState() {
+        this.nextOperationIndex = 0;
+        this.lastExecutedCodeLineNumber = -1;
+        this.currentScope = [];
+
+        this.operations = [];
         this.runtimeObservables = new Map();
 
-        this.maxLineNumber = 0;
-        this.firstExecutedCodeLineNumber = -1;
-        this.lastExecutedCodeLineNumber = -1;
-        this.lastExecutedOperationIndex = -1;
+        for (let primitiveObservers of this.observedVariables) {
+            primitiveObservers.empty();
+            primitiveObservers.unregisterObserver(this);
+        }
     }
 
     public isWaiting(): boolean { return this.status == OperationRecorderStatus.Waiting; }
@@ -407,32 +432,24 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.status = status ? OperationRecorderStatus.Waiting : OperationRecorderStatus.Idle;
     }
 
-    public async setSourceCode(code: string): Promise<boolean> {
-        this.reset();
+    public setSourceCode(code: string): boolean {
+        this.resetCodeParsingState();
+        this.resetExecutionState();
 
         this.code = code;
-        if (this.parseCode()) {
-            return await this.recordSourceCode();
-        }
-
-        return false;
+        return this.parseCode();
     }
 
     public registerVariableObservers(observables: ObservableJSVariable[]) {
         for (let observable of observables)
-            this.registerVariableObserver(observable);
+            this.registerObservedVariable(observable);
     }
 
-    public registerVariableObserver(observable: ObservableJSVariable) {
-        if (this.variableObservers.indexOf(observable) != -1)
+    public registerObservedVariable(observable: ObservableJSVariable) {
+        if (this.observedVariables.indexOf(observable) != -1)
             return;
 
-        this.variableObservers.push(observable);
-        observable.registerObserver(this);
-    }
-
-    public getFirstCodeLineNumber(): number {
-        return this.firstExecutedCodeLineNumber;
+        this.observedVariables.push(observable);
     }
 
     public getNextCodeLineNumber(): number {
@@ -444,54 +461,64 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     public forceMarkLine(lineNumber: number) {
-        this.lastExecutedCodeLineNumber = lineNumber;
-        if (this.firstExecutedCodeLineNumber == -1)
-            this.firstExecutedCodeLineNumber = lineNumber;
-
+        this.lastExecutedCodeLineNumber = lineNumber;        
         this.addOperation(OperationType.FORCE_MARK);
     }
 
     public markStartCodeLine(lineNumber: number) {
-        this.lastExecutedCodeLineNumber = lineNumber;
-        if (this.firstExecutedCodeLineNumber == -1)
-            this.firstExecutedCodeLineNumber = lineNumber;
+        console.log("OPERATIONS: "); console.log(this.operations);
+        this.executeOneCodeLine();
 
-        this.addOperation(OperationType.NONE);
+        this.onLineExecuted(lineNumber);
     }
 
-    public startScope(scopeName: string) {
-        scopeName = this.scopeNameToFunctionScope(scopeName);
-
-        this.currentScope.push(scopeName);
-        this.addOperation(OperationType.SCOPE_START, new VarScopeLifetimeOperationPayload(this.currentScope.join('.')));
+    onExecutionCompleted(): void {
+        this.status = OperationRecorderStatus.ReplayEnded;
+        this.onExecutionFinished();
     }
 
-    public endScope(scopeName: string) {    
-        scopeName = this.scopeNameToFunctionScope(scopeName);
+    private setRuntimeExecutionScope(type: OperationType, scopeName: string) {
+        if (type == OperationType.SCOPE_START) {
+            this.currentScope.push(scopeName);
+        }
 
-        this.addOperation(OperationType.SCOPE_END, new VarScopeLifetimeOperationPayload(this.currentScope.join('.')));
-
-        if (this.currentScope[this.currentScope.length - 1] == scopeName)
-            this.currentScope.pop();
-        else {
-            throw ('LAST SCOPE IS NOT AS EXPECTED');
+        if (type == OperationType.SCOPE_END) {
+            if (this.currentScope[this.currentScope.length - 1] == scopeName)
+                this.currentScope.pop();
+            else {
+                console.log(this.currentScope + " vs " + scopeName);
+                throw ('LAST SCOPE IS NOT AS EXPECTED ');
+            }
         }
     }
 
-    public pushParams(params: [string, string][]) {        
+    public startScope(scopeName: string) {
+        scopeName = this.scopeNameToFunctionScope(scopeName);        
+        this.addOperation(OperationType.SCOPE_START, new VarScopeLifetimeOperationPayload(scopeName));
+    }
+
+    public endScope(scopeName: string) {
+        scopeName = this.scopeNameToFunctionScope(scopeName);
+        this.addOperation(OperationType.SCOPE_END, new VarScopeLifetimeOperationPayload(scopeName));
+    }
+
+    public pushParams(params: [string, string][]) {
         for (let varToParamPair of params) {
             this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]] = this.getCurrentRuntimeScope() + '.' + varToParamPair[1];
         }
     }
 
-    public popParams(params: [string, string][]) {        
+    public popParams(params: [string, string][]) {
         for (let varToParamPair of params) {
             delete this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]];
         }
     }
 
-    private async recordSourceCode(): Promise<boolean> {
-        this.status = OperationRecorderStatus.Recording;
+    private async executeSourceCode(): Promise<boolean> {
+        if (this.status == OperationRecorderStatus.Executing)
+            this.codeExecProxy.stopExecution();
+
+        this.status = OperationRecorderStatus.Executing;
 
         console.log("VARS: "); console.log(this.varDeclarations);
         console.log("SCOPES: "); console.log(this.scopes);
@@ -507,9 +534,10 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
         try {
             console.log('worker send execute');
-            await this.codex.init();
-            await this.codex.setSourceCode(this.code);
-            await this.codex.execute();
+
+            await this.codeExecProxy.init();
+            await this.codeExecProxy.setSourceCode(this.code);
+            await this.codeExecProxy.execute();
 
         } catch (e) {
             console.log(e);
@@ -519,41 +547,16 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             return false;
         }
 
-        for (let primitiveObservers of this.variableObservers) {
-            primitiveObservers.unregisterObserver(this);
-        }
-
-        this.status = OperationRecorderStatus.Idle;
-        this.maxLineNumber = this.lastExecutedCodeLineNumber;
-        console.log("OPERATIONS: "); console.log(this.operations);
-
         return true;
     }
 
     public startReplay() {
-        for (let variableObservers of this.variableObservers) {
-            variableObservers.empty();
-        }
-
-        this.nextOperationIndex = 0;
-
-        for (let opIdx in this.operations) {
-            let operation = this.operations[opIdx];
-
-            if (operation.type != OperationType.NONE && operation.type != OperationType.SCOPE_START)
-                break;
-
-            this.firstExecutedCodeLineNumber = operation.codeLineNumber;
-            this.executeCurrentOperation();
-        }
-
-        this.lastExecutedCodeLineNumber = this.getFirstCodeLineNumber();
-        this.status = OperationRecorderStatus.Idle;
+        this.resetExecutionState();
+        this.executeSourceCode();
     }
 
     public advanceOneCodeLine(): void {
-  //      this.executeOneCodeLine(false);
-        this.codex.advanceOneCodeLine();
+        this.codeExecProxy.advanceOneCodeLine();
     }
 
     /*
@@ -564,12 +567,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         return this.emptyCodeLineNumbers.indexOf(lineNumber) != -1;
     }
 
-    private checkRecoverExecutionEdges() {
-        if (this.nextOperationIndex == this.operations.length) {
-            this.status = OperationRecorderStatus.ReplayEnded;
-        }
-    }
-
     private getNextOperation(): Operation {
         if (this.nextOperationIndex >= 0 && this.nextOperationIndex < this.operations.length)
             return this.operations[this.nextOperationIndex];
@@ -578,32 +575,15 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     private executeOneCodeLine() {
-        this.checkRecoverExecutionEdges();
-
-        if (this.status == OperationRecorderStatus.ReplayEnded)
-            return;
-
         let currentOperationToExecute = this.getNextOperation();
-        if (!currentOperationToExecute)
-            return;
 
-        let codeLineToExecute = currentOperationToExecute.codeLineNumber;
-
-        do {
+        while (currentOperationToExecute) {
             this.executeCurrentOperation();
-
             currentOperationToExecute = this.getNextOperation();
-            if (!currentOperationToExecute)
-                return;
-
-            if (this.nextOperationIndex == this.lastExecutedOperationIndex)
-                return;
-
-            if (this.isEmptyLine(this.operations[this.nextOperationIndex].codeLineNumber)) {
-                this.executeOneCodeLine();
-            }
         }
-        while (codeLineToExecute == currentOperationToExecute.codeLineNumber);
+
+        this.operations = [];
+        this.nextOperationIndex = 0;
     }
 
     private executeCurrentOperation(): void {
@@ -636,8 +616,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                     if (operation.attributes) operation.attributes.execute(operation.type);
                 }
         }
-
-        this.lastExecutedOperationIndex = this.nextOperationIndex;
+        
         this.lastExecutedCodeLineNumber = operation.codeLineNumber;
 
         this.nextOperationIndex += 1;
@@ -651,6 +630,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     private executeVarScopeLifetimeOperation(operationType: OperationType, varName: string, scopeName: string) {
         let scopeChain = scopeName.split('.');
         let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
+        let currentRuntimeScope = this.getCurrentRuntimeScope();
 
         this.setRuntimeExecutionScope(operationType, lastScope);
 
@@ -663,7 +643,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         }
 
         let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
-        let runtimeObservables = this.getRuntimeObservables(scopeName + (varName ? '.' + varName : ""));
+        let runtimeObservables = this.getRuntimeObservables(currentRuntimeScope + (varName ? '.' + varName : ""));
 
         for (let runtimeObservable of runtimeObservables) {
             // Check to see if there is any variable declared in the scope
@@ -678,7 +658,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             switch (operationType) {
                 case OperationType.SCOPE_END:
                     // var variables enter in scope already and it also creates the templates for scopes
-                    this.onExitScopeVariable(scopeName, runtimeObservable);
+                    this.onExitScopeVariable(currentRuntimeScope, runtimeObservable);
                     break;
                 default:
                     this.onEnterScopeVariable(scopeName, runtimeObservable)
@@ -690,22 +670,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         }
     }
 
-    private setRuntimeExecutionScope(type: OperationType, scopeName: string) {
-        if (type == OperationType.SCOPE_START) {
-            this.currentScope.push(scopeName);
-        }
-
-        if (type == OperationType.SCOPE_END) {
-            if (this.currentScope[this.currentScope.length - 1] == scopeName)
-                this.currentScope.pop();
-            else {
-                console.log(this.currentScope + " vs. " + scopeName);
-                throw ('LAST SCOPE IS NOT AS EXPECTED ' + scopeName);
-            }
-        }
-    }
-
-    private getRuntimeObservableWithId(id: number) : any {
+    private getRuntimeObservableWithId(id: number): any {
         for (let [_observableScope, observable] of this.runtimeObservables) {
             if (observable.id == id) {
                 return observable;
@@ -747,7 +712,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             }
 
             object.name = varname;
-            runtimeObservable.copyFrom(object);            
+            runtimeObservable.copyFrom(object);
         }
         else
             runtimeObservable = new ObservableJSVariable(varname, object);
@@ -759,7 +724,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     private setInstrumentationObservable(runtimeScope: string, observable: any) {
         this.runtimeObservables.set(runtimeScope, observable);
-        this.registerVariableObserver(observable);
+        this.registerObservedVariable(observable);
     }
 
     private isReferenceObject(object: any): boolean {
@@ -777,7 +742,9 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     private getCurrentRuntimeScope() { return this.currentScope.join('.'); }
 
-    public setVar(varname: string, object: any, varsource: string) {        
+    public setVar(varname: string, object: any, varsource: string) {
+        console.log('setvar ' + varname + " " + object + " " + varsource);
+
         if (object instanceof NodeBase || object instanceof BinaryTreeNode)
             return;
 
@@ -973,7 +940,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                             }
 
                             this.funcDefs[funcName].push(param.name);
-                            this.createVariable(this.scopeNameToFunctionScope(funcName), param.name, VarType.var, item.body.range[0] + 1);
+                            this.createVariable(this.scopeNameToFunctionScope(funcName), param.name, VarType.let, item.body.range[0] + 1);
                         }
 
                         this.scopes.push(new ScopeDeclaration(funcName, item.body.range[0] + 1, item.body.range[1] - 1));
@@ -1338,31 +1305,3 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         return true;
     }
 }
-/*
-(<any>window)['markcl'] = (lineNo: number) => {
-    (<any>window).oprec.markStartCodeLine(lineNo);
-};
-
-(<any>window)['forcemarkcl'] = (lineNo: number) => {
-    (<any>window).oprec.forceMarkLine(lineNo);
-};
-
-(<any>window)['setVar'] = (varname: string, varobject: any, varsource: string) => {
-    (<any>window).oprec.setVar(varname, varobject, varsource);
-};
-
-(<any>window)['startScope'] = (scopeName: string) => {
-    (<any>window).oprec.startScope(scopeName);
-};
-
-(<any>window)['endScope'] = (scopeName: string) => {
-    (<any>window).oprec.endScope(scopeName);
-};
-
-(<any>window)['pushParams'] = (params: [string, string][]) => {
-    (<any>window).oprec.pushParams(params);
-};
-
-(<any>window)['popParams'] = (params: [string, string][]) => {
-    (<any>window).oprec.popParams(params);
-};*/

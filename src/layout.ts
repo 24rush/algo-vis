@@ -2,24 +2,8 @@ import { DOMmanipulator } from "./dom-manipulator";
 import { Localize } from "./localization";
 import { ObservableType } from "./observable-type";
 import { VariableVisualizer } from "./visualizers";
+
 var MustacheIt = require('mustache');
-
-enum LayoutOperation {
-    Add,
-    Remove
-}
-
-class LayoutOperationContext {
-    constructor(public type: LayoutOperation, public scopeName: string, public observable: ObservableType) { }
-
-    static newAddOperation(scopeName: string, observable: ObservableType): LayoutOperationContext {
-        return new LayoutOperationContext(LayoutOperation.Add, scopeName, observable);
-    }
-
-    static newRemoveOperation(scopeName: string, observable: ObservableType): LayoutOperationContext {
-        return new LayoutOperationContext(LayoutOperation.Remove, scopeName, observable);
-    }
-}
 
 type OnLayoutOperationsStatus = (hasPendingOperations: boolean) => void;
 

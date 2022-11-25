@@ -1,5 +1,5 @@
 import { GraphVariableChangeCbk } from "./av-types-interfaces";
-import { CodeExecutorCommands } from "./code-executor";
+import { CodeExecutorCommands, CodeExecutorMessages, CodeExecutorSlots } from "./code-executor";
 
 export interface CodeExecutorEvents extends GraphVariableChangeCbk {
     forceMarkLine(lineNumber: number): void;
@@ -12,32 +12,31 @@ export interface CodeExecutorEvents extends GraphVariableChangeCbk {
     popParams(params: [string, string][]): void;
 
     setVar(varname: string, object: any, varsource: string): void;
+
+    onExecutionCompleted() :  void;
 }
 
 export class CodeExecutorProxy {
+    // MESSAGES from OPERATION RECORDER
     sendSharedMem(sharedMem: SharedArrayBuffer) {
         return this.promiseWrapperDirectPassParams<void>(CodeExecutorCommands.sharedMem, sharedMem);
-    }
-    getFirstCodeLineNumber(): Promise<number> {
-        return this.promiseWrapperCopyParams<number>(CodeExecutorCommands.getFirstCodeLineNumber);
-    }
-    getNextCodeLineNumber(): Promise<number> {
-        return this.promiseWrapperCopyParams<number>(CodeExecutorCommands.getNextCodeLineNumber);
-    }
-    isReplayFinished(): Promise<boolean> {
-        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.isReplayFinished);
     }
     isWaiting(): Promise<boolean> {
         return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.isWaiting);
     }
     advanceOneCodeLine() {
-        Atomics.store(this.advanceFlag, 0, 1);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.NoOp);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
         Atomics.notify(this.advanceFlag, 0);
 
         return this.promiseWrapperCopyParams<void>(CodeExecutorCommands.advanceOneCodeLine);
     }
-    startReplay(...args: any[]): Promise<void> {
-        return this.promiseWrapperCopyParams<void>(CodeExecutorCommands.startReplay, ...args);
+    
+    stopExecution() {
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.Stop);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
+
+        Atomics.notify(this.advanceFlag, 0);
     }
     execute(): Promise<boolean> {
         return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.execute);
@@ -97,14 +96,15 @@ export class CodeExecutorProxy {
     //@ts-ignore
     private codexWorker = new Worker(new URL('./code-executor.ts', import.meta.url));
     private codeExecutorEventHandler: CodeExecutorEvents = undefined;
-    private sharedMem = new SharedArrayBuffer(1 * Int32Array.BYTES_PER_ELEMENT);
+    private sharedMem = new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT);
     private advanceFlag = new Int32Array(this.sharedMem);
 
     constructor(eventHandler: CodeExecutorEvents) {
-        Atomics.store(this.advanceFlag, 0, 0);
+        Atomics.store(this.advanceFlag, 0, CodeExecutorMessages.Wait);
 
         this.codeExecutorEventHandler = eventHandler;
 
+        // MESSAGES from CodeExecutor
         this.codexWorker.onmessage = (event) => {            
             let params = event.data.params;
 
@@ -112,8 +112,11 @@ export class CodeExecutorProxy {
                 case CodeExecutorCommands.setVar:
                     this.codeExecutorEventHandler.setVar(params[0], params[1], params[2]);
                     break;
+                case CodeExecutorCommands.executionFinished:
+                    this.codeExecutorEventHandler.onExecutionCompleted();
+                    break;
                 case CodeExecutorCommands.markStartCodeLine:
-                    Atomics.store(this.advanceFlag, 0, 0);
+                    Atomics.store(this.advanceFlag, 0, CodeExecutorMessages.Wait);
                     this.codeExecutorEventHandler.markStartCodeLine(params[0]);
                     break;
                 case CodeExecutorCommands.forceMarkLine:
@@ -150,6 +153,9 @@ export class CodeExecutorProxy {
     }
 
     public init() {
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.Stop);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
+
         return this.sendSharedMem(this.sharedMem);
     }
 }

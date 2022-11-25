@@ -3,7 +3,6 @@ import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
-import { CodeExecutorProxy } from "./code-executor-proxy";
 
 var bootstrap = require('bootstrap')
 
@@ -14,7 +13,7 @@ class AVViewModel {
     onShowComments(): any { }
 
     isPaused = true;
-    isFinished = false;
+    isExecutionCompleted = false;
     onAutoplayToggled(): any { }
 
     hasCompilationError: boolean = false;
@@ -79,7 +78,7 @@ export class Scene {
         };
 
         this.viewModel.onAutoplayToggled = () => {
-            if (this.operationRecorder.isReplayFinished()) {
+            if (avViewModel.isExecutionCompleted) {
                 this.viewModel.onRestart();
             }
 
@@ -89,8 +88,7 @@ export class Scene {
 
             if (!avViewModel.isPaused) {
                 this.autoplayTimer = setInterval(() => {
-                    avViewModel.isPaused = this.operationRecorder.isReplayFinished();
-                    avViewModel.isFinished = this.operationRecorder.isReplayFinished();
+                    avViewModel.isPaused = avViewModel.isExecutionCompleted;
 
                     if (avViewModel.isPaused) {
                         clearInterval(this.autoplayTimer);
@@ -117,13 +115,11 @@ export class Scene {
             }
 
             this.operationRecorder.advanceOneCodeLine();
-            highlightLine(this.operationRecorder.getNextCodeLineNumber());
-            avViewModel.isFinished = this.operationRecorder.isReplayFinished();
         };
 
         this.viewModel.onRestart = () => {
             avViewModel.isPaused = true;
-            avViewModel.isFinished = false;
+            avViewModel.isExecutionCompleted = false;
             avViewModel.consoleOutput = "";
 
             clearInterval(this.autoplayTimer);
@@ -131,7 +127,6 @@ export class Scene {
             layout.clearAll();
 
             this.operationRecorder.startReplay();
-            highlightLine(this.operationRecorder.getFirstCodeLineNumber());
         }
 
         this.viewModel.onPlaybackSpeedChangedSSlow = () => {
@@ -154,10 +149,7 @@ export class Scene {
                 var doc = new DOMParser().parseFromString(newCode, "text/html");
                 newCode = doc.documentElement.textContent;
 
-                if (self.operationRecorder.setSourceCode(newCode)) {
-                    self.codeRenderer.highlightLine(self.operationRecorder.getFirstCodeLineNumber());
-                }
-
+                self.operationRecorder.setSourceCode(newCode);                
                 self.operationRecorder.startReplay();
             }
         });
@@ -190,6 +182,15 @@ export class Scene {
             onExceptionMessage(status: boolean, message?: string): void {
                 avViewModel.exceptionMessage = message;
                 avViewModel.hasException = status;
+            }
+        });
+
+        this.operationRecorder.registerNotificationObserver({
+            onLineExecuted(lineNo: number) : void {
+                highlightLine(lineNo);
+            },
+            onExecutionFinished() : void {
+                avViewModel.isExecutionCompleted = self.operationRecorder.isReplayFinished();
             }
         });
 
@@ -257,7 +258,6 @@ export class Scene {
             code = codeLines.join('\n');
         }
 
-        this.codeRenderer.setSourceCode(code);
-        highlightLine(1);
+        this.codeRenderer.setSourceCode(code);                
     }
 }

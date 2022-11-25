@@ -1,16 +1,25 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
 import { NodeBase, GraphType, ParentSide, GraphVariableChangeCbk, ObservableGraph } from './av-types-interfaces'
 
+export enum CodeExecutorMessages {
+    NoOp = 0,
+    Wait,
+    Wakeup,
+    Stop
+}
+
+export enum CodeExecutorSlots {
+    Main = 0,
+    Aux = 1
+}
+
 export enum CodeExecutorCommands {
     sharedMem,
 
     setSourceCode,
     execute,
-    startReplay,
-    getNextCodeLineNumber,
-    getFirstCodeLineNumber,
+    executionFinished,
     isWaiting,
-    isReplayFinished,
     advanceOneCodeLine,
 
     // EVENTS
@@ -30,7 +39,7 @@ export enum CodeExecutorCommands {
     onRemoveNode
 }
 
-let codeExec = () => {
+let codeExec = () : CodeExecutor => {
     let oprec = (self as any).this;
 
     if (!oprec)
@@ -61,7 +70,8 @@ self.onmessage = (event) => {
 
         switch (event.data.cmd) {
             case CodeExecutorCommands.sharedMem:
-                codex.advanceFlag = new Int32Array(event.data.params);
+                if (codex.advanceFlag == undefined)
+                    codex.advanceFlag = new Int32Array(event.data.params);
                 break;
             case CodeExecutorCommands.setSourceCode:
                 codex.setSourceCode(event.data.params);
@@ -69,25 +79,10 @@ self.onmessage = (event) => {
             case CodeExecutorCommands.execute:
                 codex.execute();
                 break;
-            case CodeExecutorCommands.startReplay:
-                codex.startReplay();
-                break;
-
-            case CodeExecutorCommands.getFirstCodeLineNumber:
-                return codex.getFirstCodeLineNumber();
-
-            case CodeExecutorCommands.getNextCodeLineNumber:
-                return codex.getNextCodeLineNumber();
-
-            case CodeExecutorCommands.isWaiting:
-                return codex.isWaiting();
-
+ 
             case CodeExecutorCommands.advanceOneCodeLine:
                 codex.advanceOneCodeLine();
                 break;
-
-            case CodeExecutorCommands.isReplayFinished:
-                return codex.isReplayFinished();
 
             default:
                 throw 'Cant handle ' + event.data.cmd;
@@ -127,15 +122,15 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
-    protected code: string;
+    protected origCode: string;
     protected advanceOneLineReceived: boolean = false;
-    protected advanceFlag: Int32Array = undefined;
+    public advanceFlag: Int32Array = undefined;
 
     constructor() {
     }
 
     public setSourceCode(code: string) {
-        this.code = code;
+        this.origCode = code;
     }
 
     public execute() {
@@ -157,7 +152,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 forcemarkcl: this.forceMarkLine
             };
 
-            this.code = "\"use strict\"; \
+            let code = "\"use strict\"; \
                          let BinarySearchTree = Types.BinarySearchTree; \
                          let BinaryTree = Types.BinaryTree;\
                          let Graph = Types.Graph;\
@@ -172,13 +167,15 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                          let endScope = Funcs.endScope; \
                          let pushParams = Funcs.pushParams; \
                          let popParams = Funcs.popParams; \
-                        " + this.code;
+                        " + this.origCode;
 
-            eval(this.code);
-            console.log('DONE');
+            eval(code);
             this.hookConsoleLog(prevFcn, false);
+
+            this.onExecutionFinished();
         } catch (e) {
             console.log(e);
+            throw e;
             this.hookConsoleLog(prevFcn, false);
             let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
             //TODO this.onExceptionMessage(true, message);
@@ -187,12 +184,10 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
     }
 
-    public getFirstCodeLineNumber(): number {
-        return -1;
-    }
-
-    public getNextCodeLineNumber(): number {
-        return -1;
+    private onExecutionFinished() {
+        self.postMessage({
+            cmd: CodeExecutorCommands.executionFinished,
+        });
     }
 
     public forceMarkLine(lineNumber: number) {
@@ -216,20 +211,27 @@ export class CodeExecutor implements GraphVariableChangeCbk {
             throw 'AdvanceFlag not received';
         }
 
-        while (true) {
-            let status = Atomics.wait(codex.advanceFlag, 0, 0);
-
-            if (status != 'not-equal') {                
-                break;
-            }
-        }
-
         console.log('markStartCodeLine ' + lineNumber);
 
         self.postMessage({
             cmd: CodeExecutorCommands.markStartCodeLine,
             params: Array.from(arguments)
         });
+
+        while (true) {
+            let status = Atomics.wait(codex.advanceFlag, 0, CodeExecutorMessages.Wait);
+
+            if (status != 'not-equal') {
+                let auxFlag : number = Atomics.load(codex.advanceFlag as Int32Array, 1);
+
+                if (auxFlag == CodeExecutorMessages.Stop) {
+                    console.log('THRIE');
+                    throw "STOP";
+                }
+
+                break;
+            }
+        }
     }
 
     public startScope(scopeName: string) {
