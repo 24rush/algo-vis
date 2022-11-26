@@ -22,7 +22,10 @@ var en_langMap : Record<number, string> = {
     14: "Sloow",
     15: "Slow",
     16: "Realtime",
-    17: "Exception"
+    17: "Exception",
+    18: "OK",
+    19: "Cancel",
+    20: "Insert a value"
 }
 
 var ro_langMap : Record<number, string> = {
@@ -43,7 +46,10 @@ var ro_langMap : Record<number, string> = {
     14: "Inceet",
     15: "Incet",
     16: "Fara delay",
-    17: "Exceptie"
+    17: "Exceptie",
+    18: "OK",
+    19: "Anuleaza",
+    20: "Introdu o valoare"
 }
 
 export class Localize

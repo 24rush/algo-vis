@@ -3,6 +3,7 @@ import { Layout } from "./layout";
 import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
+import { Localize } from "./localization";
 
 var bootstrap = require('bootstrap')
 
@@ -30,6 +31,13 @@ class AVViewModel {
     onPlaybackSpeedChangedSlow(): any { }
     onPlaybackSpeedChangedRealtime(): any { }
 
+    promptTitle: string = "";
+    promptDefaultValue: string = "";
+    onPromptOk() : any {};
+    onPromptCancel() : any {};
+
+    isFunctionalityDisabled : boolean = false;
+
     public setDefaults() {
         this.consoleOutput = "";
         this.isPaused = true;
@@ -38,12 +46,18 @@ class AVViewModel {
         this.compilatonErrorMessage = "";
         this.hasException = false;
         this.exceptionMessage = "";
+        this.promptTitle = "";
+        this.promptDefaultValue = "";
+        this.isFunctionalityDisabled = false;
     }
 }
 
 export class Scene {
     private codeRenderer: CodeRenderer;
     private commentsPopover: any = undefined;
+
+    private promptWidget: HTMLElement = undefined;
+    private promptToast: any = undefined;
     private autoReplayInterval = 200;
     private autoplayTimer: NodeJS.Timer = undefined;
 
@@ -54,14 +68,17 @@ export class Scene {
     constructor(widget: HTMLElement, codeId?: string) {
         let rightPane = widget.querySelector("[class*=rightPane]");
         let variablesPanel = widget.querySelector("[class*=panelVariables]") as HTMLElement;
-        let codeEditor = widget.querySelector("[class*=codeEditor]") as HTMLElement;
+        let codeEditor = widget.querySelector("[class*=codeEditor]") as HTMLElement;        
         let buttonsBar = widget.querySelector("[class*=buttonsBar]");
+
+        this.promptWidget = widget.querySelector("[id=toast-" + codeEditor.id);
+        this.promptToast = new bootstrap.Toast(this.promptWidget);
 
         this.codeRenderer = new CodeRenderer(codeEditor, widget.hasAttribute('av-ro'));
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
-        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane);
+        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane).bindTo(this.promptWidget);        
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
         avViewModel.setDefaults();
@@ -139,6 +156,19 @@ export class Scene {
             this.autoReplayInterval = 0;
         }
 
+        this.viewModel.onPromptOk = () => {
+            let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;            
+            this.promptToast.hide();
+
+            this.operationRecorder.onPromptReply(value);
+            avViewModel.isFunctionalityDisabled = false;
+        }
+
+        this.viewModel.onPromptCancel = () => {            
+            this.operationRecorder.onPromptReply(null);
+            avViewModel.isFunctionalityDisabled = false;
+        }
+
         let self = this;
 
         this.codeRenderer.registerEventNotifier({
@@ -168,6 +198,13 @@ export class Scene {
         this.operationRecorder.registerNotificationObserver({
             onTraceMessage(message: string): void {
                 avViewModel.consoleOutput += message + '\r\n';
+            },
+            onPromptRequest(title?: string, defValue?: string): void {                
+                self.promptToast.show();
+
+                avViewModel.isFunctionalityDisabled = true;
+                avViewModel.promptTitle = title ?? Localize.str(20);
+                avViewModel.promptDefaultValue = defValue ?? "";                                
             }
         });
 
@@ -246,18 +283,5 @@ export class Scene {
                 checkerFunc();
             } else options.content = "";
         };
-
-        // Avoid mismatches between actual html content and .textContent used later on
-        let code = this.codeRenderer.getSourceCode();
-        let codeLines = code.split('\n');
-
-        if (codeLines && codeLines.length) {
-            if (codeLines[0].trim() == '')
-                codeLines.shift();
-
-            code = codeLines.join('\n');
-        }
-
-        this.codeRenderer.setSourceCode(code);                
     }
 }

@@ -45,7 +45,7 @@ class VisualizerViewModel {
     isEmpty: boolean = false;
 
     public reset(value: any, varname: string) {
-        this.isEmpty = value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0);
+        this.isEmpty = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0);
 
         if (value instanceof ObservableGraph)
             this.isEmpty = (value as ObservableGraph).isEmpty();
@@ -197,8 +197,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
-        if (objectToPrint == undefined) {
-            text.textContent = 'undefined';
+        if (objectToPrint == undefined || objectToPrint == null) {
+            text.textContent = (objectToPrint === undefined) ? 'undefined' : 'null';
             this.resetFontSize(text);
             return;
         }

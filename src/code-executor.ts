@@ -5,12 +5,16 @@ export enum CodeExecutorMessages {
     NoOp = 0,
     Wait,
     Wakeup,
-    Stop
+    Stop,
+
+    PromptReply
 }
 
 export enum CodeExecutorSlots {
     Main = 0,
-    Aux = 1
+    Aux,
+
+    MessageSize,
 }
 
 export enum CodeExecutorCommands {
@@ -20,7 +24,9 @@ export enum CodeExecutorCommands {
     execute,
     executionFinished,
     isWaiting,
-    advanceOneCodeLine,
+
+    promptRequest,
+    promptReply,
 
     // EVENTS
     setVar,
@@ -36,10 +42,13 @@ export enum CodeExecutorCommands {
     onAddNode,
     onAddEdge,
     onRemoveEdge,
-    onRemoveNode
+    onRemoveNode,
+
+    onExceptionMessage,
+    onTraceMessage
 }
 
-let codeExec = () : CodeExecutor => {
+let codeExec = (): CodeExecutor => {
     let oprec = (self as any).this;
 
     if (!oprec)
@@ -49,7 +58,6 @@ let codeExec = () : CodeExecutor => {
 }
 
 self.onmessage = (event) => {
-    console.log(event.data);
     if (event.data.cmd === undefined)
         return;
 
@@ -67,7 +75,7 @@ self.onmessage = (event) => {
 
     wrapMessageHandler(event, () => {
         let codex = codeExec();
-
+        // MESSAGES from CodeExecutorProxy
         switch (event.data.cmd) {
             case CodeExecutorCommands.sharedMem:
                 if (codex.advanceFlag == undefined)
@@ -79,10 +87,6 @@ self.onmessage = (event) => {
             case CodeExecutorCommands.execute:
                 codex.execute();
                 break;
- 
-            case CodeExecutorCommands.advanceOneCodeLine:
-                codex.advanceOneCodeLine();
-                break;
 
             default:
                 throw 'Cant handle ' + event.data.cmd;
@@ -91,6 +95,7 @@ self.onmessage = (event) => {
 };
 
 export class CodeExecutor implements GraphVariableChangeCbk {
+    // Events sent to CodeExecutorProxy
     onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any): void {
         throw new Error("Method not implemented.");
     }
@@ -122,15 +127,28 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
+    onExceptionMessage(status: boolean, message?: string): void {
+        self.postMessage({
+            cmd: CodeExecutorCommands.onExceptionMessage,
+            params: Array.from(arguments)
+        });
+    }
+
+    onTraceMessage(message: string): void {
+        self.postMessage({
+            cmd: CodeExecutorCommands.onTraceMessage,
+            params: Array.from(arguments)
+        });
+    }
+
     protected origCode: string;
-    protected advanceOneLineReceived: boolean = false;
     public advanceFlag: Int32Array = undefined;
 
     constructor() {
     }
 
     public setSourceCode(code: string) {
-        this.origCode = code;
+        this.origCode = code.toString().replace("prompt", "promptWrap");
     }
 
     public execute() {
@@ -149,7 +167,8 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 endScope: this.endScope,
                 pushParams: this.pushParams,
                 popParams: this.popParams,
-                forcemarkcl: this.forceMarkLine
+                forcemarkcl: this.forceMarkLine,
+                promptWrap: this.promptWrap
             };
 
             let code = "\"use strict\"; \
@@ -167,6 +186,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                          let endScope = Funcs.endScope; \
                          let pushParams = Funcs.pushParams; \
                          let popParams = Funcs.popParams; \
+                         let promptWrap = Funcs.promptWrap; \
                         " + this.origCode;
 
             eval(code);
@@ -174,11 +194,14 @@ export class CodeExecutor implements GraphVariableChangeCbk {
 
             this.onExecutionFinished();
         } catch (e) {
-            console.log(e);
-            throw e;
             this.hookConsoleLog(prevFcn, false);
-            let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
-            //TODO this.onExceptionMessage(true, message);
+            
+            console.log(e);            
+            
+            if (e != "__STOP__") {
+                let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
+                this.onExceptionMessage(true, message);
+            }
 
             return false;
         }
@@ -190,28 +213,19 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
-    public forceMarkLine(lineNumber: number) {
+    private forceMarkLine(lineNumber: number) {
         self.postMessage({
             cmd: CodeExecutorCommands.forceMarkLine,
             params: Array.from(arguments)
         });
     }
 
-    public advanceOneCodeLine() {
-        let codex = codeExec();
-
-        console.log('Advance received');
-        codex.advanceOneLineReceived = true;
-    }
-
-    public markStartCodeLine(lineNumber: number) {
+    private markStartCodeLine(lineNumber: number) {
         let codex = codeExec();
 
         if (!codex.advanceFlag) {
             throw 'AdvanceFlag not received';
         }
-
-        console.log('markStartCodeLine ' + lineNumber);
 
         self.postMessage({
             cmd: CodeExecutorCommands.markStartCodeLine,
@@ -219,14 +233,13 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
 
         while (true) {
-            let status = Atomics.wait(codex.advanceFlag, 0, CodeExecutorMessages.Wait);
+            let status = Atomics.wait(codex.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
 
             if (status != 'not-equal') {
-                let auxFlag : number = Atomics.load(codex.advanceFlag as Int32Array, 1);
+                let auxFlag: number = Atomics.load(codex.advanceFlag as Int32Array, CodeExecutorSlots.Aux);
 
                 if (auxFlag == CodeExecutorMessages.Stop) {
-                    console.log('THRIE');
-                    throw "STOP";
+                    throw "__STOP__";
                 }
 
                 break;
@@ -234,41 +247,41 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
     }
 
-    public startScope(scopeName: string) {
+    private startScope(scopeName: string) {
         self.postMessage({
             cmd: CodeExecutorCommands.startScope,
             params: Array.from(arguments)
         });
     }
 
-    public endScope(scopeName: string) {
+    private endScope(scopeName: string) {
         self.postMessage({
             cmd: CodeExecutorCommands.endScope,
             params: Array.from(arguments)
         });
     }
 
-    public pushParams(params: [string, string][]) {
+    private pushParams(params: [string, string][]) {
         self.postMessage({
             cmd: CodeExecutorCommands.pushParams,
             params: Array.from(arguments)
         });
     }
 
-    public popParams(params: [string, string][]) {
+    private popParams(params: [string, string][]) {
         self.postMessage({
             cmd: CodeExecutorCommands.popParams,
             params: Array.from(arguments)
         });
     }
 
-    public setVar(varname: string, object: any, varsource: string) {
+    private setVar(varname: string, object: any, varsource: string) {
         self.postMessage({
             cmd: CodeExecutorCommands.setVar,
             params: Array.from(arguments)
         });
 
-        if (typeof object == 'object' && '__isGraphType__' in object) {
+        if (object && typeof object == 'object' && '__isGraphType__' in object) {
             let graph = object as ObservableGraph;
             let codex = codeExec();
 
@@ -282,7 +295,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 prevFcn = console.log;
 
             console.log = (message: any) => {
-                //TODO this.addOperation(OperationType.TRACE, new TraceOperationPayload(message));
+                this.onTraceMessage(message);
                 prevFcn.apply(console, [message]);
             };
         } else {
@@ -290,5 +303,42 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
 
         return prevFcn;
+    }
+
+    private promptWrap(title?: string, defValue?: string): string {
+        let codex = codeExec();
+
+        if (!codex.advanceFlag) {
+            throw 'AdvanceFlag not received';
+        }
+
+        self.postMessage({
+            cmd: CodeExecutorCommands.promptRequest,
+            params: Array.from(arguments)
+        });
+
+        while (true) 
+        {
+            let status = Atomics.wait(codex.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
+
+            if (status != 'not-equal') 
+            {
+                let auxFlag: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.Aux);
+
+                if (auxFlag == CodeExecutorMessages.PromptReply) {
+                    let msgSize: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize);
+
+                    let msg = null;
+                    if (msgSize > 0) {
+                        msg = "";
+                        for (let idx = 0; idx < msgSize; idx++) {
+                            msg += String.fromCharCode(Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + idx + 1));
+                        }
+                    }
+
+                    return msg;
+                }
+            }
+        }
     }
 }

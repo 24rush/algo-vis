@@ -60,7 +60,7 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
     constructor(public name: string, protected value?: any) {
         super();
 
-        this.initValue = value ? JSON.parse(JSON.stringify(value)) : undefined;
+        this.initValue = value ? JSON.parse(JSON.stringify(value)) : value;
     }
 
     public empty() {
@@ -106,8 +106,8 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
     }
 
     public setValue(value: any) {
-        let oldValues = this.value ? JSON.parse(JSON.stringify(this.value)) : undefined;
-        this.value = value != undefined ? JSON.parse(JSON.stringify(value)) : undefined;
+        let oldValues = this.value ? JSON.parse(JSON.stringify(this.value)) : this.value;
+        this.value = value ? JSON.parse(JSON.stringify(value)) : value;
 
         let variableType = this.determineType(value);
 

@@ -1,19 +1,21 @@
 <div id="{{leftPaneId}}" class="halfScreen leftPane">
     <div class="btn-group btn-group-sm buttonsBar d-flex flex-row">
-        <button av-bind-onclick="onAdvance" type="button" class="popover-dismiss rounded-right btn btn-light btn-overrides"
-            av-bind-class="{isExecutionCompleted : disabled}"
+        <button av-bind-onclick="onAdvance" type="button"
+            class="popover-dismiss rounded-right btn btn-light btn-overrides"
+            av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}"
             style="background-color: var(--bs-blue) !important; color: var(--bs-white);">
             <i class="bi bi-play-fill"></i>
             <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
         </button>
-        
-        <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides">
+
+        <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides"
+            av-bind-class="{isFunctionalityDisabled : disabled}">
             <i class="bi bi-fast-forward-fill"
                 av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
             <span av-bind-text='{isPaused: LangStrId.1, !isPaused: LangStrId.2}'>Execute all</span>
         </button>
         <button av-bind-onclick="onRestart" type="button" class="btn btn-light btn-overrides"
-            av-bind-class="{!isPaused : disabled}">
+            av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
             <i class="bi bi-arrow-clockwise"></i>
             <span av-bind-text="LangStrId.6">Restart</span>
         </button>
@@ -28,10 +30,11 @@
                     <div class="form-check form-switch">
                         <label class="form-check-label" style="font-size: 0.875rem !important"
                             for="showCommentsCheck-{{codeEditorId}}" av-bind-text="LangStrId.3">
-                            Show comments                            
+                            Show comments
                         </label>
-                        <input class="form-check-input radiusOverwrite" style="border-width: 0.5px;" type="checkbox" role="switch" unchecked
-                            av-bind-onclick="onShowComments" id="showCommentsCheck-{{codeEditorId}}">
+                        <input class="form-check-input radiusOverwrite" style="border-width: 0.5px;" type="checkbox"
+                            role="switch" unchecked av-bind-onclick="onShowComments"
+                            id="showCommentsCheck-{{codeEditorId}}">
                     </div>
                 </li>
                 <li>
@@ -64,21 +67,39 @@
     <div class="commentsPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">
     </div>
 
+    <div id="toast-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3"
+        style="pointer-events: all; position:relative; width: 100%" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header" style="margin-bottom: 0;">
+            <strong class="me-auto" av-bind-text="promptTitle"></strong>
+        </div>
+
+        <div class="toast-body fade show">
+            <input type="text" class="form-control" av-bind-value="promptDefaultValue">
+            <div class="mt-2 pt-2 border-top">
+                <button type="button" class="btn btn-primary btn-sm" av-bind-onclick="onPromptOk"
+                    av-bind-text="LangStrId.18">OK</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast"
+                    av-bind-onclick="onPromptCancel" av-bind-text="LangStrId.19">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <div id="{{codeEditorId}}" class="codeEditor">{{code}}</div>
 </div>
 
 <div class="halfScreen rightPane">
     <ul class="list-group" style="margin: 0px !important">
-        <li class="list-group-item fw-semibold" av-bind-style-display="{!hasCompilationError : none, hasCompilationError: block}"><span
+        <li class="list-group-item fw-semibold"
+            av-bind-style-display="{!hasCompilationError : none, hasCompilationError: block}"><span
                 av-bind-text="LangStrId.5">Compilation error</span>
-            <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"                
+            <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
                 av-bind-text='{hasCompilationError: compilationErrorMessage()}'></button>
         </li>
-        
-        <li class="list-group-item fw-semibold" av-bind-style-display="{!hasException : none, hasException: block}"><span
-            av-bind-text="LangStrId.17">Exception</span>
-        <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"            
-            av-bind-text='exceptionMessage'></button>
+
+        <li class="list-group-item fw-semibold" av-bind-style-display="{!hasException : none, hasException: block}">
+            <span av-bind-text="LangStrId.17">Exception</span>
+            <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
+                av-bind-text='exceptionMessage'></button>
         </li>
 
         <li class="list-group-item fw-semibold"><span av-bind-text="LangStrId.7">Variables</span>

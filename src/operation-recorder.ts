@@ -187,8 +187,10 @@ export interface VariableScopingNotification {
     onExitScopeVariable(scopeName: string, observable: ObservableJSVariable): void;
 }
 
-export interface TraceMessageNotification {
+export interface MessageNotification {
     onTraceMessage(message: string): void;
+
+    onPromptRequest(title?: string, defValue?: string) : void;
 }
 
 export interface CompilationStatusNotification {
@@ -204,9 +206,9 @@ export interface ExecutionStatus {
     onExecutionFinished(): void;
 }
 
-type NotificationTypes = VariableScopingNotification | TraceMessageNotification | CompilationStatusNotification | ExceptionNotification | ExecutionStatus;
+type NotificationTypes = VariableScopingNotification | MessageNotification | CompilationStatusNotification | ExceptionNotification | ExecutionStatus;
 
-class NotificationEmitter implements VariableScopingNotification, TraceMessageNotification, CompilationStatusNotification, ExceptionNotification, ExecutionStatus {
+class NotificationEmitter implements VariableScopingNotification, MessageNotification, CompilationStatusNotification, ExceptionNotification, ExecutionStatus {
     private notificationObservers: NotificationTypes[] = [];
 
     public registerNotificationObserver(notifier: NotificationTypes) {
@@ -224,12 +226,12 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         return notifiers;
     }
 
-    private traceMessageNotifications(): TraceMessageNotification[] {
-        let notifiers: TraceMessageNotification[] = [];
+    private traceMessageNotifications(): MessageNotification[] {
+        let notifiers: MessageNotification[] = [];
 
         for (const notifier of this.notificationObservers) {
             if ('onTraceMessage' in notifier)
-                notifiers.push(notifier as TraceMessageNotification);
+                notifiers.push(notifier as MessageNotification);
         }
 
         return notifiers;
@@ -279,9 +281,15 @@ class NotificationEmitter implements VariableScopingNotification, TraceMessageNo
         };
     }
 
+    // MessageNotification
     onTraceMessage(message: string): void {
         for (const notifier of this.traceMessageNotifications()) {
             notifier.onTraceMessage(message);
+        };
+    }
+    onPromptRequest(title?: string, defValue?: string): void {
+        for (const notifier of this.traceMessageNotifications()) {
+            notifier.onPromptRequest(title, defValue);
         };
     }
 
@@ -429,7 +437,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     public isWaiting(): boolean { return this.status == OperationRecorderStatus.Waiting; }
     public setWaiting(status: boolean) {
-        this.status = status ? OperationRecorderStatus.Waiting : OperationRecorderStatus.Idle;
+        this.status = status ? OperationRecorderStatus.Waiting : OperationRecorderStatus.Executing;
     }
 
     public setSourceCode(code: string): boolean {
@@ -472,7 +480,15 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.onLineExecuted(lineNumber);
     }
 
-    onExecutionCompleted(): void {
+    public promptRequest(title?: string, defValue?: string) {
+        this.onPromptRequest(title, defValue);
+    }
+
+    public onPromptReply(value: string) : void {
+        this.codeExecProxy.promptReply(value);
+    }
+
+    public onExecutionCompleted(): void {
         this.status = OperationRecorderStatus.ReplayEnded;
         this.onExecutionFinished();
     }
@@ -697,7 +713,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             return [false, this.runtimeObservables.get(runtimeScope)];
 
         let runtimeObservable: any;
-        if (typeof object == 'object' && '__isGraphType__' in object) {
+        if (object && typeof object == 'object' && '__isGraphType__' in object) {
             switch (object.type) {
                 case GraphType.DIRECTED:
                 case GraphType.UNDIRECTED:

@@ -12,8 +12,11 @@ export interface CodeExecutorEvents extends GraphVariableChangeCbk {
     popParams(params: [string, string][]): void;
 
     setVar(varname: string, object: any, varsource: string): void;
+    promptRequest(title?: string, defValue?: string): void;
 
-    onExecutionCompleted() :  void;
+    onExecutionCompleted(): void;
+    onExceptionMessage(status: boolean, message?: string): void;
+    onTraceMessage(message: string): void;
 }
 
 export class CodeExecutorProxy {
@@ -25,17 +28,20 @@ export class CodeExecutorProxy {
         return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.isWaiting);
     }
     advanceOneCodeLine() {
+        if (this.executionHalted)
+            return;
+
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.NoOp);
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
-        Atomics.notify(this.advanceFlag, 0);
-
-        return this.promiseWrapperCopyParams<void>(CodeExecutorCommands.advanceOneCodeLine);
+        Atomics.notify(this.advanceFlag, CodeExecutorSlots.Main);
     }
-    
+
     stopExecution() {
+        if (this.executionHalted)
+            return;
+
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.Stop);
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
-
         Atomics.notify(this.advanceFlag, 0);
     }
     execute(): Promise<boolean> {
@@ -44,6 +50,20 @@ export class CodeExecutorProxy {
     setSourceCode(...args: any[]): Promise<boolean> {
         return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.setSourceCode, ...args);
     }
+    promptReply(value?: string) {
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize, value == null ? 0 : value.length);
+        if (value != null) {
+            for (let idx = 0; idx < value.length; idx++) {
+                Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize + idx + 1, value.charCodeAt(idx));
+            }
+        }
+
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.PromptReply);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
+        Atomics.notify(this.advanceFlag, 0);
+
+        this.executionHalted = false;
+    }
 
     private promiseWrapperDirectPassParams<T>(cmd: CodeExecutorCommands, sharedMem: SharedArrayBuffer): Promise<T> {
         return new Promise((result, reject) => {
@@ -51,13 +71,7 @@ export class CodeExecutorProxy {
 
             channel.port1.onmessage = ({ data }) => {
                 channel.port1.close();
-                if (data.error) {
-                    console.log(data.error);
-                    reject(data.error);
-                } else {
-                    console.log(`RET cmd: ${data.cmd} result = ${data.result}`);
-                    result(data.result);
-                }
+                data.error ? reject(data.error) : result(data.result);                
             };
 
             this.codexWorker.postMessage({
@@ -73,13 +87,7 @@ export class CodeExecutorProxy {
 
             channel.port1.onmessage = ({ data }) => {
                 channel.port1.close();
-                if (data.error) {
-                    console.log(data.error);
-                    reject(data.error);
-                } else {
-                    console.log(`RET cmd: ${data.cmd} result = ${data.result}`);
-                    result(data.result);
-                }
+                data.error ? reject(data.error) : result(data.result);
             };
 
             this.codexWorker.postMessage({
@@ -89,15 +97,12 @@ export class CodeExecutorProxy {
         });
     }
 
-    setWaiting(status: boolean) {
-        throw new Error("Method not implemented.");
-    }
-
     //@ts-ignore
     private codexWorker = new Worker(new URL('./code-executor.ts', import.meta.url));
     private codeExecutorEventHandler: CodeExecutorEvents = undefined;
-    private sharedMem = new SharedArrayBuffer(2 * Int32Array.BYTES_PER_ELEMENT);
+    private sharedMem = new SharedArrayBuffer(128 * Int16Array.BYTES_PER_ELEMENT);
     private advanceFlag = new Int32Array(this.sharedMem);
+    private executionHalted = false; // for prompts
 
     constructor(eventHandler: CodeExecutorEvents) {
         Atomics.store(this.advanceFlag, 0, CodeExecutorMessages.Wait);
@@ -105,7 +110,7 @@ export class CodeExecutorProxy {
         this.codeExecutorEventHandler = eventHandler;
 
         // MESSAGES from CodeExecutor
-        this.codexWorker.onmessage = (event) => {            
+        this.codexWorker.onmessage = (event) => {
             let params = event.data.params;
 
             switch (event.data.cmd) {
@@ -116,8 +121,13 @@ export class CodeExecutorProxy {
                     this.codeExecutorEventHandler.onExecutionCompleted();
                     break;
                 case CodeExecutorCommands.markStartCodeLine:
-                    Atomics.store(this.advanceFlag, 0, CodeExecutorMessages.Wait);
+                    Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
                     this.codeExecutorEventHandler.markStartCodeLine(params[0]);
+                    break;
+                case CodeExecutorCommands.promptRequest:
+                    this.executionHalted = true;
+                    Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
+                    this.codeExecutorEventHandler.promptRequest(params[0], params[1]);
                     break;
                 case CodeExecutorCommands.forceMarkLine:
                     this.codeExecutorEventHandler.forceMarkLine(params[0])
@@ -145,6 +155,12 @@ export class CodeExecutorProxy {
                     break;
                 case CodeExecutorCommands.onRemoveEdge:
                     this.codeExecutorEventHandler.onRemoveEdge(params[0], params[1], params[2]);
+                    break;
+                case CodeExecutorCommands.onExceptionMessage:
+                    this.codeExecutorEventHandler.onExceptionMessage(params[0], params[1]);
+                    break;
+                case CodeExecutorCommands.onTraceMessage:
+                    this.codeExecutorEventHandler.onTraceMessage(params[0]);
                     break;
                 default:
                     throw 'Cant handle ' + event.data.cmd;

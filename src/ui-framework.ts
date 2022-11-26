@@ -27,6 +27,7 @@ enum BindingType {
     undefined,
     TEXT,
     CLASS,
+    VALUE,
     CHECKED,
     STYLE
 }
@@ -82,12 +83,12 @@ export class UIBinder {
 
     public bindTo(widget: Element): UIBinder {
         // Search for all known binding attributes
-        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style"];
+        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-value", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style"];
         let bindingType = BindingType.undefined;
         let styleTargetProp: string = undefined;
 
         for (let bindingAttr of bindingAttrs) {
-            for (let element of widget.querySelectorAll("[" + bindingAttr + "]")) {                
+            for (let element of widget.querySelectorAll("[" + bindingAttr + "]")) {
                 let htmlElement = element as HTMLElement;
                 let bindingText = htmlElement.getAttribute(bindingAttr);
 
@@ -100,6 +101,11 @@ export class UIBinder {
                     case "av-bind-class":
                         {
                             bindingType = BindingType.CLASS;
+                            break;
+                        }
+                    case "av-bind-value":
+                        {
+                            bindingType = BindingType.VALUE;
                             break;
                         }
                     case "av-bind-style-display":
@@ -212,7 +218,7 @@ export class UIBinder {
             let bindingsOnSameTriggerProp = this.propertyBindings.get(triggerProperty);
             for (let binding of bindingsOnSameTriggerProp) {
                 if (binding.getBindingType() == bindingContext.getBindingType() &&
-                    binding.htmlElement == bindingContext.htmlElement && 
+                    binding.htmlElement == bindingContext.htmlElement &&
                     binding.getStyleTargetProp() == bindingContext.getStyleTargetProp()) {
                     return binding;
                 }
@@ -264,6 +270,7 @@ export class UIBinder {
                     case BindingType.TEXT:
                     case BindingType.CLASS:
                     case BindingType.STYLE:
+                    case BindingType.VALUE:
                         {
                             if (bindingContext.propNeedsEvaluation()) {
                                 let propEval = this.getViewModeProperty(this.viewModel, property);
@@ -278,7 +285,7 @@ export class UIBinder {
                                             break;
                                         case "border":
                                             bindingContext.htmlElement.style.removeProperty('border');
-                                            if (propValueAfterEval != undefined) 
+                                            if (propValueAfterEval != undefined)
                                                 bindingContext.htmlElement.style.border = propValueAfterEval;
                                             break;
                                         case "font-style":
@@ -292,6 +299,10 @@ export class UIBinder {
                                     bindingContext.htmlElement.textContent = propValueAfterEval;
                                 }
 
+                                if (bindingContext.getBindingType() == BindingType.VALUE) {
+                                    (bindingContext.htmlElement as HTMLInputElement).value = propValueAfterEval;
+                                }
+
                                 if (bindingContext.getBindingType() == BindingType.CLASS) {
                                     if (bindingContext.getValueOnTrueEvaluation(this.viewModel))
                                         bindingContext.htmlElement.classList.remove(bindingContext.getValueOnTrueEvaluation(this.viewModel));
@@ -301,7 +312,11 @@ export class UIBinder {
                                     bindingContext.htmlElement.classList.add(propValueAfterEval);
                                 }
                             } else {
-                                bindingContext.htmlElement.textContent = newValue;
+                                if (bindingContext.getBindingType() == BindingType.VALUE) {
+                                    (bindingContext.htmlElement as HTMLInputElement).value = newValue;
+                                } else {
+                                    bindingContext.htmlElement.textContent = newValue;
+                                }
                             }
                         }
                 }
