@@ -11,24 +11,6 @@ import { GraphVariableChangeCbk, NodeBase, ObservableGraph } from "./av-types-in
 import { BinaryTree, Graph } from "./av-types";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
 
-class FontSizeCache {
-    private static cache: any = {}; // elementId: { textLength : fontSize }
-
-    public static getFontSize(id: string, text: string): number {
-        if (id in this.cache && text.length in this.cache[id])
-            return this.cache[id][text.length];
-
-        return 0;
-    }
-
-    public static setFontSize(id: string, text: string, fontSize: number) {
-        if (!(id in this.cache))
-            this.cache[id] = {};
-
-        this.cache[id][text.length] = fontSize;
-    }
-}
-
 enum DrawnElement {
     undefined,
     Primitive,
@@ -43,6 +25,8 @@ class VisualizerViewModel {
     isNotStack: boolean = true;
     isNotQueueOrStack: boolean = true;
     isEmpty: boolean = false;
+
+    onVarNameClicked(): void { }
 
     public reset(value: any, varname: string) {
         this.isEmpty = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0);
@@ -78,7 +62,7 @@ class VisualizerViewModel {
 
 export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
-        '<div class="var-box" style="display: table-row;"> \
+        '<div class="var-box" style="display: table-row;" av-bind-onclick="onVarNameClicked"> \
         <span id="var-name" class="var-name" style="display: table-cell; text-align: right; width: 20%;">{{name}}:</span> \
     </div> \
     ';
@@ -137,9 +121,11 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected text: HTMLElement = undefined;
     protected graphVis: any = undefined; // Cytoscape
     protected layout: any = undefined;
+    protected fontSizeCache: Record<string, number> = {};
 
     protected varNameDrawn = false;
     protected varValueDrawn: boolean = false;
+    protected varValueBinaryDisplay: boolean = false;
     protected elementToDrawType: DrawnElement = DrawnElement.undefined;
     protected pendingDraw: DrawnElement = DrawnElement.undefined;
 
@@ -150,6 +136,10 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     constructor(protected observable: ObservableType) {
         this.observable.registerObserver(this);
 
+        this.viewModel.onVarNameClicked = () => {
+            this.varValueBinaryDisplay = !this.varValueBinaryDisplay;
+            this.redraw(this.elementToDrawType);
+        };
         let viewModel = new ObservableViewModel(this.viewModel);
 
         this.clientViewModel = clientViewModel<typeof this.viewModel>(viewModel);
@@ -194,7 +184,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     private resetAnimation(text: HTMLElement) {
         text.style.animation = 'none'; text.offsetHeight; text.style.animation = null;
         text.classList.remove('blink'); text.classList.add('blink');
-    }
+    }   
 
     private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         if (objectToPrint == undefined || objectToPrint == null) {
@@ -219,17 +209,18 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             }
         }
 
-        text.textContent = objectToPrint.toString();
+        let dec2bin = (dec: number): string => {
+            return (dec >>> 0).toString(2);
+        }
+
+        text.textContent = (this.varValueBinaryDisplay && typeof objectToPrint == 'number') ? dec2bin(objectToPrint) : objectToPrint.toString();
         text.title = text.textContent;
         text.parentElement.title = text.textContent;
 
-        if (text.textContent == "")
+        if (text.textContent == "" || disableAutoResize)
             return;
 
-        if (disableAutoResize)
-            return;
-
-        let cachedFontSizeForNewValue = FontSizeCache.getFontSize(text.id, text.textContent);
+        let cachedFontSizeForNewValue = (text.id in this.fontSizeCache) ? this.fontSizeCache[text.id] : 0;
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
         if (!currentFontSize || currentFontSize == NaN) currentFontSize = 15;
 
@@ -241,9 +232,9 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             let paddingPercent = 1.1;
             w *= paddingPercent; h *= paddingPercent;
 
-            if (w > maxWidth || h > maxHeight)
+            if (/*w > maxWidth || */h > maxHeight)
                 return -1;
-            if (w < maxWidth && h < maxHeight)
+            if (/*w < maxWidth && */h < maxHeight)
                 return 1;
 
             return 0;
@@ -264,8 +255,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
             wh = this.textWidth(text);
         } while (directionToBounds(wh.w, wh.h) == currDirectionToBounds);
-
-        FontSizeCache.setFontSize(text.id, text.textContent, newFontSize);
+        
+        this.fontSizeCache[text.id] = newFontSize;
     }
 
     public detach(): void {
@@ -284,6 +275,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
         this.htmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
         this.varNameDrawn = true;
+
+        this.uiBinder.bindTo(this.htmlElement.parentElement);
 
         return this.htmlElement;
     }
@@ -676,7 +669,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
     }
 
-    private forceGraphRefresh(observable: ObservableGraph) {        
+    private forceGraphRefresh(observable: ObservableGraph) {
         if (this.layout) {
             this.layout.stop();
             this.layout.destroy();
@@ -697,15 +690,15 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 fit: true,
                 transform: (node: any, pos: any) => {
                     pos.y += 20;
-                    
+
                     let treeNode = observable.findNodeWithId(node.id());
                     let isOnlyChild = treeNode.isOnlyChild();
 
                     let offsetComputed = 40;
-                    if (!treeNode.isRoot()) {                     
+                    if (!treeNode.isRoot()) {
                         let parent = this.graphVis.nodes().filter(`[id="${treeNode.parent.id}"]`);
                         let parentPos = parent.position();
-                        
+
                         offsetComputed = Math.abs(parentPos.y - pos.y) * 0.5;
                     }
 
@@ -733,20 +726,20 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
     onAccessNode(_observable: ObservableGraph, node: NodeBase): void {
         let graphNode = this.graphVis.filter(`[id = "${node.id}"]`);
-/*
-        graphNode.animate({
-            style: { opacity: 1},
-            duration: 100,
-            easing: 'ease-in-sine'
-        }).delay(100).animate({
-            style: { opacity: 0, 'background-color': 'black'},
-            duration: 100,
-            easing: 'ease-in-sine'
-        }).delay(0).animate({
-            style: { opacity: 1, 'background-color': '#0d6efd'},
-            duration: 100,
-            easing: 'ease-in-sine'
-        });*/
+        /*
+                graphNode.animate({
+                    style: { opacity: 1},
+                    duration: 100,
+                    easing: 'ease-in-sine'
+                }).delay(100).animate({
+                    style: { opacity: 0, 'background-color': 'black'},
+                    duration: 100,
+                    easing: 'ease-in-sine'
+                }).delay(0).animate({
+                    style: { opacity: 1, 'background-color': '#0d6efd'},
+                    duration: 100,
+                    easing: 'ease-in-sine'
+                });*/
     }
 
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
@@ -777,7 +770,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
     onRemoveNode(_observable: ObservableGraph, node: NodeBase): void {
         this.ensureGraphDrawn();
-        this.graphVis.remove(this.graphVis.filter(`[id = "${node.id}"]`));        
+        this.graphVis.remove(this.graphVis.filter(`[id = "${node.id}"]`));
     }
     onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         this.ensureGraphDrawn();

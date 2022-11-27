@@ -49,16 +49,16 @@ export class CodeRenderer {
             };
         };        
 
+        this.editor.setOptions({
+            useWorker: false,  
+            maxLines: codeLines.length + 5,  
+        });
+
         this.editor.on('change', () => {
             if (timeoutReloadCode)
                 clearInterval(timeoutReloadCode);
-
+                
             timeoutReloadCode = setTimeout(notifySourceCodeObservers, recompileCodeInterval);
-        });
-
-        this.editor.setOptions({
-            useWorker: false,
-            maxLines: 12,
         });
     }
 
