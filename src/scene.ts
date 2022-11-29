@@ -26,6 +26,7 @@ class AVViewModel {
 
     onAdvance(): any { }
     onRestart(): any { }
+    onFullscreen(): any { }
 
     onPlaybackSpeedChangedSSlow(): any { }
     onPlaybackSpeedChangedSlow(): any { }
@@ -52,6 +53,8 @@ class AVViewModel {
     }
 }
 
+export type RequestFullScreenCbk = () => void;
+
 export class Scene {
     private codeRenderer: CodeRenderer;
     private commentsPopover: any = undefined;
@@ -65,23 +68,27 @@ export class Scene {
 
     private operationRecorder = new OperationRecorder();
 
-    constructor(widget: HTMLElement, codeId?: string) {
-        let rightPane = widget.querySelector("[class*=rightPane]");
-        let variablesPanel = widget.querySelector("[class*=panelVariables]") as HTMLElement;
-        let codeEditor = widget.querySelector("[class*=codeEditor]") as HTMLElement;        
-        let buttonsBar = widget.querySelector("[class*=buttonsBar]");
+    constructor(app: HTMLElement, codeId: string, fullscreenCbk: RequestFullScreenCbk) {
+        let rightPane = app.querySelector("[class*=rightPane]");
+        let variablesPanel = app.querySelector("[class*=panelVariables]") as HTMLElement;
+        let codeEditor = app.querySelector("[class*=codeEditor]") as HTMLElement;        
+        let buttonsBar = app.querySelector("[class*=buttonsBar]");
 
-        this.promptWidget = widget.querySelector("[id=toast-" + codeEditor.id);
+        this.promptWidget = app.querySelector("[id=toast-" + codeEditor.id);
         this.promptToast = new bootstrap.Toast(this.promptWidget);
 
-        this.codeRenderer = new CodeRenderer(codeEditor, widget.hasAttribute('av-ro'));
+        this.codeRenderer = new CodeRenderer(codeEditor, app.hasAttribute('av-ro'));
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
         new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane).bindTo(this.promptWidget);        
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
-        avViewModel.setDefaults();
+        avViewModel.setDefaults();        
+
+        this.viewModel.onFullscreen = () => {
+            if (fullscreenCbk) fullscreenCbk();
+        };
 
         this.viewModel.onShowComments = () => {
             avViewModel.showComments = !avViewModel.showComments;
@@ -255,7 +262,7 @@ export class Scene {
                     return;
 
                 if (self.commentsPopover) self.commentsPopover.dispose();
-                let commentsElement = widget.querySelector("[class*=commentsPopover]") as HTMLElement;
+                let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
 
                 commentsElement.style['left'] = aceCursor.style['left'];
                 commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";

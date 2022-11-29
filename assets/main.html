@@ -20,6 +20,10 @@
             <span av-bind-text="LangStrId.6">Restart</span>
         </button>
 
+        <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides" style="flex-grow: 0 !important;">
+            <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>            
+        </button>
+
         <div>
             <button class="btn btn-light btn-overrides" type="button" id="dropdownMenuButton-{{codeEditorId}}"
                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-auto-close="outside">
@@ -42,18 +46,18 @@
                 </li>
                 <li><a class="dropdown-item">
                         <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="btnradio" id="btnradio1-{{codeEditorId}}"
+                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}" id="btnradio1-{{codeEditorId}}"
                                 autocomplete="off" av-bind-onclick="onPlaybackSpeedChangedSSlow">
                             <label class="btn btn-outline-primary radiusOverwrite-left" for="btnradio1-{{codeEditorId}}"
                                 av-bind-text="LangStrId.14">Slooow</label>
 
-                            <input type="radio" class="btn-check" checked name="btnradio"
+                            <input type="radio" class="btn-check" checked name="btnradio-{{codeEditorId}}"
                                 id="btnradio2-{{codeEditorId}}" autocomplete="off"
                                 av-bind-onclick="onPlaybackSpeedChangedSlow">
                             <label class="btn btn-outline-primary" style="border-right: none;"
                                 for="btnradio2-{{codeEditorId}}" av-bind-text="LangStrId.15">Slow</label>
 
-                            <input type="radio" class="btn-check" name="btnradio" id="btnradio3-{{codeEditorId}}"
+                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}" id="btnradio3-{{codeEditorId}}"
                                 autocomplete="off" av-bind-onclick="onPlaybackSpeedChangedRealtime">
                             <label class="btn btn-outline-primary radiusOverwrite-right"
                                 for="btnradio3-{{codeEditorId}}" av-bind-text="LangStrId.16">Realtime</label>

@@ -58,6 +58,7 @@
   cursor: pointer;
   vertical-align: middle;
   padding-right: 5px;
+  white-space: nowrap;
   font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
 }
 
@@ -66,6 +67,7 @@
   text-align: center;
   vertical-align: middle;
   border: 1px solid;
+  white-space: nowrap;
   font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
 }
 
@@ -119,3 +121,20 @@
   transition: visibility 0s 0.6s, opacity 0.5s ease-out;
 }
 
+.modal {
+  padding: 0 !important;
+}
+.modal .modal-dialog {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  margin: 0;
+}
+.modal .modal-content {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+.modal .modal-body {
+  overflow-y: auto;
+}

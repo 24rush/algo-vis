@@ -184,7 +184,12 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     private resetAnimation(text: HTMLElement) {
         text.style.animation = 'none'; text.offsetHeight; text.style.animation = null;
         text.classList.remove('blink'); text.classList.add('blink');
-    }   
+
+        setTimeout(() => {
+            // Remove class so it doesnt blink when switching to fullscreen
+            text.classList.remove('blink');
+        }, 600);
+    }
 
     private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         if (objectToPrint == undefined || objectToPrint == null) {
@@ -255,7 +260,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
             wh = this.textWidth(text);
         } while (directionToBounds(wh.w, wh.h) == currDirectionToBounds);
-        
+
         this.fontSizeCache[text.id] = newFontSize;
     }
 

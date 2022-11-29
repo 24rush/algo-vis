@@ -148,7 +148,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
     }
 
     public setSourceCode(code: string) {
-        this.origCode = code.toString().replace("prompt", "promptWrap");
+        this.origCode = code.toString().split("prompt").join("promptWrap");
     }
 
     public execute() {

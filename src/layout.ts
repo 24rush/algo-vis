@@ -9,13 +9,13 @@ type OnLayoutOperationsStatus = (hasPendingOperations: boolean) => void;
 
 export class Layout {
     protected readonly scopeTemplate = '\
-    <ul class="list-group list-group-mine" av-scope="{{scope}}"> \
+    <ul class="list-group list-group-mine" style="margin-left: 0px;" av-scope="{{scope}}"> \
       <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px; ">{{scopeName}}</li> \
       <li class="list-group-item" style="padding-right: 0px; display: table;"></li> \
     </ul>'
 
     protected readonly localScopeTemplate = '\
-    <ul class="list-group list-group-mine" style="border: none; padding: 8px;" av-scope="{{scope}}"> \
+    <ul class="list-group list-group-mine" style="border: none; padding: 8px; margin-left: 0px;" av-scope="{{scope}}"> \
       <li class="list-group-item" style="font-style: italic; font-weight:500; padding-right: 0px;">{{scopeName}}</li> \
       <li class="list-group-item" style="display: table;"></li> \
     </ul>'
