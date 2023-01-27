@@ -2,6 +2,7 @@ import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
 import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType } from './av-types-interfaces'
 import { CodeExecutorEvents, CodeExecutorProxy } from "./code-executor-proxy";
+import { UserInteractionType } from "./code-executor";
 
 var esprima = require('esprima')
 
@@ -190,7 +191,7 @@ export interface VariableScopingNotification {
 export interface MessageNotification {
     onTraceMessage(message: string): void;
 
-    onPromptRequest(title?: string, defValue?: string) : void;
+    onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string) : void;
 }
 
 export interface CompilationStatusNotification {
@@ -287,9 +288,9 @@ class NotificationEmitter implements VariableScopingNotification, MessageNotific
             notifier.onTraceMessage(message);
         };
     }
-    onPromptRequest(title?: string, defValue?: string): void {
+    onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
         for (const notifier of this.traceMessageNotifications()) {
-            notifier.onPromptRequest(title, defValue);
+            notifier.onUserInteractionRequest(userInteraction, title, defValue);
         };
     }
 
@@ -480,12 +481,12 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.onLineExecuted(lineNumber);
     }
 
-    public promptRequest(title?: string, defValue?: string) {
-        this.onPromptRequest(title, defValue);
+    public userInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string) {
+        this.onUserInteractionRequest(userInteraction, title, defValue);
     }
 
-    public onPromptReply(value: string) : void {
-        this.codeExecProxy.promptReply(value);
+    public onUserInteractionResponse(interactionType : UserInteractionType, value?: string | boolean) : void {
+        this.codeExecProxy.userInteractionResponse(interactionType, value);
     }
 
     public onExecutionCompleted(): void {

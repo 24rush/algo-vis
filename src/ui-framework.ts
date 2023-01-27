@@ -88,7 +88,8 @@ export class UIBinder {
         let styleTargetProp: string = undefined;
 
         for (let bindingAttr of bindingAttrs) {
-            for (let element of widget.querySelectorAll("[" + bindingAttr + "]")) {
+            let elementToHook = widget.parentElement ?? widget;
+            for (let element of elementToHook.querySelectorAll("[" + bindingAttr + "]")) {
                 let htmlElement = element as HTMLElement;
                 let bindingText = htmlElement.getAttribute(bindingAttr);
 
@@ -281,7 +282,7 @@ export class UIBinder {
 
                                     switch (targetStyle) {
                                         case "display":
-                                            bindingContext.htmlElement.style.display = propValueAfterEval;
+                                            bindingContext.htmlElement.style.setProperty("display", propValueAfterEval, "important")                                            
                                             break;
                                         case "border":
                                             bindingContext.htmlElement.style.removeProperty('border');

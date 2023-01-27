@@ -54,10 +54,23 @@ var ro_langMap : Record<number, string> = {
 
 export class Localize
 {
+    private static currentLang : LangEnum = LangEnum.Ro;
     private static languageMap : Record<number, string> = undefined;
 
     public static setLang(lang: LangEnum) { 
         this.languageMap = lang == LangEnum.En ? en_langMap : ro_langMap;
+        this.currentLang = lang;
+    }
+
+    public static getLangStr() {
+        switch (this.currentLang) {
+            case LangEnum.En:
+                return "en"
+            case LangEnum.Ro:
+                return "ro"                        
+            default:
+                throw "Language not set";
+        }
     }
 
     public static str(strId: number) : string {        

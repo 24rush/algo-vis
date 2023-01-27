@@ -1,5 +1,5 @@
 import { GraphVariableChangeCbk } from "./av-types-interfaces";
-import { CodeExecutorCommands, CodeExecutorMessages, CodeExecutorSlots } from "./code-executor";
+import { CodeExecutorCommands, CodeExecutorMessages, CodeExecutorSlots, UserInteractionType } from "./code-executor";
 
 export interface CodeExecutorEvents extends GraphVariableChangeCbk {
     forceMarkLine(lineNumber: number): void;
@@ -12,7 +12,7 @@ export interface CodeExecutorEvents extends GraphVariableChangeCbk {
     popParams(params: [string, string][]): void;
 
     setVar(varname: string, object: any, varsource: string): void;
-    promptRequest(title?: string, defValue?: string): void;
+    userInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void;
 
     onExecutionCompleted(): void;
     onExceptionMessage(status: boolean, message?: string): void;
@@ -50,15 +50,32 @@ export class CodeExecutorProxy {
     setSourceCode(...args: any[]): Promise<boolean> {
         return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.setSourceCode, ...args);
     }
-    promptReply(value?: string) {
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize, value == null ? 0 : value.length);
-        if (value != null) {
-            for (let idx = 0; idx < value.length; idx++) {
-                Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize + idx + 1, value.charCodeAt(idx));
+    userInteractionResponse(interactionType: UserInteractionType, value?: string | boolean) {
+        let valueAsInt = 0;
+
+        switch (interactionType) {
+            case UserInteractionType.Alert:
+                valueAsInt = 0;
+                break;
+            case UserInteractionType.Confirm:
+                valueAsInt = value as boolean ? 1 : 0;
+                break;
+            case UserInteractionType.Prompt:
+                let valueAsString = value as string;
+                valueAsInt = valueAsString && valueAsString.length ? valueAsString.length : 0;
+                break;
+        }
+
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize, interactionType);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize + 1, valueAsInt);
+
+        if (interactionType == UserInteractionType.Prompt) {
+            for (let idx = 0; idx < valueAsInt; idx++) {
+                Atomics.store(this.advanceFlag, CodeExecutorSlots.MessageSize + 2 + idx, (value as string).charCodeAt(idx));
             }
         }
 
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.PromptReply);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.UserInteractionResponse);
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
         Atomics.notify(this.advanceFlag, 0);
 
@@ -71,7 +88,7 @@ export class CodeExecutorProxy {
 
             channel.port1.onmessage = ({ data }) => {
                 channel.port1.close();
-                data.error ? reject(data.error) : result(data.result);                
+                data.error ? reject(data.error) : result(data.result);
             };
 
             this.codexWorker.postMessage({
@@ -124,10 +141,10 @@ export class CodeExecutorProxy {
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
                     this.codeExecutorEventHandler.markStartCodeLine(params[0]);
                     break;
-                case CodeExecutorCommands.promptRequest:
+                case CodeExecutorCommands.userInteractionRequest:
                     this.executionHalted = true;
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.promptRequest(params[0], params[1]);
+                    this.codeExecutorEventHandler.userInteractionRequest(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.forceMarkLine:
                     this.codeExecutorEventHandler.forceMarkLine(params[0])

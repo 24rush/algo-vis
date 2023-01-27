@@ -1,13 +1,19 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
 import { NodeBase, GraphType, ParentSide, GraphVariableChangeCbk, ObservableGraph } from './av-types-interfaces'
 
+export enum UserInteractionType {
+    Alert,
+    Confirm,
+    Prompt
+}
+
 export enum CodeExecutorMessages {
     NoOp = 0,
     Wait,
     Wakeup,
     Stop,
 
-    PromptReply
+    UserInteractionResponse
 }
 
 export enum CodeExecutorSlots {
@@ -25,8 +31,8 @@ export enum CodeExecutorCommands {
     executionFinished,
     isWaiting,
 
-    promptRequest,
-    promptReply,
+    userInteractionRequest,
+    userInteractionResponse,
 
     // EVENTS
     setVar,
@@ -144,11 +150,9 @@ export class CodeExecutor implements GraphVariableChangeCbk {
     protected origCode: string;
     public advanceFlag: Int32Array = undefined;
 
-    constructor() {
-    }
-
     public setSourceCode(code: string) {
-        this.origCode = code.toString().split("prompt").join("promptWrap");
+        let regex = new RegExp("(alert)|(confirm)|(prompt)", 'g')
+        this.origCode = code.toString().replace(regex, '$&Wrap')
     }
 
     public execute() {
@@ -168,7 +172,9 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 pushParams: this.pushParams,
                 popParams: this.popParams,
                 forcemarkcl: this.forceMarkLine,
-                promptWrap: this.promptWrap
+                promptWrap: this.promptWrap,
+                alertWrap: this.alertWrap,
+                confirmWrap: this.confirmWrap
             };
 
             let code = "\"use strict\"; \
@@ -187,6 +193,8 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                          let pushParams = Funcs.pushParams; \
                          let popParams = Funcs.popParams; \
                          let promptWrap = Funcs.promptWrap; \
+                         let alertWrap = Funcs.alertWrap; \
+                         let confirmWrap = Funcs.confirmWrap; \
                         " + this.origCode;
 
             eval(code);
@@ -195,9 +203,9 @@ export class CodeExecutor implements GraphVariableChangeCbk {
             this.onExecutionFinished();
         } catch (e) {
             this.hookConsoleLog(prevFcn, false);
-            
-            console.log(e);            
-            
+
+            console.log(e);
+
             if (e != "__STOP__") {
                 let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
                 this.onExceptionMessage(true, message);
@@ -305,7 +313,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         return prevFcn;
     }
 
-    private promptWrap(title?: string, defValue?: string): string {
+    private userInteractionRequest(_userInteraction: UserInteractionType, _title?: string, _defValue?: string): string | boolean {
         let codex = codeExec();
 
         if (!codex.advanceFlag) {
@@ -313,32 +321,53 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
 
         self.postMessage({
-            cmd: CodeExecutorCommands.promptRequest,
+            cmd: CodeExecutorCommands.userInteractionRequest,
             params: Array.from(arguments)
         });
 
-        while (true) 
-        {
+        while (true) {
             let status = Atomics.wait(codex.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
 
-            if (status != 'not-equal') 
-            {
+            if (status != 'not-equal') {
                 let auxFlag: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.Aux);
 
-                if (auxFlag == CodeExecutorMessages.PromptReply) {
-                    let msgSize: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize);
+                if (auxFlag == CodeExecutorMessages.UserInteractionResponse) {
+                    let interactionType: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize);
 
-                    let msg = null;
-                    if (msgSize > 0) {
-                        msg = "";
-                        for (let idx = 0; idx < msgSize; idx++) {
-                            msg += String.fromCharCode(Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + idx + 1));
+                    switch (interactionType) {
+                        case UserInteractionType.Alert:
+                            return undefined;
+                        case UserInteractionType.Confirm:
+                            console.log(Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1))
+                            return Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1) == 1;
+                        case UserInteractionType.Prompt: {
+                            let msgSize: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1);
+
+                            let msg = null;
+                            if (msgSize > 0) {
+                                msg = "";
+                                for (let idx = 0; idx < msgSize; idx++) {
+                                    msg += String.fromCharCode(Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + idx + 2));
+                                }
+                            }
+
+                            return msg;
                         }
                     }
-
-                    return msg;
                 }
             }
         }
+    }
+
+    private promptWrap(title?: string, defValue?: string): string {
+        return codeExec().userInteractionRequest(UserInteractionType.Prompt, title, defValue) as string;
+    }
+
+    private alertWrap(title?: string) {
+        codeExec().userInteractionRequest(UserInteractionType.Alert, title);
+    }
+
+    private confirmWrap(title?: string): boolean {
+        return codeExec().userInteractionRequest(UserInteractionType.Confirm, title) as boolean;
     }
 }

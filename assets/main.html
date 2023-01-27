@@ -1,5 +1,28 @@
 <div id="{{leftPaneId}}" class="halfScreen leftPane">
-    <div class="btn-group btn-group-sm buttonsBar d-flex flex-row">
+    <div class="btn-group btn-group-sm d-flex flex-row dropdown-center av-snippets"
+        av-bind-style-display="{isSnippetSet: flex, !isSnippetSet: none}">
+        <button class="dropdown-toggle btn btn-light btn-overrides" type="button" data-bs-toggle="dropdown"
+            aria-expanded="false" av-bind-text="selectedSnippetDesc">
+        </button>
+        <ul class="dropdown-menu" av-bind-onclick="onSnippetSelected" style="cursor: pointer;">
+            {{#levels}}
+            <li>
+                <h5 class="dropdown-header dropdown-header-av" av-bind-style-display="{hasLevelSpecified: flex, !hasLevelSpecified: none}">
+                    {{level}}</h5>
+            </li>
+            {{#snippets}}
+            <li><a class="dropdown-item" av-id="{{id}}">{{desc}}</a></li>
+            {{/snippets}}
+            {{/levels}}
+        </ul>
+
+        <button av-bind-onclick="onNextSnippet" type="button" class="btn btn-light btn-overrides"
+            av-bind-class="{!hasMoreSnippets : disabled}"
+            style="flex-grow: 0 !important;">
+            <span class="bi bi-arrow-right-square" style="padding: 0.4rem;"></span>
+        </button>
+    </div>
+    <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
         <button av-bind-onclick="onAdvance" type="button"
             class="popover-dismiss rounded-right btn btn-light btn-overrides"
             av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}"
@@ -20,8 +43,9 @@
             <span av-bind-text="LangStrId.6">Restart</span>
         </button>
 
-        <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides" style="flex-grow: 0 !important;">
-            <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>            
+        <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides"
+            style="flex-grow: 0 !important;">
+            <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>
         </button>
 
         <div>
@@ -46,8 +70,9 @@
                 </li>
                 <li><a class="dropdown-item">
                         <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}" id="btnradio1-{{codeEditorId}}"
-                                autocomplete="off" av-bind-onclick="onPlaybackSpeedChangedSSlow">
+                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
+                                id="btnradio1-{{codeEditorId}}" autocomplete="off"
+                                av-bind-onclick="onPlaybackSpeedChangedSSlow">
                             <label class="btn btn-outline-primary radiusOverwrite-left" for="btnradio1-{{codeEditorId}}"
                                 av-bind-text="LangStrId.14">Slooow</label>
 
@@ -57,8 +82,9 @@
                             <label class="btn btn-outline-primary" style="border-right: none;"
                                 for="btnradio2-{{codeEditorId}}" av-bind-text="LangStrId.15">Slow</label>
 
-                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}" id="btnradio3-{{codeEditorId}}"
-                                autocomplete="off" av-bind-onclick="onPlaybackSpeedChangedRealtime">
+                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
+                                id="btnradio3-{{codeEditorId}}" autocomplete="off"
+                                av-bind-onclick="onPlaybackSpeedChangedRealtime">
                             <label class="btn btn-outline-primary radiusOverwrite-right"
                                 for="btnradio3-{{codeEditorId}}" av-bind-text="LangStrId.16">Realtime</label>
                         </div>
@@ -78,11 +104,13 @@
         </div>
 
         <div class="toast-body fade show">
-            <input type="text" class="form-control" av-bind-value="promptDefaultValue">
-            <div class="mt-2 pt-2 border-top">
+            <input type="text" class="form-control" av-bind-value="promptDefaultValue"
+                av-bind-style-display="{!hasInputBox : none, hasInputBox: inline-block}">
+            <div class="mt-2 pt-2">
                 <button type="button" class="btn btn-primary btn-sm" av-bind-onclick="onPromptOk"
                     av-bind-text="LangStrId.18">OK</button>
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast"
+                    av-bind-style-display="{!hasCancelBtn : none, hasCancelBtn: inline-block}"
                     av-bind-onclick="onPromptCancel" av-bind-text="LangStrId.19">Cancel</button>
             </div>
         </div>

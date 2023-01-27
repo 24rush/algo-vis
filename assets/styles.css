@@ -138,3 +138,7 @@
 .modal .modal-body {
   overflow-y: auto;
 }
+
+.dropdown-header-av {
+  color: var(--bs-blue) !important;
+}

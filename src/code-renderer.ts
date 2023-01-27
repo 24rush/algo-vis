@@ -11,6 +11,7 @@ export class CodeRenderer {
     private Range = ace.require('ace/range').Range;
     private eventListeners: CodeRendererEventNotifier[] = [];
     private lineComments: string[] = [];
+    private skipEventsCount = 0;
 
     constructor(codeEditorHtmlElement: HTMLElement, isReadonly: boolean = false) {
         let code = codeEditorHtmlElement.textContent;
@@ -43,22 +44,25 @@ export class CodeRenderer {
         let timeoutReloadCode: any;
         let recompileCodeInterval = 3000;
 
-        let notifySourceCodeObservers = () => {
-            for (let notifier of this.eventListeners) {
-                notifier.onSourceCodeUpdated(this.editor.getSession().getValue());
-            };
-        };        
-
         this.editor.setOptions({
-            useWorker: false,  
-            maxLines: codeLines.length + 5,  
+            useWorker: false,
+            maxLines: codeLines.length + 5,
         });
 
         this.editor.on('change', () => {
+            if (this.skipEventsCount > 0) {
+                this.skipEventsCount--;
+                return;
+            }
+
             if (timeoutReloadCode)
                 clearInterval(timeoutReloadCode);
-                
-            timeoutReloadCode = setTimeout(notifySourceCodeObservers, recompileCodeInterval);
+
+            timeoutReloadCode = setTimeout(() => {
+                for (let notifier of this.eventListeners) {
+                    notifier.onSourceCodeUpdated(this.editor.getSession().getValue());
+                };
+            }, recompileCodeInterval);
         });
     }
 
@@ -71,6 +75,11 @@ export class CodeRenderer {
         this.eventListeners = this.eventListeners.slice(this.eventListeners.indexOf(notifier), 1);
     }
 
+    public notifySourceCodeObservers() {
+        for (let notifier of this.eventListeners) {
+            notifier.onSourceCodeUpdated(this.editor.getSession().getValue());
+        };
+    };
     public highlightLine(lineNo: number) {
         this.editor.gotoLine(lineNo);
         this.unhighlightLine();
@@ -96,7 +105,11 @@ export class CodeRenderer {
     public setSourceCode(sourceCode: string): void {
         let newCode = "";
         [this.lineComments, newCode] = this.extractComments(sourceCode);
+
+        // Updating code triggers remove + insert events
+        this.skipEventsCount = 2;
         this.editor.setValue(newCode);
+        this.notifySourceCodeObservers();
     }
 
     private extractComments(sourceCode: string): [any, string] {

@@ -4,6 +4,8 @@ import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
 import { Localize } from "./localization";
+import { Snippet, SnippetsForLang } from "./index";
+import { UserInteractionType } from "./code-executor";
 
 var bootstrap = require('bootstrap')
 
@@ -17,6 +19,13 @@ class AVViewModel {
     isExecutionCompleted = false;
     onAutoplayToggled(): any { }
 
+    isSnippetSet = false;
+    snippets: Snippet[] = [];
+    selectedSnippetDesc: string = "";
+    selectedSnippetIdx: number = 0;
+    hasLevelSpecified: boolean = false;
+    hasMoreSnippets: boolean = false;
+
     hasCompilationError: boolean = false;
     compilatonErrorMessage: string = "";
     compilationErrorMessage(): string { return this.compilatonErrorMessage; };
@@ -28,27 +37,46 @@ class AVViewModel {
     onRestart(): any { }
     onFullscreen(): any { }
 
+    onSnippetSelected(_event: any) : any {};
+    onNextSnippet() {}
+
     onPlaybackSpeedChangedSSlow(): any { }
     onPlaybackSpeedChangedSlow(): any { }
     onPlaybackSpeedChangedRealtime(): any { }
 
     promptTitle: string = "";
     promptDefaultValue: string = "";
-    onPromptOk() : any {};
-    onPromptCancel() : any {};
+    hasCancelBtn : boolean = true;
+    hasInputBox : boolean = true;
+    onPromptOk(): any { };
+    onPromptCancel(): any { };
 
-    isFunctionalityDisabled : boolean = false;
+    isFunctionalityDisabled: boolean = false;
 
     public setDefaults() {
         this.consoleOutput = "";
+        
         this.isPaused = true;
+        this.isExecutionCompleted = false;
+
+        this.isSnippetSet = false;
+        this.hasLevelSpecified = false;
+        this.selectedSnippetDesc = "";
+        this.selectedSnippetIdx = 0;
+        this.hasMoreSnippets = false;
+        
         this.showComments = false; // needs sync with UI checked
+        
         this.hasCompilationError = false;
         this.compilatonErrorMessage = "";
         this.hasException = false;
         this.exceptionMessage = "";
+        
         this.promptTitle = "";
         this.promptDefaultValue = "";
+        this.hasCancelBtn = true;
+        this.hasInputBox = true;
+        
         this.isFunctionalityDisabled = false;
     }
 }
@@ -68,11 +96,12 @@ export class Scene {
 
     private operationRecorder = new OperationRecorder();
 
-    constructor(app: HTMLElement, codeId: string, fullscreenCbk: RequestFullScreenCbk) {
+    constructor(app: HTMLElement, snippets: Snippet[], fullscreenCbk: RequestFullScreenCbk) {
         let rightPane = app.querySelector("[class*=rightPane]");
         let variablesPanel = app.querySelector("[class*=panelVariables]") as HTMLElement;
-        let codeEditor = app.querySelector("[class*=codeEditor]") as HTMLElement;        
-        let buttonsBar = app.querySelector("[class*=buttonsBar]");
+        let codeEditor = app.querySelector("[class*=codeEditor]") as HTMLElement;
+        let buttonsBar = app.querySelector("[class*=av-buttonsBar]");
+        let snippetsList = app.querySelector("[class*=av-snippets]");
 
         this.promptWidget = app.querySelector("[id=toast-" + codeEditor.id);
         this.promptToast = new bootstrap.Toast(this.promptWidget);
@@ -81,10 +110,46 @@ export class Scene {
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
-        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(rightPane).bindTo(this.promptWidget);        
+        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(snippetsList).bindTo(rightPane).bindTo(this.promptWidget);
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
-        avViewModel.setDefaults();        
+        avViewModel.setDefaults();
+
+        let self = this;
+        
+        let onSnippetSelected = (snippetId: number) => {            
+            let idxSnippet = snippets.findIndex(value => { return value.id == snippetId });
+
+            if (idxSnippet != -1) {
+                let selectedSnippet = snippets[idxSnippet];                
+
+                avViewModel.selectedSnippetDesc = selectedSnippet.desc;
+                avViewModel.hasMoreSnippets = idxSnippet < (snippets.length - 1);
+                avViewModel.hasLevelSpecified = selectedSnippet.level != "";
+                avViewModel.selectedSnippetIdx = idxSnippet;
+
+                this.codeRenderer.setSourceCode(selectedSnippet.code);
+            }            
+        };
+
+        avViewModel.onNextSnippet = () => {
+            avViewModel.selectedSnippetIdx++;
+
+            if (avViewModel.selectedSnippetIdx < snippets.length) {
+                onSnippetSelected(snippets[avViewModel.selectedSnippetIdx].id);
+            }
+        }
+
+        avViewModel.onSnippetSelected = (event : any) => {
+            let snippetId = Number.parseInt(event.getAttribute('av-id'));
+            onSnippetSelected(snippetId);
+        }
+
+        avViewModel.isSnippetSet = snippets.length > 1;
+        
+        if (snippets.length > 0) {
+            onSnippetSelected(snippets[0].id);
+        }
 
         this.viewModel.onFullscreen = () => {
             if (fullscreenCbk) fullscreenCbk();
@@ -164,19 +229,17 @@ export class Scene {
         }
 
         this.viewModel.onPromptOk = () => {
-            let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;            
+            let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;
             this.promptToast.hide();
 
-            this.operationRecorder.onPromptReply(value);
+            this.operationRecorder.onUserInteractionResponse(UserInteractionType.Prompt, value);
             avViewModel.isFunctionalityDisabled = false;
         }
 
-        this.viewModel.onPromptCancel = () => {            
-            this.operationRecorder.onPromptReply(null);
+        this.viewModel.onPromptCancel = () => {
+            this.operationRecorder.onUserInteractionResponse(UserInteractionType.Prompt, null);
             avViewModel.isFunctionalityDisabled = false;
         }
-
-        let self = this;
 
         this.codeRenderer.registerEventNotifier({
             onSourceCodeUpdated(newCode: string) {
@@ -186,7 +249,7 @@ export class Scene {
                 var doc = new DOMParser().parseFromString(newCode, "text/html");
                 newCode = doc.documentElement.textContent;
 
-                self.operationRecorder.setSourceCode(newCode);                
+                self.operationRecorder.setSourceCode(newCode);
                 self.operationRecorder.startReplay();
             }
         });
@@ -206,12 +269,14 @@ export class Scene {
             onTraceMessage(message: string): void {
                 avViewModel.consoleOutput += message + '\r\n';
             },
-            onPromptRequest(title?: string, defValue?: string): void {                
+            onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
                 self.promptToast.show();
 
                 avViewModel.isFunctionalityDisabled = true;
                 avViewModel.promptTitle = title ?? Localize.str(20);
-                avViewModel.promptDefaultValue = defValue ?? "";                                
+                avViewModel.promptDefaultValue = defValue ?? "";
+                avViewModel.hasCancelBtn = (userInteraction != UserInteractionType.Alert);
+                avViewModel.hasInputBox = (userInteraction == UserInteractionType.Prompt);
             }
         });
 
@@ -230,26 +295,13 @@ export class Scene {
         });
 
         this.operationRecorder.registerNotificationObserver({
-            onLineExecuted(lineNo: number) : void {
+            onLineExecuted(lineNo: number): void {
                 highlightLine(lineNo);
             },
-            onExecutionFinished() : void {
+            onExecutionFinished(): void {
                 avViewModel.isExecutionCompleted = self.operationRecorder.isReplayFinished();
             }
         });
-
-        // Actual code start
-        if (codeId) {
-            fetch(codeId)
-                .then((response) => {
-                    if (!response.ok)
-                        return;
-
-                    response.text().then((code: string) => {
-                        this.codeRenderer.setSourceCode(code);
-                    });
-                });
-        }
 
         var options = {
             'content': "",
