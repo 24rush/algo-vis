@@ -58,11 +58,11 @@ export class CodeExecutorProxy {
                 valueAsInt = 0;
                 break;
             case UserInteractionType.Confirm:
-                valueAsInt = value as boolean ? 1 : 0;
+                valueAsInt = (value as boolean) ? 1 : 0;
                 break;
             case UserInteractionType.Prompt:
                 let valueAsString = value as string;
-                valueAsInt = valueAsString && valueAsString.length ? valueAsString.length : 0;
+                valueAsInt = valueAsString != null ? valueAsString.length : -1;
                 break;
         }
 

@@ -343,7 +343,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                         case UserInteractionType.Prompt: {
                             let msgSize: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1);
 
-                            let msg = null;
+                            let msg = msgSize == -1 ? null : "";
                             if (msgSize > 0) {
                                 msg = "";
                                 for (let idx = 0; idx < msgSize; idx++) {

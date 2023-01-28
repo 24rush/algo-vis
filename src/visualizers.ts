@@ -24,21 +24,23 @@ class VisualizerViewModel {
     isMultiArray: boolean = false;
     isNotStack: boolean = true;
     isNotQueueOrStack: boolean = true;
-    isEmpty: boolean = false;
+    isBorderless: boolean = false; // isEmpty or isString
+    isString: boolean = false;
 
     onVarNameClicked(): void { }
 
     public reset(value: any, varname: string) {
-        this.isEmpty = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0);
+        this.isBorderless = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0) || typeof value == 'string';
+        this.isString = (typeof value == 'string');
 
         if (value instanceof ObservableGraph)
-            this.isEmpty = (value as ObservableGraph).isEmpty();
+            this.isBorderless = (value as ObservableGraph).isEmpty();
 
         this.isMultiArray = this.checkIsMultiArray(value);
         this.isNotStack = varname.indexOf('stack') == -1;
         this.isNotQueueOrStack = this.isNotStack && varname.indexOf('queue') == -1;
 
-        if (this.isEmpty) { // Overwrites to handle empty values
+        if (this.isBorderless) { // Overwrites to handle empty values
             this.isNotStack = true;
             this.isNotQueueOrStack = false;
         }
@@ -74,8 +76,9 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
      </span>';
 
     protected readonly templatePrimitive: string =
-        '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}"> \
-         <span id="var-value" style="vertical-align:middle;"></span> \
+        '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" \
+                av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
+            <span av-bind-style-display="{!isString : none}">\'</span><span id="var-value" style="vertical-align:middle;"></span><span av-bind-style-display="{!isString : none}">\'</span> \
      </span>';
 
     protected readonly templateArray = '<span style="display: table;"> \
@@ -84,7 +87,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         <span class="align-self-baseline" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
         {{#cols}} \
             <div style="padding:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
-                <span class="var-value" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}" style="width: {{width}}px; height:{{height}}px;"> \
+                <span class="var-value" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
                     <span id="var-value"></span> \
                 </span> \
                 <span av-bind-style-display="{isNotQueueOrStack : table, !isNotQueueOrStack : none}" style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
@@ -97,15 +100,15 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templateObject = '<span style="display: table;" class="justify-contents-baseline"> \
     {{#data}} \
         <div style="padding-right: 3px; display: table-cell;"> \
-            <span class="var-value" av-bind-style-border="{isEmpty : none}" av-bind-style-font-style="{isEmpty:italic}" style="width: {{width}}px; height:{{height}}px;"> \
+            <span class="var-value" av-bind-style-border="{isBorderless : none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
                 <span id="var-value"></span> \
             </span> \
-            <span av-bind-style-display="{!isEmpty : table, isEmpty : none}" style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
+            <span av-bind-style-display="{!isBorderless : table, isBorderless : none}" style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
         </div> \
     {{/data}} \
     </span>';
 
-    protected readonly templateEmptyGraph = '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isEmpty:none}" av-bind-style-font-style="{isEmpty:italic}"> \
+    protected readonly templateEmptyGraph = '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
         <span id="var-value" style="vertical-align:middle;"></span> \
     </span>';
 
@@ -192,13 +195,17 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
-        if (objectToPrint == undefined || objectToPrint == null) {
-            text.textContent = (objectToPrint === undefined) ? 'undefined' : 'null';
-            this.resetFontSize(text);
-            return;
+        let dec2bin = (dec: number): string => {
+            return (dec >>> 0).toString(2);
         }
 
-        if (typeof objectToPrint == 'object') {
+        if (objectToPrint == undefined || objectToPrint == null) {
+            text.textContent = (objectToPrint === undefined) ? 'undefined' : 'null';
+        } else {
+            text.textContent = (this.varValueBinaryDisplay && typeof objectToPrint == 'number') ? dec2bin(objectToPrint) : objectToPrint.toString();
+        }
+
+        if (objectToPrint != null && typeof objectToPrint == 'object') {
             let isEmptyObject: boolean = false;
             if (objectToPrint instanceof ObservableGraph) {
                 isEmptyObject = ((objectToPrint as ObservableGraph).isEmpty());
@@ -214,11 +221,6 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             }
         }
 
-        let dec2bin = (dec: number): string => {
-            return (dec >>> 0).toString(2);
-        }
-
-        text.textContent = (this.varValueBinaryDisplay && typeof objectToPrint == 'number') ? dec2bin(objectToPrint) : objectToPrint.toString();
         text.title = text.textContent;
         text.parentElement.title = text.textContent;
 
@@ -227,14 +229,14 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         let cachedFontSizeForNewValue = (text.id in this.fontSizeCache) ? this.fontSizeCache[text.id] : 0;
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
-        if (!currentFontSize || currentFontSize == NaN) currentFontSize = 15;
+        if (!currentFontSize || Number.isNaN(currentFontSize)) currentFontSize = 15;
 
         if (cachedFontSizeForNewValue > 0 && cachedFontSizeForNewValue == currentFontSize) {
             return;
         }
 
         let directionToBounds = (w: number, h: number) => {
-            let paddingPercent = 1.1;
+            let paddingPercent = 1.3;
             w *= paddingPercent; h *= paddingPercent;
 
             if (/*w > maxWidth || */h > maxHeight)
@@ -382,7 +384,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             arrayData = [arrayData];
         }
 
-        if (this.clientViewModel.isEmpty) {
+        if (this.clientViewModel.isBorderless) {
             // Copy the data so that we don't mess with the original
             arrayData[0] = [...arrayData];
             arrayData[0][0] = undefined;
@@ -407,8 +409,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         for (let [index, textElement] of this.indextValueElements.entries()) { //TODO handle jagged arrays
             let value = this.clientViewModel.isMultiArray ? observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) :
                 (this.clientViewModel.isNotStack ? observable.getAtIndex(index) : observable.getAtIndex(nr_cols - index - 1));
-            value = this.clientViewModel.isEmpty ? [] : value;
-            this.fitText(textElement, value, this.width, this.height, this.clientViewModel.isEmpty);
+            value = this.clientViewModel.isBorderless ? [] : value;
+            this.fitText(textElement, value, this.width, this.height, this.clientViewModel.isBorderless);
         }
 
         this.varValueDrawn = true;
@@ -442,7 +444,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         this.htmlElement.append(valuesHtmlElement);
 
-        this.clientViewModel.isEmpty = isEmpty;
+        this.clientViewModel.isBorderless = isEmpty;
 
         let domIndex = 0;
         let domElements = DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value');

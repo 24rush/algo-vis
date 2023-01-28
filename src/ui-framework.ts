@@ -88,10 +88,13 @@ export class UIBinder {
         let styleTargetProp: string = undefined;
 
         for (let bindingAttr of bindingAttrs) {
-            let elementToHook = widget.parentElement ?? widget;
-            for (let element of elementToHook.querySelectorAll("[" + bindingAttr + "]")) {
+            let elementsToHook = Array.from(widget.querySelectorAll("[" + bindingAttr + "]")).concat([widget]);
+            for (let element of elementsToHook) {
                 let htmlElement = element as HTMLElement;
                 let bindingText = htmlElement.getAttribute(bindingAttr);
+
+                if (!bindingText)
+                    continue;
 
                 switch (bindingAttr) {
                     case "av-bind-text":
@@ -182,8 +185,10 @@ export class UIBinder {
         }
 
         // Search for av-bind-checked
-        for (let htmlElement of widget.querySelectorAll("[av-bind-checked]")) {
+        for (let htmlElement of Array.from(widget.querySelectorAll("[av-bind-checked]")).concat([widget])) {
             let propertyBound = htmlElement.getAttribute('av-bind-checked');
+
+            if (!propertyBound) continue;
 
             if (propertyBound in this.viewModel) {
                 this.addPropertyBinding(propertyBound, new BindingContext(BindingType.CHECKED, htmlElement as HTMLElement));
@@ -199,8 +204,10 @@ export class UIBinder {
         }
 
         // Search for av-bind-onclick
-        for (let htmlElement of widget.querySelectorAll("[av-bind-onclick]")) {
+        for (let htmlElement of Array.from(widget.querySelectorAll("[av-bind-onclick]")).concat([widget])) {
             let propertyBound = htmlElement.getAttribute('av-bind-onclick');
+
+            if (!propertyBound) continue;
 
             if (propertyBound in this.viewModel) {
                 htmlElement.addEventListener('click', (event) => {

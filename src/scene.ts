@@ -52,6 +52,7 @@ class AVViewModel {
     onPromptCancel(): any { };
 
     isFunctionalityDisabled: boolean = false;
+    userInteraction: UserInteractionType = UserInteractionType.Alert;
 
     public setDefaults() {
         this.consoleOutput = "";
@@ -78,6 +79,7 @@ class AVViewModel {
         this.hasInputBox = true;
         
         this.isFunctionalityDisabled = false;
+        this.userInteraction = UserInteractionType.Alert;
     }
 }
 
@@ -228,16 +230,31 @@ export class Scene {
             this.autoReplayInterval = 0;
         }
 
+        enum OkCancel { Ok, Cancel }
+
+        let retValueOnButton = (userInteraction: UserInteractionType, button: OkCancel, value: any) : any => {
+            switch (userInteraction) {
+                case UserInteractionType.Alert:
+                    return undefined;                    
+                case UserInteractionType.Confirm:
+                    return button == OkCancel.Ok;
+                case UserInteractionType.Prompt:
+                    return button == OkCancel.Ok ? value : null;
+                default:
+                    return undefined;
+            }
+        }
+
         this.viewModel.onPromptOk = () => {
             let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;
             this.promptToast.hide();
-
-            this.operationRecorder.onUserInteractionResponse(UserInteractionType.Prompt, value);
+        
+            this.operationRecorder.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Ok, value));
             avViewModel.isFunctionalityDisabled = false;
         }
 
         this.viewModel.onPromptCancel = () => {
-            this.operationRecorder.onUserInteractionResponse(UserInteractionType.Prompt, null);
+            this.operationRecorder.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Cancel, null));
             avViewModel.isFunctionalityDisabled = false;
         }
 
@@ -273,6 +290,7 @@ export class Scene {
                 self.promptToast.show();
 
                 avViewModel.isFunctionalityDisabled = true;
+                avViewModel.userInteraction = userInteraction;
                 avViewModel.promptTitle = title ?? Localize.str(20);
                 avViewModel.promptDefaultValue = defValue ?? "";
                 avViewModel.hasCancelBtn = (userInteraction != UserInteractionType.Alert);
