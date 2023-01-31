@@ -102,12 +102,21 @@
 }
 
 * {
-  border-radius: 1px !important;
+  /*border-radius: 1px !important;*/
 }
 
 body#algovis {
   line-height: 1.6!important;
-  font: 400 16px Source Sans Pro,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif!important;
+  font-family: Source Sans Pro,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif!important;
+  font-size: 17px;
+}
+
+h3.shepherd-title {
+  font-weight: 600;
+}
+
+header.shepherd-header {
+  background-color: var(--askella-menu-bg-color)!important;
 }
 
 highlight {
