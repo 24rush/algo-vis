@@ -760,8 +760,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     private getCurrentRuntimeScope() { return this.currentScope.join('.'); }
 
     public setVar(varname: string, object: any, varsource: string) {
-        console.log('setvar ' + varname + " " + object + " " + varsource);
-
         if (object instanceof NodeBase || object instanceof BinaryTreeNode)
             return;
 

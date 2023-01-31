@@ -91,7 +91,7 @@ export class Scene {
 
     private promptWidget: HTMLElement = undefined;
     private promptToast: any = undefined;
-    private autoReplayInterval = 200;
+    private autoReplayInterval = 400;
     private autoplayTimer: NodeJS.Timer = undefined;
 
     private viewModel: AVViewModel = new AVViewModel();
@@ -108,7 +108,10 @@ export class Scene {
         this.promptWidget = app.querySelector("[id=toast-" + codeEditor.id);
         this.promptToast = new bootstrap.Toast(this.promptWidget);
 
-        this.codeRenderer = new CodeRenderer(codeEditor, app.hasAttribute('av-ro'));
+        let hasAutoPlayOption = app.hasAttribute('av-autoplay');
+        let isReadOnly = app.hasAttribute('av-ro');
+
+        this.codeRenderer = new CodeRenderer(codeEditor, isReadOnly);
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
@@ -176,6 +179,9 @@ export class Scene {
             avViewModel.isPaused = !avViewModel.isPaused;
 
             clearInterval(this.autoplayTimer);
+            if (avViewModel.isPaused) {
+                hasAutoPlayOption = false;
+            }
 
             if (!avViewModel.isPaused) {
                 this.autoplayTimer = setInterval(() => {
@@ -318,6 +324,10 @@ export class Scene {
             },
             onExecutionFinished(): void {
                 avViewModel.isExecutionCompleted = self.operationRecorder.isReplayFinished();
+
+                if (hasAutoPlayOption) {
+                    self.viewModel.onAutoplayToggled();
+                }
             }
         });
 
@@ -360,5 +370,9 @@ export class Scene {
                 checkerFunc();
             } else options.content = "";
         };
+
+        if (hasAutoPlayOption) {
+            this.viewModel.onAutoplayToggled();
+        }
     }
 }

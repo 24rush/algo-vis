@@ -24,9 +24,8 @@
     </div>
     <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
         <button av-bind-onclick="onAdvance" type="button"
-            class="popover-dismiss rounded-right btn btn-light btn-overrides"
-            av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}"
-            style="background-color: var(--bs-blue) !important; color: var(--bs-white);">
+            class="popover-dismiss rounded-right btn btn-light btn-overrides av-btn"
+            av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}">
             <i class="bi bi-play-fill"></i>
             <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
         </button>
@@ -70,13 +69,13 @@
                 </li>
                 <li><a class="dropdown-item">
                         <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
+                            <input type="radio" class="btn-check" checked name="btnradio-{{codeEditorId}}"
                                 id="btnradio1-{{codeEditorId}}" autocomplete="off"
                                 av-bind-onclick="onPlaybackSpeedChangedSSlow">
                             <label class="btn btn-outline-primary radiusOverwrite-left" for="btnradio1-{{codeEditorId}}"
                                 av-bind-text="LangStrId.14">Slooow</label>
 
-                            <input type="radio" class="btn-check" checked name="btnradio-{{codeEditorId}}"
+                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
                                 id="btnradio2-{{codeEditorId}}" autocomplete="off"
                                 av-bind-onclick="onPlaybackSpeedChangedSlow">
                             <label class="btn btn-outline-primary" style="border-right: none;"

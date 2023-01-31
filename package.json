@@ -10,7 +10,6 @@
     "cytoscape": "^3.23.0",
     "cytoscape-dagre": "^2.5.0",
     "esprima": "^4.0.1",
-    "html-loader": "^4.2.0",
     "lodash": "^4.17.21",
     "mustache": "^4.2.0",
     "raw-loader": "^4.0.2",

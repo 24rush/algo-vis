@@ -16,8 +16,8 @@ a {
 
 =================
 functions.php:152
-
 +added
+
 function algo_vis() {    
     wp_enqueue_script(
         'js-algovis',
@@ -25,6 +25,48 @@ function algo_vis() {
     );
 }
 add_action('wp_enqueue_scripts', 'algo_vis');
+
+function prism_core_js() {    
+    wp_enqueue_script(
+        'js-prism_core',
+        'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js', array(), filemtime('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js'), true 
+    );
+}
+add_action('wp_enqueue_scripts', 'prism_core_js');
+
+function prism_autoloader() {    
+    wp_enqueue_script(
+        'js-prism_autoloader',
+        'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js', array(), filemtime('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js'), true 
+    );
+}
+add_action('wp_enqueue_scripts', 'prism_autoloader');
+
+function prism_linenumbers() {    
+    wp_enqueue_script(
+        'js-prism_linenumbers',
+        'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js', array(), filemtime('https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.js'), true 
+    );
+}
+add_action('wp_enqueue_scripts', 'prism_linenumbers');
+
+/*wp_enqueue_style( 'style-prism','https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.css' );*/
+wp_enqueue_style( 'style-prism','/wp-content/themes/askella/prism-coy-without-shadows.css' );
+/*wp_enqueue_style( 'style-prism','https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-coy.min.css' );*/
+wp_enqueue_style( 'style-prism-line-numbers','https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css' );
+ 
+add_filter('script_loader_tag', function($tag, $handle){
+	$tag = preg_replace(
+		'/src=[\'|"|]/i',
+		'crossorigin $0',
+		$tag
+	);
+    return $tag;
+}, 10, 2);
+
+add_filter('style_loader_tag', function($tag, $handle){
+	return str_replace( "media='all'", "media='all' crossorigin='anonymous'", $tag );
+}, 10, 2);
 
 =================
 .htaccess
@@ -43,3 +85,17 @@ add_action('wp_enqueue_scripts', 'algo_vis');
 <FilesMatch "\.(eot|ttf|otf|woff|gif)$">
    Header set Access-Control-Allow-Origin "*"
 </FilesMatch>
+
+====================
+footer.php:32
++added
+<?php if (is_front_page ()){?>
+
+  <script type="text/javascript">
+      window.addEventListener('load', function() {
+        document.querySelector('.metismenu a').click();
+    });
+      
+  </script>
+
+<?php } ?>
