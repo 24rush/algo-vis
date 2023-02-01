@@ -1,6 +1,6 @@
 .algovis {
   max-width: 100% !important;
- /* height: 500px;*/
+  /* height: 500px;*/
   resize: both;
   overflow: auto;
   display: flex;
@@ -13,7 +13,7 @@
 }
 
 .commentsPopover {
-  position:relative;
+  position: relative;
 }
 
 .split {
@@ -44,6 +44,13 @@
 .av-btn {
   background-color: var(--bs-blue) !important;
   color: var(--bs-white) !important;
+}
+
+.av-btn:hover {
+  color: var(--bs-btn-hover-color);
+  background-color: var(--bs-btn-hover-bg);
+  border-color: var(--bs-btn-hover-border-color);
+  opacity: 0.6;
 }
 
 .halfScreen {
@@ -106,8 +113,8 @@
 }
 
 body#algovis {
-  line-height: 1.6!important;
-  font-family: Source Sans Pro,-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif!important;
+  line-height: 1.6 !important;
+  font-family: Source Sans Pro, -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif !important;
   font-size: 17px;
 }
 
@@ -116,7 +123,7 @@ h3.shepherd-title {
 }
 
 header.shepherd-header {
-  background-color: var(--askella-menu-bg-color)!important;
+  background-color: var(--askella-menu-bg-color) !important;
 }
 
 highlight {
@@ -147,17 +154,20 @@ highlight {
 .modal {
   padding: 0 !important;
 }
+
 .modal .modal-dialog {
   width: 100%;
   max-width: none;
   height: 100%;
   margin: 0;
 }
+
 .modal .modal-content {
   height: 100%;
   border: 0;
   border-radius: 0;
 }
+
 .modal .modal-body {
   overflow-y: auto;
 }
@@ -168,14 +178,14 @@ highlight {
 
 .attention-box {
   background: #ffdd0040;
-  border-color: #ff9d00!important;
+  border-color: #ff9d00 !important;
   padding: 20px 30px;
   border-left: 9px solid;
 }
 
 .tip-box {
   background: #eaf8ff;
-  border-color: #1eb4ff!important;
+  border-color: #1eb4ff !important;
   padding: 20px 30px;
   border-left: 9px solid;
 }

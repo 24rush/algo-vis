@@ -295,6 +295,14 @@ export class Scene {
             onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
                 self.promptToast.show();
 
+                let inputBox = self.promptWidget.querySelector('[class=form-control]') as HTMLInputElement;                
+                inputBox.addEventListener("keyup", function(event) {
+                    if (event.key === "Enter") {
+                        self.viewModel.onPromptOk();
+                    }
+                });
+                inputBox.focus();
+
                 avViewModel.isFunctionalityDisabled = true;
                 avViewModel.userInteraction = userInteraction;
                 avViewModel.promptTitle = title ?? Localize.str(20);

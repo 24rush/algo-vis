@@ -56,10 +56,10 @@ function simple_tour_guide_scripts_and_styles() {
 		'is_logged_in'  => is_user_logged_in(),
 		'has_tour'      => has_shortcode( $content, 'stg_kef' ),
 		'strings'       => array(
-			'close'  => __( 'Close', 'simple-tour-guide' ),
-			'back'   => __( 'Back', 'simple-tour-guide' ),
-			'next'   => __( 'Next', 'simple-tour-guide' ),
-			'finish' => __( 'Finish', 'simple-tour-guide' ),
+			'close'  => __( 'Închide', 'simple-tour-guide' ),
+			'back'   => __( 'Înapoi', 'simple-tour-guide' ),
+			'next'   => __( 'Înainte', 'simple-tour-guide' ),
+			'finish' => __( 'Termină', 'simple-tour-guide' ),
 		),
 	);
 	wp_localize_script( 'simple-tour-guide', 'scriptParams', $script_params );

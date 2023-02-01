@@ -1,8 +1,8 @@
-(function () {
+function SimpleTour() {
     const tourObj = scriptParams.tour_object;
     if (!tourObj) {
         localStorage.removeItem('tour-guide');
-        return;
+        //return;
     }
     const strings = scriptParams.strings;
     const counter = scriptParams.counter;
@@ -216,5 +216,4 @@
             }, 100);
         }
     }
-
-})();
+}

@@ -81,6 +81,13 @@ export class UIBinder {
 
     constructor(protected viewModel: ObservableViewModel) { }
 
+    private getElementsWithAttribute(parent: Element, attribute: string): Element[] {
+        let elements = Array.from(parent.querySelectorAll("[" + attribute + "]"));
+        elements.push(parent);
+
+        return elements;
+    }
+
     public bindTo(widget: Element): UIBinder {
         // Search for all known binding attributes
         let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-value", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style"];
@@ -88,7 +95,7 @@ export class UIBinder {
         let styleTargetProp: string = undefined;
 
         for (let bindingAttr of bindingAttrs) {
-            let elementsToHook = Array.from(widget.querySelectorAll("[" + bindingAttr + "]")).concat([widget]);
+            let elementsToHook = this.getElementsWithAttribute(widget, bindingAttr);
             for (let element of elementsToHook) {
                 let htmlElement = element as HTMLElement;
                 let bindingText = htmlElement.getAttribute(bindingAttr);
@@ -185,7 +192,7 @@ export class UIBinder {
         }
 
         // Search for av-bind-checked
-        for (let htmlElement of Array.from(widget.querySelectorAll("[av-bind-checked]")).concat([widget])) {
+        for (let htmlElement of this.getElementsWithAttribute(widget, "av-bind-checked")) {
             let propertyBound = htmlElement.getAttribute('av-bind-checked');
 
             if (!propertyBound) continue;
@@ -204,7 +211,7 @@ export class UIBinder {
         }
 
         // Search for av-bind-onclick
-        for (let htmlElement of Array.from(widget.querySelectorAll("[av-bind-onclick]")).concat([widget])) {
+        for (let htmlElement of this.getElementsWithAttribute(widget, "av-bind-onclick")) {
             let propertyBound = htmlElement.getAttribute('av-bind-onclick');
 
             if (!propertyBound) continue;
@@ -289,7 +296,7 @@ export class UIBinder {
 
                                     switch (targetStyle) {
                                         case "display":
-                                            bindingContext.htmlElement.style.setProperty("display", propValueAfterEval, "important")                                            
+                                            bindingContext.htmlElement.style.setProperty("display", propValueAfterEval, "important")
                                             break;
                                         case "border":
                                             bindingContext.htmlElement.style.removeProperty('border');
