@@ -9,7 +9,7 @@ type OnLayoutOperationsStatus = (hasPendingOperations: boolean) => void;
 
 export class Layout {
     protected readonly scopeTemplate = '\
-    <ul class="list-group list-group-mine" style="margin-left: 0px;" av-scope="{{scope}}"> \
+    <ul class="list-group list-group-mine" style="margin-left: 1em;" av-scope="{{scope}}"> \
       <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px; ">{{scopeName}}</li> \
       <li class="list-group-item" style="padding-right: 0px; display: table;"></li> \
     </ul>'
@@ -43,36 +43,70 @@ export class Layout {
         return uiScopeName;
     }
 
-    public add(scopeName: string, observable: ObservableType) : boolean {
+    private isLocalScope(scopeName: string): boolean {
+        return scopeName.indexOf('local') != -1 && scopeName.substring(0, scopeName.lastIndexOf('.')) != "";
+    }
+
+    private getTemplateForScope(scopeName: string): string {
+        return this.isLocalScope(scopeName) ? this.localScopeTemplate : this.scopeTemplate;
+    }
+
+    private checkScopesExist(scopeName: string, htmlElementParent: any) {
+        let scopeChain = scopeName.split('.');
+
+        if (scopeChain.length == 1 && scopeName == "global" && !this.scopes.has(scopeName)) {
+            let scopeHtmlElement = this.createHtmlElementForScope(scopeName);
+            htmlElementParent.append(scopeHtmlElement);
+            this.scopes.set(scopeName, scopeHtmlElement);
+
+            return;
+        }
+
+        let parentHtmlElement = htmlElementParent;
+        let currentScopeName = scopeChain[0];
+        let scopeHtmlElement = parentHtmlElement;
+
+        for (let scope of scopeChain) {
+            if (scope != "global")
+                currentScopeName += "." + scope;
+
+            if (!this.scopes.has(currentScopeName)) {
+                scopeHtmlElement = this.createHtmlElementForScope(currentScopeName);
+                this.isLocalScope(currentScopeName) ? parentHtmlElement.children[0].insertAdjacentElement("afterend", scopeHtmlElement) : parentHtmlElement.append(scopeHtmlElement);
+                this.scopes.set(currentScopeName, scopeHtmlElement);
+            }
+
+            parentHtmlElement = this.scopes.get(currentScopeName);
+        }
+    }
+
+    private createHtmlElementForScope(scopeName: string): HTMLElement {
+        let rendered = MustacheIt.render(this.getTemplateForScope(scopeName), { scopeName: this.codeScopeToUiScope(scopeName), scope: scopeName });
+        let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);
+
+        return scopeHtmlElement;
+    }
+
+    public add(scopeName: string, observable: ObservableType): boolean {
+        this.checkScopesExist(scopeName, this.scene);
+
         if (!this.scopes.has(scopeName)) {
-            let isLocalScope = false;
+            let scopeHtmlElement = this.createHtmlElementForScope(scopeName);
+            let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
+            if (parentScopeName == "") parentScopeName = "global";
 
-            let uiScopeName = this.codeScopeToUiScope(scopeName);
-
-            if (scopeName.indexOf('local') != -1) {
-                let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
-
-                if (parentScopeName != "") {
-                    isLocalScope = true;
-                }
-            }
-
-            let rendered = MustacheIt.render(isLocalScope ? this.localScopeTemplate : this.scopeTemplate, { scopeName: uiScopeName, scope: scopeName });
-            let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);
-
-            let parentScopeHtmlElement = this.scene;
-
-            if (isLocalScope) {
-                let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
+            let parentScopeHtmlElement;
+            if (parentScopeName == "global")
+                parentScopeHtmlElement = this.scene;
+            else
                 parentScopeHtmlElement = this.scene.querySelector("[av-scope='" + parentScopeName + "']");
-            }
 
-            isLocalScope ? parentScopeHtmlElement.children[0].insertAdjacentElement("afterend", scopeHtmlElement) : parentScopeHtmlElement.prepend(scopeHtmlElement);
+            this.isLocalScope(scopeName) ? parentScopeHtmlElement.children[0].insertAdjacentElement("afterend", scopeHtmlElement) : parentScopeHtmlElement.prepend(scopeHtmlElement);
             this.scopes.set(scopeName, scopeHtmlElement);
         }
 
         if (observable) {
-            let key = scopeName + "." + observable.name;            
+            let key = scopeName + "." + observable.name;
 
             if (!(key in this.observableToVisualizer)) {
                 this.observableToVisualizer[key] = new VariableVisualizer(observable);
@@ -81,7 +115,7 @@ export class Layout {
             let visualizer = this.observableToVisualizer[key];
             let scopeHtmlElement: HTMLElement = this.scopes.get(scopeName);
             let htmlElement = visualizer.drawVarName();
-            if (htmlElement) {                
+            if (htmlElement) {
                 scopeHtmlElement.children[1].prepend(htmlElement);
             }
 
@@ -91,40 +125,54 @@ export class Layout {
         return true;
     }
 
-    public remove(scopeName: string, observable: ObservableType, onLayoutOperationsStatus: OnLayoutOperationsStatus = undefined) {
-        let key = scopeName + "." + observable.name;
+    private removeScope(parentScopeHtmlElement: HTMLElement, htmlElement: HTMLElement, onLayoutOperationsStatus: OnLayoutOperationsStatus = undefined) {
+        let fadingHtmlElem = htmlElement ?? parentScopeHtmlElement;
 
-        if (!(key in this.observableToVisualizer))
+        if (onLayoutOperationsStatus)
+            onLayoutOperationsStatus(true);
+
+        fadingHtmlElem.ontransitionend = () => {
+            if (htmlElement)
+                parentScopeHtmlElement.children[1].removeChild(htmlElement);
+
+            if (!htmlElement /*&& parentScopeHtmlElement.children[1].children.length <= 1*/) {
+                parentScopeHtmlElement.remove();
+            }
+
+            if (onLayoutOperationsStatus)
+                onLayoutOperationsStatus(false);
+        };
+
+        fadingHtmlElem.classList.add('fade-out');
+    }
+
+    public remove(scopeName: string, observable?: ObservableType, onLayoutOperationsStatus: OnLayoutOperationsStatus = undefined) {
+        let parentScopeHtmlElement = this.scene.querySelector("[av-scope='" + scopeName + "']") as HTMLElement;
+        let key = scopeName + (observable ? "." + observable.name : "");
+
+        if (!observable) {
+            this.removeScope(parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
+            delete this.observableToVisualizer[key];
+            this.scopes.delete(scopeName);
+
             return;
+        }
 
         let visualizer = this.observableToVisualizer[key];
         let htmlElement = visualizer.getHTMLElement();
-        let parentScopeHtmlElement = this.scene.querySelector("[av-scope='" + scopeName + "']") as HTMLElement;
 
-        for (let key of Object.keys(this.observableToVisualizer)) {
-            let visualizer = this.observableToVisualizer[key];
+        for (let obsKey of Object.keys(this.observableToVisualizer)) {
+            let visualizer = this.observableToVisualizer[obsKey];
             if (visualizer.getHTMLElement() == htmlElement) {
+                this.removeScope(parentScopeHtmlElement, htmlElement, onLayoutOperationsStatus);
                 let wholeScopeRemoval = parentScopeHtmlElement.children[1].children.length == 1;
-                let fadingHtmlElem = wholeScopeRemoval ? parentScopeHtmlElement : htmlElement;
 
-                if (onLayoutOperationsStatus)
-                    onLayoutOperationsStatus(true);
+                visualizer.detach();
 
-                fadingHtmlElem.ontransitionend = () => {
-                    parentScopeHtmlElement.children[1].removeChild(htmlElement);
-                    visualizer.detach();
-
-                    if (parentScopeHtmlElement.children[1].children.length == 0) {
-                        parentScopeHtmlElement.remove();
-                        delete this.observableToVisualizer[key];
-                        this.scopes.delete(scopeName);
-                    }
-
-                    if (onLayoutOperationsStatus)
-                        onLayoutOperationsStatus(false);
-                };
-
-                fadingHtmlElem.classList.add('fade-out');
+                if (wholeScopeRemoval) {
+                    this.removeScope(parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
+                    this.scopes.delete(scopeName);
+                }
 
                 break;
             }

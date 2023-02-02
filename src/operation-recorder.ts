@@ -3,6 +3,7 @@ import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types"
 import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType } from './av-types-interfaces'
 import { CodeExecutorEvents, CodeExecutorProxy } from "./code-executor-proxy";
 import { UserInteractionType } from "./code-executor";
+import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
 
 var esprima = require('esprima')
 
@@ -53,7 +54,7 @@ class VariableDeclaration {
     public endOfDefinitionIndexes: number[] = [];
     public source: string = "";
 
-    constructor(public scopeName: string, public name: string, public vartype: VarType, public endOfDefinitionIndex: number) {
+    constructor(public declarationScopeName: string, public name: string, public vartype: VarType, public endOfDefinitionIndex: number) {
         this.endOfDefinitionIndexes = [endOfDefinitionIndex];
     }
 }
@@ -185,13 +186,13 @@ enum OperationRecorderStatus {
 
 export interface VariableScopingNotification {
     onEnterScopeVariable(scopeName: string, observable: ObservableJSVariable): void;
-    onExitScopeVariable(scopeName: string, observable: ObservableJSVariable): void;
+    onExitScopeVariable(scopeName: string, observable?: ObservableJSVariable): void;
 }
 
 export interface MessageNotification {
     onTraceMessage(message: string): void;
 
-    onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string) : void;
+    onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void;
 }
 
 export interface CompilationStatusNotification {
@@ -276,7 +277,7 @@ class NotificationEmitter implements VariableScopingNotification, MessageNotific
             notifier.onEnterScopeVariable(scopeName, observable);
         }
     }
-    onExitScopeVariable(scopeName: string, observable: ObservableJSVariable): void {
+    onExitScopeVariable(scopeName: string, observable?: ObservableJSVariable): void {
         for (const notifier of this.variableScopingNotifications()) {
             notifier.onExitScopeVariable(scopeName, observable);
         };
@@ -395,6 +396,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
 
+    // Runtime data
+    protected rsMonitor = new RuntimeScopeMonitor();
     protected observedVariables: ObservableJSVariable[] = [];
     private runtimeObservables: Map<string, any> = new Map();
 
@@ -402,10 +405,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     protected codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy(this);
 
     protected operations: Operation[] = [];
-    protected nextOperationIndex: number = 0;    
+    protected nextOperationIndex: number = 0;
     protected lastExecutedCodeLineNumber: number = -1;
-
-    protected currentScope: string[] = [];    
 
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
@@ -425,7 +426,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     private resetExecutionState() {
         this.nextOperationIndex = 0;
         this.lastExecutedCodeLineNumber = -1;
-        this.currentScope = [];
 
         this.operations = [];
         this.runtimeObservables = new Map();
@@ -434,6 +434,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             primitiveObservers.empty();
             primitiveObservers.unregisterObserver(this);
         }
+
+        this.rsMonitor.reset();
     }
 
     public isWaiting(): boolean { return this.status == OperationRecorderStatus.Waiting; }
@@ -470,7 +472,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     public forceMarkLine(lineNumber: number) {
-        this.lastExecutedCodeLineNumber = lineNumber;        
+        this.lastExecutedCodeLineNumber = lineNumber;
         this.addOperation(OperationType.FORCE_MARK);
     }
 
@@ -485,7 +487,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.onUserInteractionRequest(userInteraction, title, defValue);
     }
 
-    public onUserInteractionResponse(interactionType : UserInteractionType, value?: string | boolean) : void {
+    public onUserInteractionResponse(interactionType: UserInteractionType, value?: string | boolean): void {
         this.codeExecProxy.userInteractionResponse(interactionType, value);
     }
 
@@ -494,23 +496,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.onExecutionFinished();
     }
 
-    private setRuntimeExecutionScope(type: OperationType, scopeName: string) {
-        if (type == OperationType.SCOPE_START) {
-            this.currentScope.push(scopeName);
-        }
-
-        if (type == OperationType.SCOPE_END) {
-            if (this.currentScope[this.currentScope.length - 1] == scopeName)
-                this.currentScope.pop();
-            else {
-                console.log(this.currentScope + " vs " + scopeName);
-                throw ('LAST SCOPE IS NOT AS EXPECTED ');
-            }
-        }
-    }
-
     public startScope(scopeName: string) {
-        scopeName = this.scopeNameToFunctionScope(scopeName);        
+        scopeName = this.scopeNameToFunctionScope(scopeName);
         this.addOperation(OperationType.SCOPE_START, new VarScopeLifetimeOperationPayload(scopeName));
     }
 
@@ -521,13 +508,17 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     public pushParams(params: [string, string][]) {
         for (let varToParamPair of params) {
-            this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]] = this.getCurrentRuntimeScope() + '.' + varToParamPair[1];
+            let attachedVar0 = this.rsMonitor.attachVarToScope(varToParamPair[0], this.rsMonitor.getCurrentScope());
+            let attachedVar1 = this.rsMonitor.attachVarToScope(varToParamPair[1], this.rsMonitor.getCurrentScope());
+
+            this.refs[attachedVar0] = attachedVar1;
         }
     }
 
     public popParams(params: [string, string][]) {
         for (let varToParamPair of params) {
-            delete this.refs[this.getCurrentRuntimeScope() + '.' + varToParamPair[0]];
+            let attachedVar0 = this.rsMonitor.attachVarToScope(varToParamPair[0], this.rsMonitor.getCurrentScope());
+            delete this.refs[attachedVar0];
         }
     }
 
@@ -617,7 +608,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
         switch (operation.type) {
             case OperationType.CREATE_REF:
-            case OperationType.CREATE_VAR:
             case OperationType.SCOPE_START:
             case OperationType.SCOPE_END:
                 {
@@ -625,7 +615,20 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                     let scopeName = operationAttributes.scopeName;
                     let varName = operationAttributes.varName;
 
-                    this.executeVarScopeLifetimeOperation(operation.type, varName, scopeName);
+                    let currentRuntimeScope = this.rsMonitor.getCurrentScope();
+
+                    if (operation.type == OperationType.SCOPE_START && scopeName != "global")
+                        currentRuntimeScope = this.rsMonitor.extendScopeNameWith(currentRuntimeScope, scopeName);
+
+                    if (currentRuntimeScope == "") currentRuntimeScope = "global";
+
+                    this.executeRuntimeObservableVarLifetime(operation.type, this.findRuntimeObservableFromName(varName));
+
+                    if (operation.type == OperationType.SCOPE_START)
+                        this.rsMonitor.scopeStart(scopeName);
+                    else if (operation.type == OperationType.SCOPE_END)
+                        this.rsMonitor.scopeEnd(scopeName);
+
                     break;
                 }
             default:
@@ -633,7 +636,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                     if (operation.attributes) operation.attributes.execute(operation.type);
                 }
         }
-        
+
         this.lastExecutedCodeLineNumber = operation.codeLineNumber;
 
         this.nextOperationIndex += 1;
@@ -644,30 +647,53 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             this.nextOperationIndex = this.operations.length;
     }
 
-    private executeVarScopeLifetimeOperation(operationType: OperationType, varName: string, scopeName: string) {
-        let scopeChain = scopeName.split('.');
-        let lastScope = scopeChain.indexOf('!') != -1 ? scopeChain[scopeChain.length - 1] : scopeName;
-        let currentRuntimeScope = this.getCurrentRuntimeScope();
+    private findRuntimeObservableFromName(varName: string): any[] {
+        let currentRuntimeScope = this.rsMonitor.getCurrentScope();
+        let isVarVariable = false;
 
-        this.setRuntimeExecutionScope(operationType, lastScope);
+        // Find the variable declaration matching varName:
+        //  - search local scope for let variables up until we reach a function border
+        //  - search global scope for var variables
+        let varDecls: [string, string][] = this.getVarDeclsTillFuncBorder(
+            currentRuntimeScope, VarType.let, varName).map(v => [v.name, v.declarationScopeName]);
 
-        let varTypeFilter: VarType = undefined; // ending scope for all types of variables
-        if (operationType != OperationType.SCOPE_END) {
-            varTypeFilter = VarType.var;
-
-            if (operationType == OperationType.CREATE_VAR || operationType == OperationType.CREATE_REF)
-                varTypeFilter = VarType.let
+        if (!varDecls.length) {
+            varDecls = this.searchVarInAllScopes(varName).map(v => [v.name, v.declarationScopeName]);
+            isVarVariable = varDecls.length > 0;
+        } else {
+            if (varDecls[0][1] == 'global')
+                isVarVariable = true;
         }
 
-        let varDecls = this.getVariableDeclarationInScope(scopeName, varTypeFilter, varName).map(v => v.name);
-        let runtimeObservables = this.getRuntimeObservables(currentRuntimeScope + (varName ? '.' + varName : ""));
+        let runtimeObservables: any[] = [];
+        let varNameInCurrentScope = this.rsMonitor.attachVarToScope(varName, currentRuntimeScope);
+
+        for (let [observableScope, observable] of this.runtimeObservables) {
+            if (isVarVariable) {
+                if (observable.name == varName) {
+                    runtimeObservables.push(observable);
+                }
+            } else {
+                if (observable.name == varName && observableScope.endsWith(this.rsMonitor.attachVarToScope(varDecls[0][0], varDecls[0][1]))) {
+                    runtimeObservables.push(observable);
+                }
+            }
+
+        }
+        return runtimeObservables;
+    }
+
+    private executeRuntimeObservableVarLifetime(operationType: OperationType, runtimeObservables: any[]) {
+        let currentRuntimeScope = this.rsMonitor.getCurrentScope();
+
+        if ((!runtimeObservables || !runtimeObservables.length)) {
+            if (operationType == OperationType.SCOPE_END)
+                this.onExitScopeVariable(currentRuntimeScope);
+
+            return;
+        }
 
         for (let runtimeObservable of runtimeObservables) {
-            // Check to see if there is any variable declared in the scope
-            // so we don't create an empty scope
-            if (varDecls.indexOf(runtimeObservable.name) == -1)
-                continue;
-
             if (operationType == OperationType.SCOPE_START) {
                 runtimeObservable.empty();
             }
@@ -675,13 +701,14 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             switch (operationType) {
                 case OperationType.SCOPE_END:
                     // var variables enter in scope already and it also creates the templates for scopes
+                    this.runtimeObservables.delete(this.rsMonitor.attachVarToScope(runtimeObservable.name, currentRuntimeScope));
                     this.onExitScopeVariable(currentRuntimeScope, runtimeObservable);
                     break;
                 default:
-                    this.onEnterScopeVariable(scopeName, runtimeObservable)
-                    if (varTypeFilter == VarType.var) { // set var variables to undefined                        
-                        runtimeObservable.setValue(undefined);
-                    }
+                    this.onEnterScopeVariable(currentRuntimeScope, runtimeObservable)
+                    //if (varTypeFilter == VarType.var) { // set var variables to undefined                        
+                    //runtimeObservable.setValue(undefined);
+                    //}
                     break;
             }
         }
@@ -695,53 +722,42 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         }
     }
 
-    private getRuntimeObservables(runtimeScope: string): any[] {
-        let observables: any[] = [];
+    private createRuntimeObservable(scopeName: string, varName: string, varValue: any): [boolean, any] {
+        if (this.runtimeObservables.has(this.rsMonitor.attachVarToScope(varName, scopeName)))
+            return [false, this.runtimeObservables.get(this.rsMonitor.attachVarToScope(varName, scopeName))];
 
-        for (let [observableScope, observable] of this.runtimeObservables) {
-            if (observableScope.startsWith(runtimeScope)) {
-                observables.push(observable);
-            }
-        }
+        let existingRuntimeObservable = this.findRuntimeObservableFromName(varName);
 
-        return observables;
-    }
-
-    private createRuntimeObservable(scopeName: string, varname: string, object: any): [boolean, any] {
-        let runtimeScope = scopeName + "." + varname;
-
-        if (this.runtimeObservables.has(runtimeScope))
-            return [false, this.runtimeObservables.get(runtimeScope)];
+        if (existingRuntimeObservable.length)
+            return [false, existingRuntimeObservable[0]];
 
         let runtimeObservable: any;
-        if (object && typeof object == 'object' && '__isGraphType__' in object) {
-            switch (object.type) {
+        if (varValue && typeof varValue == 'object' && '__isGraphType__' in varValue) {
+            switch (varValue.type) {
                 case GraphType.DIRECTED:
                 case GraphType.UNDIRECTED:
-                    runtimeObservable = new Graph(object.type);
+                    runtimeObservable = new Graph(varValue.type);
                     break;
                 case GraphType.BT:
-                    runtimeObservable = new BinaryTree(object.type);
+                    runtimeObservable = new BinaryTree(varValue.type);
                     break;
                 case GraphType.BST:
                     runtimeObservable = new BinarySearchTree();
                     break;
             }
 
-            object.name = varname;
-            runtimeObservable.copyFrom(object);
+            varValue.name = varName;
+            runtimeObservable.copyFrom(varValue);
         }
         else
-            runtimeObservable = new ObservableJSVariable(varname, object);
+            runtimeObservable = new ObservableJSVariable(varName, varValue);
 
-        this.setInstrumentationObservable(runtimeScope, runtimeObservable);
+        let varInCurrentScope = this.rsMonitor.attachVarToScope(varName, scopeName);
+
+        this.runtimeObservables.set(varInCurrentScope, runtimeObservable);
+        this.registerObservedVariable(runtimeObservable);
 
         return [true, runtimeObservable];
-    }
-
-    private setInstrumentationObservable(runtimeScope: string, observable: any) {
-        this.runtimeObservables.set(runtimeScope, observable);
-        this.registerObservedVariable(observable);
     }
 
     private isReferenceObject(object: any): boolean {
@@ -757,48 +773,48 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         return scopeVarName;
     }
 
-    private getCurrentRuntimeScope() { return this.currentScope.join('.'); }
-
-    public setVar(varname: string, object: any, varsource: string) {
-        if (object instanceof NodeBase || object instanceof BinaryTreeNode)
+    public setVar(varName: string, varValue: any, varSource: string) {
+        if (varValue instanceof NodeBase || varValue instanceof BinaryTreeNode)
             return;
 
-        let scopeName = this.getCurrentRuntimeScope();
+        let runtimeScopeName = this.rsMonitor.getCurrentScope();
 
-        if (this.isReferenceObject(object)) {
-            let varRuntimeScope = this.getCurrentRuntimeScope() + "." + varname;
+        if (this.isReferenceObject(varValue)) {
+            let varRuntimeScope = this.rsMonitor.attachVarToScope(varName, runtimeScopeName);
 
-            if (varsource) {
-                let lastScope = this.currentScope[this.currentScope.length - 1];
-                scopeName = this.getCurrentRuntimeScope().replace('.' + lastScope, '');
-                this.refs[varRuntimeScope] = scopeName + "." + varsource;
+            if (varSource) {
+                runtimeScopeName = this.rsMonitor.getScopeExclLast();
+                this.refs[varRuntimeScope] = this.rsMonitor.extendScopeNameWith(runtimeScopeName, varSource);
             }
 
             let dstScopedVar = this.getReferencedObject(varRuntimeScope);
 
             if (varRuntimeScope != dstScopedVar) {
-                let [isNew, runtimeObservable] = this.createRuntimeObservable(this.getCurrentRuntimeScope(), varname, dstScopedVar);
+                let [isNew, runtimeObservable] = this.createRuntimeObservable(this.rsMonitor.getCurrentScope(), varName, varValue);
 
                 if (isNew) {
-                    this.addOperation(OperationType.CREATE_REF, new VarScopeLifetimeOperationPayload(this.getCurrentRuntimeScope(), varname));
+                    this.addOperation(OperationType.CREATE_REF, new VarScopeLifetimeOperationPayload(this.rsMonitor.getCurrentScope(), varName));
                 }
 
                 runtimeObservable.setReference(dstScopedVar);
 
                 // Overwrite with referenced variable
                 let indexDot = dstScopedVar.lastIndexOf('.');
-                varname = dstScopedVar.substring(indexDot + 1);
-                scopeName = dstScopedVar.substring(0, indexDot);
+                varName = dstScopedVar.substring(indexDot + 1);
+                runtimeScopeName = dstScopedVar.substring(0, indexDot);
             }
         }
 
-        let [isNew, runtimeObservable] = this.createRuntimeObservable(scopeName, varname, object);
+        let [isNew, runtimeObservable] = this.createRuntimeObservable(runtimeScopeName, varName, varValue);
 
         if (isNew) {
-            this.addOperation(OperationType.CREATE_VAR, new VarScopeLifetimeOperationPayload(this.getCurrentRuntimeScope(), varname));
+            this.executeRuntimeObservableVarLifetime(OperationType.CREATE_VAR, [runtimeObservable]);
+
+            this.addOperation(OperationType.NONE);
         }
 
-        runtimeObservable.setValue(object);
+        runtimeObservable.setValue(varValue);
+
     }
 
     private registerVarInScope(scopeName: string, varname: string, vardecl: VariableDeclaration) {
@@ -819,36 +835,65 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         return scopeName;
     }
 
-    private getVariableDeclarationInScope(scopeName: string, varType?: VarType, varName?: string): VariableDeclaration[] {
+    private searchVarInAllScopes(varName: string): VariableDeclaration[] {
         let foundVars: VariableDeclaration[] = [];
 
-        // Search for a scope chain that ends at a function as var declarations are per static code scope
-        let foundScopes = [];
-        let scopeChain = scopeName.split('.').reverse();
-        for (let scope of scopeChain) {
-            foundScopes.push(scope);
+        for (let scopeName in this.varDeclarations) {
+            let varsInScope = this.varDeclarations[scopeName];
 
-            if (scope.indexOf('!') != -1) {
-                break;
+            if (varsInScope == undefined || Object.keys(varsInScope).length == 0)
+                continue;
+
+            for (let variableName of Object.keys(varsInScope)) {
+                let variable = this.varDeclarations[scopeName][variableName];
+
+                if (variable.vartype == VarType.var && variable.name == varName)
+                    foundVars.push(variable);
             }
         }
 
-        scopeName = foundScopes.reverse().join('.');
+        return foundVars;
+    }
 
-        let varsInScope = this.varDeclarations[scopeName];
-        if (varsInScope == undefined || Object.keys(varsInScope).length == 0)
-            return foundVars;
+    private getVarDeclsTillFuncBorder(scopeName: string, varType?: VarType, varName?: string): VariableDeclaration[] {
+        // Search for a scope chain that ends at a function border
+        let foundScopes = [];
+        let scopeChain = scopeName.split('.').reverse();
+        for (let scope of scopeChain) {
+            if (scope.indexOf('!') != -1) {
+                foundScopes.push(scope);
+                break;
+            }
 
-        for (let variableName of Object.keys(varsInScope)) {
-            let variable = this.varDeclarations[scopeName][variableName];
+            foundScopes.push(scope);
+        }
 
-            if (varType != undefined && variable.vartype != varType)
-                continue;
+        let foundVars: VariableDeclaration[] = [];
+        foundScopes.reverse();
 
-            if (varName != undefined && variable.name != varName)
-                continue;
+        while (foundScopes.length) {
+            // Max scope chain from a function border to our variable
+            // and then up the chain till it reaches the function
+            scopeName = foundScopes.join('.');
 
-            foundVars.push(variable);
+            let varsInScope = this.varDeclarations[scopeName];
+            if (varsInScope == undefined || Object.keys(varsInScope).length == 0)
+                return foundVars;
+
+            for (let variableName of Object.keys(varsInScope)) {
+                let variable = this.varDeclarations[scopeName][variableName];
+
+                if (varType != undefined && variable.vartype != varType)
+                    continue;
+
+                if (varName != undefined && variable.name != varName)
+                    continue;
+
+                foundVars.push(variable);
+                break;
+            }
+
+            foundScopes.pop();
         }
 
         return foundVars;
@@ -857,10 +902,17 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     private searchScopeAndParent(startScope: string, varName: string): [string, VariableDeclaration[]] {
         let foundInScope = startScope;
 
-        let vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
+        let vardeclaration = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
         if (vardeclaration.length == 0) {
             foundInScope = startScope.split(".local").join("");
-            vardeclaration = this.getVariableDeclarationInScope(foundInScope, undefined, varName);
+            vardeclaration = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
+
+            if (vardeclaration.length == 0) {
+                foundInScope = 'global';
+                vardeclaration = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
+            }
+        } else {
+            foundInScope = vardeclaration[0].declarationScopeName;
         }
 
         return [foundInScope, vardeclaration];
@@ -1064,7 +1116,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                             let argument = item.arguments[i];
                             let paramName = argument.name;
 
-                            let vardeclaration = this.getVariableDeclarationInScope(scopeName, undefined, paramName);
+                            let vardeclaration = this.getVarDeclsTillFuncBorder(scopeName, undefined, paramName);
 
                             if (vardeclaration.length > 0 && calledFunc in this.funcDefs) {
                                 varToParamPairs.push([this.scopeNameToFunctionScope(calledFunc) + "." + this.funcDefs[calledFunc][i], paramName]);
