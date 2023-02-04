@@ -14,20 +14,32 @@ def determineLang(pathFileName):
 
     return 'ro'
 
-def extractHeaderLines(code_lines):
+def extractSnippets(code_lines):
+    snippets = []
+
     desc_value = ""
     level_value = ""
     code = ""
 
     for line in code_lines:
-        if DESC_HEADER in line and desc_value == '':
+        if DESC_HEADER in line:            
+            if desc_value != '':
+                snippets.append({'code': code[:-1], 'desc' : desc_value, 'level': level_value})
+                desc_value = ''
+                level_value = ''
+                code = ''
             desc_value = line.replace(DESC_HEADER, '').strip()
         elif LEVEL_HEADER in line and level_value == '':
             level_value = line.replace(LEVEL_HEADER, '').strip()
         else:
             code += line
-    
-    return (code[:-1], desc_value, level_value)
+        
+    if desc_value != '':
+        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value})
+    elif code != '':
+        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value})
+
+    return snippets
 
 def processSnippet(inputFolder, pathFileName, dir, jsonData):
     if dir != None:
@@ -46,13 +58,9 @@ def processSnippet(inputFolder, pathFileName, dir, jsonData):
     with open(os.getcwd() + os.path.sep + pathFileName, 'r') as jsFile:    
         code_lines = jsFile.readlines()
 
-        snippet = {}
-        (code, snippet['desc'], snippet['level']) = extractHeaderLines(code_lines)
-
-        snippet['code'] = code
-        snippet['src'] = pathFileName.replace(inputFolder, '')
-
-        jsonData[jsonFile][lang].append(snippet)
+        for snippet in extractSnippets(code_lines):            
+            snippet['src'] = pathFileName.replace(inputFolder, '')
+            jsonData[jsonFile][lang].append(snippet)
 
     return jsonData
 

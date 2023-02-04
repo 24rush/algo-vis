@@ -110,6 +110,7 @@ export class Scene {
 
         let hasAutoPlayOption = app.hasAttribute('av-autoplay');
         let isReadOnly = app.hasAttribute('av-ro');
+        let hasCommentsOn = app.hasAttribute('av-comments');
 
         this.codeRenderer = new CodeRenderer(codeEditor, isReadOnly);
         let layout = new Layout(variablesPanel);
@@ -119,7 +120,8 @@ export class Scene {
 
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
         avViewModel.setDefaults();
-
+        avViewModel.showComments = hasCommentsOn;
+        
         let self = this;
         
         let onSnippetSelected = (snippetId: number) => {            
@@ -328,6 +330,7 @@ export class Scene {
 
         this.operationRecorder.registerNotificationObserver({
             onLineExecuted(lineNo: number): void {
+                avViewModel.isExecutionCompleted = false;
                 highlightLine(lineNo);
             },
             onExecutionFinished(): void {

@@ -55,12 +55,20 @@ export class CodeRenderer {
                 return;
             }
 
+            let newCode = this.editor.getSession().getValue();
+            let sanitizedCode = convert(this.extractComments(newCode)[1]);
+            
+            if (sanitizedCode != newCode) {
+                this.editor.setValue(sanitizedCode);
+                return;
+            }
+
             if (timeoutReloadCode)
                 clearInterval(timeoutReloadCode);
 
             timeoutReloadCode = setTimeout(() => {
                 for (let notifier of this.eventListeners) {
-                    notifier.onSourceCodeUpdated(this.editor.getSession().getValue());
+                    notifier.onSourceCodeUpdated(sanitizedCode);
                 };
             }, recompileCodeInterval);
         });
@@ -115,7 +123,7 @@ export class CodeRenderer {
     private extractComments(sourceCode: string): [any, string] {
         let lineComments: string[] = [];
         let lineNo = 1;
-        let regexp = new RegExp("/\\*\\*\\*([\\s\\S]*?)\\*\\*\\*/");
+        let regexp = new RegExp("/\\*\\*\\*([\\s\\S]*?)\\*\\*\\*/"); /*** Comment ***/
         let lineByLine = sourceCode.split('\n');
 
         let newCode = "";
@@ -132,6 +140,6 @@ export class CodeRenderer {
             lineNo++;
         }
 
-        return [lineComments, newCode];
+        return [lineComments, newCode.substring(0, newCode.length - 1)];
     }
 }

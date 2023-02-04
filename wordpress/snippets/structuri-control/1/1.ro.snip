@@ -1,0 +1,23 @@
+//DESC:  Să se afișeze toate pătratele perfecte (AxA) mai mici decât un număr n citit de la tastatură
+//LEVEL: Ușor
+let numar = prompt("n = ");
+
+for (let a = 1; a <= Math.sqrt(numar); a++) {
+    console.log(a * a);
+}
+
+//DESC: Sa se converteasca un string la intreg
+//LEVEL: Ușor
+let valoareText = "-123";
+
+let esteNegativ = (valoareText[0] == '-');
+
+let valoareNumerica = 0; // Initializare variabila
+let codAsciiPtZero = '0'.charCodeAt(0); // Stocare cod ASCII pentru caracterul '0'
+for (let i = esteNegativ ? 1 : 0; i < valoareText.length; ++i) {
+    valoareNumerica = valoareNumerica * 10 + valoareText.charAt(i).charCodeAt(0) - codAsciiPtZero;
+}
+
+if (esteNegativ) {
+    valoareNumerica = -1 * valoareNumerica; // Conversie la numar negativ
+}

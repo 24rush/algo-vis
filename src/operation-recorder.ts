@@ -446,9 +446,10 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     public setSourceCode(code: string): boolean {
         this.resetCodeParsingState();
         this.resetExecutionState();
-
         this.code = code;
-        return this.parseCode();
+
+        let parseResult = this.parseCode();
+        return parseResult;
     }
 
     public registerVariableObservers(observables: ObservableJSVariable[]) {
@@ -615,18 +616,12 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                     let scopeName = operationAttributes.scopeName;
                     let varName = operationAttributes.varName;
 
-                    let currentRuntimeScope = this.rsMonitor.getCurrentScope();
-
-                    if (operation.type == OperationType.SCOPE_START && scopeName != "global")
-                        currentRuntimeScope = this.rsMonitor.extendScopeNameWith(currentRuntimeScope, scopeName);
-
-                    if (currentRuntimeScope == "") currentRuntimeScope = "global";
+                    if (operation.type == OperationType.SCOPE_START)
+                        this.rsMonitor.scopeStart(scopeName);
 
                     this.executeRuntimeObservableVarLifetime(operation.type, this.findRuntimeObservableFromName(varName));
 
-                    if (operation.type == OperationType.SCOPE_START)
-                        this.rsMonitor.scopeStart(scopeName);
-                    else if (operation.type == OperationType.SCOPE_END)
+                    if (operation.type == OperationType.SCOPE_END)
                         this.rsMonitor.scopeEnd(scopeName);
 
                     break;
@@ -666,7 +661,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         }
 
         let runtimeObservables: any[] = [];
-        let varNameInCurrentScope = this.rsMonitor.attachVarToScope(varName, currentRuntimeScope);
+
+        if (!varDecls.length) return runtimeObservables;
 
         for (let [observableScope, observable] of this.runtimeObservables) {
             if (isVarVariable) {
@@ -674,12 +670,14 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                     runtimeObservables.push(observable);
                 }
             } else {
-                if (observable.name == varName && observableScope.endsWith(this.rsMonitor.attachVarToScope(varDecls[0][0], varDecls[0][1]))) {
+                let varScope = this.rsMonitor.attachVarToScope(varDecls[0][0], varDecls[0][1]);
+                if (observable.name == varName && observableScope.endsWith(varScope)) {
                     runtimeObservables.push(observable);
                 }
             }
 
         }
+
         return runtimeObservables;
     }
 
@@ -1049,8 +1047,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                     }
                 case "ForStatement":
                     {
-                        this.fcnReturns.push(item.body.range[0] + 1);
-                        this.markLineOverrides.push(item.range[0]);
+                        //this.fcnReturns.push(item.body.range[0] + 1);
+                        //this.markLineOverrides.push(item.range[0]);
 
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
                         this.parseVariable(scopeName + ".local", item.init, item.body.range[0] + 1);
@@ -1130,7 +1128,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
                     if (item.arguments && item.arguments.length) {
                         // Don't add line markers in between function parameters
-                        this.addNoMarklineZone(item.range[0], item.range[1]);
+                        this.addNoMarklineZone(item.range[0] + 1, item.range[1]);
                     }
 
                     break;
@@ -1159,6 +1157,10 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                         if (!varName && item.left.object.object) { // handle matrix assignment
                             varName = item.left.object.object.name;
                         }
+                    }
+                    else if (item.type == "UpdateExpression") // ++ operator
+                    {
+                        varName = item.argument.name;
                     }
                     else
                         varName = item.argument.object.name;
