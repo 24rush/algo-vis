@@ -8,7 +8,7 @@ import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
 var esprima = require('esprima')
 
 enum OperationType {
-    NONE,
+    MARK_LINE,
     FORCE_MARK, // force the debugger to stop at a line even if it has only skipable operations
 
     READ,
@@ -32,10 +32,7 @@ enum OperationType {
     BINARY_TREE_REMOVE_NODE,
     BINARY_TREE_REMOVE_EDGE, // Visualizer purposes
 
-    GRAPH_ACCESS_NODE,
-
-    TRACE,
-    SYS_FUNC_CALL,
+    GRAPH_ACCESS_NODE
 }
 
 enum VarType {
@@ -71,23 +68,17 @@ class PushFuncParams {
  OPERATION PAYLOADS
  */
 
-class OperationPayload {
-    execute(_operationType: OperationType): void { };
-}
-
-class RWPrimitiveOperationPayload extends OperationPayload {
-    constructor(public observable: any, public oldValue: any, public newValue: any) { super(); }
-
-    override execute(operationType: OperationType): void {
+class RWPrimitiveOperationPayload {
+    static execute(operationType: OperationType, observable: any, oldValue: any, newValue: any) {
         switch (operationType) {
             case OperationType.READ:
-                this.observable.getValue(this.oldValue);
+                observable.getValue(oldValue);
                 break;
             case OperationType.WRITE:
-                this.observable.setValue(this.newValue);
+                observable.setValue(newValue);
                 break;
             case OperationType.WRITE_REF:
-                this.observable.setReference(this.newValue);
+                observable.setReference(newValue);
                 break;
             default:
                 throw 'Cannot process operation type: ' + operationType;
@@ -95,16 +86,14 @@ class RWPrimitiveOperationPayload extends OperationPayload {
     }
 }
 
-class RWIndexedObjectOperationPayload extends OperationPayload {
-    constructor(public observable: any, public oldValue: any, public newValue: any, public property: any) { super(); }
-
-    execute(operationType: OperationType): void {
+class RWIndexedObjectOperationPayload {
+    static execute(operationType: OperationType, observable: any, oldValue: any, newValue: any, property: any): void {
         switch (operationType) {
             case OperationType.WRITE_AT:
-                this.observable.setValueAtIndex(this.newValue, this.property);
+                observable.setValueAtIndex(newValue, property);
                 break;
             case OperationType.READ_AT:
-                this.observable.getAtIndex(this.property);
+                observable.getAtIndex(property);
                 break;
             default:
                 throw 'Cannot process operation type: ' + operationType;
@@ -112,42 +101,36 @@ class RWIndexedObjectOperationPayload extends OperationPayload {
     }
 }
 
-class GraphObjectOperationPayload extends OperationPayload {
-    constructor(public observable: ObservableGraph, public source: GraphNodePayloadType, public destinationOrParent?: GraphNodePayloadType, public side?: ParentSide) { super(); }
-
-    public execute(operationType: OperationType) {
-        this.executeOperationOnGraph(operationType, this.observable);
-    }
-
-    private executeOperationOnGraph(operationType: OperationType, observableGraph: ObservableGraph) {
+class GraphObjectOperationPayload {
+    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ParentSide) {    
         switch (operationType) {
             case OperationType.GRAPH_ADD_EDGE:
-                (observableGraph as Graph).addEdge(this.source, this.destinationOrParent);
+                (observableGraph as Graph).addEdge(source, destinationOrParent);
                 break;
             case OperationType.GRAPH_ADD_VERTEX:
-                (observableGraph as Graph).addVertex(this.source);
+                (observableGraph as Graph).addVertex(source);
                 break;
             case OperationType.GRAPH_REMOVE_EDGE:
-                (observableGraph as Graph).removeEdge(this.source, this.destinationOrParent);
+                (observableGraph as Graph).removeEdge(source, destinationOrParent);
                 break;
             case OperationType.GRAPH_REMOVE_VERTEX:
-                (observableGraph as Graph).removeVertex(this.source);
+                (observableGraph as Graph).removeVertex(source);
                 break;
             case OperationType.BINARY_TREE_ADD_NODE:
                 if (observableGraph instanceof BinarySearchTree)
-                    (observableGraph as BinarySearchTree).add(this.source);
+                    (observableGraph as BinarySearchTree).add(source);
                 else
-                    (observableGraph as BinaryTree).add(this.source, this.destinationOrParent, this.side);
+                    (observableGraph as BinaryTree).add(source, destinationOrParent, side);
                 break;
             case OperationType.BINARY_TREE_REMOVE_NODE:
-                (observableGraph as BinaryTree).remove(this.source);
+                (observableGraph as BinaryTree).remove(source);
                 break;
             case OperationType.BINARY_TREE_ADD_EDGE:
             case OperationType.BINARY_TREE_REMOVE_EDGE:
                 // Nothing to do
                 break;
             case OperationType.GRAPH_ACCESS_NODE:
-                observableGraph.accessValue(this.source);
+                observableGraph.accessValue(source);
                 break;
             default:
                 throw 'Cannot process operation type: ' + operationType;
@@ -155,27 +138,7 @@ class GraphObjectOperationPayload extends OperationPayload {
     }
 }
 
-class VarScopeLifetimeOperationPayload extends OperationPayload {
-    constructor(public scopeName: string, public varName?: string) { super(); }
-}
-
-class TraceOperationPayload extends OperationPayload {
-    constructor(public message: string) { super(); }
-}
-
-class Operation {
-    constructor(public type: OperationType, public codeLineNumber: number, public attributes: OperationPayload) {
-    }
-
-    public toString(): string {
-        if (this instanceof RWPrimitiveOperationPayload)
-            //@ts-ignore
-            return "{0} {1} {2} => {3}".format(this.type.toString(), this.observable.name, this.oldValue, this.newValue);
-
-        //@ts-ignore
-        return "{0} {1}[{2}] {3} => {4}".format(this.type.toString(), this.observable.name, this.index, this.oldValue, this.newValue);
-    }
-}
+type OperationPayloads = RWPrimitiveOperationPayload | RWIndexedObjectOperationPayload | GraphObjectOperationPayload;
 
 enum OperationRecorderStatus {
     Idle,
@@ -318,65 +281,64 @@ class NotificationEmitter implements VariableScopingNotification, MessageNotific
             notifier.onExecutionFinished();
         }
     }
-
 }
 
 export class OperationRecorder extends NotificationEmitter implements CodeExecutorEvents, JSVariableChangeCbk, GraphVariableChangeCbk {
     onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
-        this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue))));
+        RWPrimitiveOperationPayload.execute(OperationType.WRITE, observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue)));
     }
     onSetReferenceEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
-        this.addOperation(OperationType.WRITE_REF, new RWPrimitiveOperationPayload(observable, value, newValue));
+        RWPrimitiveOperationPayload.execute(OperationType.WRITE_REF, observable, value, newValue);
     }
     onSetEvent(observable: ObservableJSVariable | ObservableGraph, value: any, newValue: any): void {
-        this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
+        RWPrimitiveOperationPayload.execute(OperationType.WRITE, observable, value, newValue);
     }
     onGetEvent(observable: ObservableJSVariable, value: any): void {
-        this.addOperation(OperationType.READ, new RWPrimitiveOperationPayload(observable, value, value));
+        RWPrimitiveOperationPayload.execute(OperationType.READ, observable, value, value);
     }
     onSetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, newValue: any, index: number): void {
-        this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, index));
+        RWIndexedObjectOperationPayload.execute(OperationType.WRITE_AT, observable, value, newValue, index);
     }
     onGetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, index: number): void {
-        this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, index));
+        RWIndexedObjectOperationPayload.execute(OperationType.READ_AT, observable, value, value, index);
     }
     onSetObjectValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
-        this.addOperation(OperationType.WRITE, new RWPrimitiveOperationPayload(observable, value, newValue));
+        RWPrimitiveOperationPayload.execute(OperationType.WRITE, observable, value, newValue);
     }
     onSetObjectPropertyEvent(observable: ObservableJSVariable, value: any, newValue: any, key: string | number | symbol): void {
-        this.addOperation(OperationType.WRITE_AT, new RWIndexedObjectOperationPayload(observable, value, newValue, key));
+        RWIndexedObjectOperationPayload.execute(OperationType.WRITE_AT, observable, value, newValue, key);
     }
     onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: string | number | symbol): void {
-        this.addOperation(OperationType.READ_AT, new RWIndexedObjectOperationPayload(observable, value, value, key));
+        RWIndexedObjectOperationPayload.execute(OperationType.READ_AT, observable, value, value, key);
     }
 
     // Graph
     onAccessNode(observable: ObservableGraph, node: NodeBase): void {
-        this.addOperation(OperationType.GRAPH_ACCESS_NODE, new GraphObjectOperationPayload(observable, node.value));
+        GraphObjectOperationPayload.execute(OperationType.GRAPH_ACCESS_NODE, observable, node.value);
     }
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
         let isGraph = runtimeObservable instanceof Graph;
 
-        this.addOperation(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, new GraphObjectOperationPayload(runtimeObservable, source.value, destination.value));
+        GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, runtimeObservable, source.value, destination.value);
     }
     onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ParentSide): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
         let isGraph = runtimeObservable instanceof Graph;
 
-        this.addOperation(isGraph ? OperationType.GRAPH_ADD_VERTEX : OperationType.BINARY_TREE_ADD_NODE, new GraphObjectOperationPayload(runtimeObservable, vertex.value, parentValue ? parentValue.value : undefined, side));
+        GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_ADD_VERTEX : OperationType.BINARY_TREE_ADD_NODE, runtimeObservable, vertex.value, parentValue ? parentValue.value : undefined, side);
     }
     onRemoveNode(observable: ObservableGraph, vertex: NodeBase): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
         let isGraph = runtimeObservable instanceof Graph;
 
-        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_VERTEX : OperationType.BINARY_TREE_REMOVE_NODE, new GraphObjectOperationPayload(runtimeObservable, vertex.value));
+        GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_REMOVE_VERTEX : OperationType.BINARY_TREE_REMOVE_NODE, runtimeObservable, vertex.value);
     }
     onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
         let isGraph = runtimeObservable instanceof Graph;
 
-        this.addOperation(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, new GraphObjectOperationPayload(runtimeObservable, source.value, destination.value));
+        GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, runtimeObservable, source.value, destination.value);
     }
 
     constructor() {
@@ -386,6 +348,8 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     // CODE Parsing
+    protected code: string;
+
     private varDeclarations: Record<string, Record<string, VariableDeclaration>>; // [scopeName][varname] = VariableDeclaration
     private scopes: ScopeDeclaration[] = [];
     private refs: Record<string, string> = {}; // [funcName.paramName] = [scopeName.varName]
@@ -401,20 +365,10 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     protected observedVariables: ObservableJSVariable[] = [];
     private runtimeObservables: Map<string, any> = new Map();
 
-    protected code: string;
     protected codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy(this);
-
-    protected operations: Operation[] = [];
-    protected nextOperationIndex: number = 0;
-    protected lastExecutedCodeLineNumber: number = -1;
 
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
-
-    protected addOperation(type: OperationType, attributes?: OperationPayload) {
-        this.operations.push(new Operation(type, this.lastExecutedCodeLineNumber, attributes));
-        this.executeCurrentOperation();
-    }
 
     private resetCodeParsingState() {
         this.emptyCodeLineNumbers = [];
@@ -424,10 +378,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     private resetExecutionState() {
-        this.nextOperationIndex = 0;
-        this.lastExecutedCodeLineNumber = -1;
-
-        this.operations = [];
         this.runtimeObservables = new Map();
 
         for (let primitiveObservers of this.observedVariables) {
@@ -464,23 +414,11 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.observedVariables.push(observable);
     }
 
-    public getNextCodeLineNumber(): number {
-        if (this.nextOperationIndex < this.operations.length && this.nextOperationIndex >= 0) {
-            return this.operations[this.nextOperationIndex].codeLineNumber;
-        }
-
-        return this.lastExecutedCodeLineNumber;
-    }
-
     public forceMarkLine(lineNumber: number) {
-        this.lastExecutedCodeLineNumber = lineNumber;
-        this.addOperation(OperationType.FORCE_MARK);
+        this.onLineExecuted(lineNumber);
     }
 
     public markStartCodeLine(lineNumber: number) {
-        console.log("OPERATIONS: "); console.log(this.operations);
-        this.executeOneCodeLine();
-
         this.onLineExecuted(lineNumber);
     }
 
@@ -498,13 +436,13 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     public startScope(scopeName: string) {
-        scopeName = this.scopeNameToFunctionScope(scopeName);
-        this.addOperation(OperationType.SCOPE_START, new VarScopeLifetimeOperationPayload(scopeName));
+        this.rsMonitor.scopeStart(this.scopeNameToFunctionScope(scopeName));
+        this.executeRuntimeObservableVarLifetime(OperationType.SCOPE_START, this.findRuntimeObservableFromName(undefined));
     }
 
     public endScope(scopeName: string) {
-        scopeName = this.scopeNameToFunctionScope(scopeName);
-        this.addOperation(OperationType.SCOPE_END, new VarScopeLifetimeOperationPayload(scopeName));
+        this.executeRuntimeObservableVarLifetime(OperationType.SCOPE_END, this.findRuntimeObservableFromName(undefined));
+        this.rsMonitor.scopeEnd(this.scopeNameToFunctionScope(scopeName));
     }
 
     public pushParams(params: [string, string][]) {
@@ -574,72 +512,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     private isEmptyLine(lineNumber: number): boolean {
         return this.emptyCodeLineNumbers.indexOf(lineNumber) != -1;
-    }
-
-    private getNextOperation(): Operation {
-        if (this.nextOperationIndex >= 0 && this.nextOperationIndex < this.operations.length)
-            return this.operations[this.nextOperationIndex];
-
-        return undefined;
-    }
-
-    private executeOneCodeLine() {
-        let currentOperationToExecute = this.getNextOperation();
-
-        while (currentOperationToExecute) {
-            this.executeCurrentOperation();
-            currentOperationToExecute = this.getNextOperation();
-        }
-
-        this.operations = [];
-        this.nextOperationIndex = 0;
-    }
-
-    private executeCurrentOperation(): void {
-        let operation = this.getNextOperation();
-
-        if (!operation) {
-            return;
-        }
-
-        if (operation.type == OperationType.TRACE) {
-            let operationAttributes = operation.attributes as TraceOperationPayload;
-            this.onTraceMessage(operationAttributes.message);
-        }
-
-        switch (operation.type) {
-            case OperationType.CREATE_REF:
-            case OperationType.SCOPE_START:
-            case OperationType.SCOPE_END:
-                {
-                    let operationAttributes = operation.attributes as VarScopeLifetimeOperationPayload;
-                    let scopeName = operationAttributes.scopeName;
-                    let varName = operationAttributes.varName;
-
-                    if (operation.type == OperationType.SCOPE_START)
-                        this.rsMonitor.scopeStart(scopeName);
-
-                    this.executeRuntimeObservableVarLifetime(operation.type, this.findRuntimeObservableFromName(varName));
-
-                    if (operation.type == OperationType.SCOPE_END)
-                        this.rsMonitor.scopeEnd(scopeName);
-
-                    break;
-                }
-            default:
-                {
-                    if (operation.attributes) operation.attributes.execute(operation.type);
-                }
-        }
-
-        this.lastExecutedCodeLineNumber = operation.codeLineNumber;
-
-        this.nextOperationIndex += 1;
-        if (this.nextOperationIndex < 0)
-            this.nextOperationIndex = -1;
-
-        if (this.nextOperationIndex >= this.operations.length)
-            this.nextOperationIndex = this.operations.length;
     }
 
     private findRuntimeObservableFromName(varName: string): any[] {
@@ -791,7 +663,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
                 let [isNew, runtimeObservable] = this.createRuntimeObservable(this.rsMonitor.getCurrentScope(), varName, varValue);
 
                 if (isNew) {
-                    this.addOperation(OperationType.CREATE_REF, new VarScopeLifetimeOperationPayload(this.rsMonitor.getCurrentScope(), varName));
+                    this.executeRuntimeObservableVarLifetime(OperationType.CREATE_REF, this.findRuntimeObservableFromName(varName));
                 }
 
                 runtimeObservable.setReference(dstScopedVar);
@@ -807,25 +679,12 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
         if (isNew) {
             this.executeRuntimeObservableVarLifetime(OperationType.CREATE_VAR, [runtimeObservable]);
-
-            this.addOperation(OperationType.NONE);
         }
 
         runtimeObservable.setValue(varValue);
 
     }
-
-    private registerVarInScope(scopeName: string, varname: string, vardecl: VariableDeclaration) {
-        if (!(scopeName in this.varDeclarations))
-            this.varDeclarations[scopeName] = {};
-
-        if (varname in this.varDeclarations[scopeName]) {
-            this.varDeclarations[scopeName][varname].endOfDefinitionIndexes.push(vardecl.endOfDefinitionIndex);
-        } else {
-            this.varDeclarations[scopeName][varname] = vardecl;
-        }
-    }
-
+    
     private scopeNameToFunctionScope(scopeName: string): string {
         if (scopeName != "global" && scopeName != "local")
             return "!" + scopeName;
@@ -918,7 +777,15 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {
         let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex);
-        this.registerVarInScope(scopeName, varName, varDecl);
+
+        if (!(scopeName in this.varDeclarations))
+            this.varDeclarations[scopeName] = {};
+
+        if (varName in this.varDeclarations[scopeName]) {
+            this.varDeclarations[scopeName][varName].endOfDefinitionIndexes.push(varDecl.endOfDefinitionIndex);
+        } else {
+            this.varDeclarations[scopeName][varName] = varDecl;
+        }
 
         return varDecl;
     }

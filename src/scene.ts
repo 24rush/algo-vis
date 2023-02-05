@@ -4,7 +4,7 @@ import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
 import { Localize } from "./localization";
-import { Snippet, SnippetsForLang } from "./index";
+import { Snippet } from "./index";
 import { UserInteractionType } from "./code-executor";
 
 var bootstrap = require('bootstrap')
@@ -97,6 +97,7 @@ export class Scene {
     private viewModel: AVViewModel = new AVViewModel();
 
     private operationRecorder = new OperationRecorder();
+    private lineNoToBeExecuted = -1;
 
     constructor(app: HTMLElement, snippets: Snippet[], fullscreenCbk: RequestFullScreenCbk) {
         let rightPane = app.querySelector("[class*=rightPane]");
@@ -166,7 +167,7 @@ export class Scene {
             avViewModel.showComments = !avViewModel.showComments;
 
             if (avViewModel.showComments) {
-                highlightLine(this.operationRecorder.getNextCodeLineNumber());
+                highlightLine(this.lineNoToBeExecuted);
             } else {
                 this.commentsPopover?.dispose();
                 this.commentsPopover = undefined;
@@ -331,6 +332,7 @@ export class Scene {
         this.operationRecorder.registerNotificationObserver({
             onLineExecuted(lineNo: number): void {
                 avViewModel.isExecutionCompleted = false;
+                self.lineNoToBeExecuted = lineNo;
                 highlightLine(lineNo);
             },
             onExecutionFinished(): void {
@@ -344,6 +346,7 @@ export class Scene {
 
         var options = {
             'content': "",
+            "maxLines" : "12"
         };
 
         var observer = new MutationObserver(function (mutations) {

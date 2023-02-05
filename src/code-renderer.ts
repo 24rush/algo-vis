@@ -54,11 +54,12 @@ export class CodeRenderer {
                 this.skipEventsCount--;
                 return;
             }
-
-            let newCode = this.editor.getSession().getValue();
-            let sanitizedCode = convert(this.extractComments(newCode)[1]);
+            
+            let [, newCode, lineNo] = this.extractComments(this.editor.getSession().getValue());
+            let sanitizedCode = convert(newCode);
             
             if (sanitizedCode != newCode) {
+                this.editor.setOption('maxLines', lineNo > 20 ? 20 : lineNo)
                 this.editor.setValue(sanitizedCode);
                 return;
             }
@@ -112,15 +113,17 @@ export class CodeRenderer {
 
     public setSourceCode(sourceCode: string): void {
         let newCode = "";
-        [this.lineComments, newCode] = this.extractComments(sourceCode);
+        let lineNo = 0;
+        [this.lineComments, newCode, lineNo] = this.extractComments(sourceCode);
 
         // Updating code triggers remove + insert events
         this.skipEventsCount = 2;
+        this.editor.setOption('maxLines', lineNo > 20 ? 20 : lineNo)
         this.editor.setValue(newCode);
         this.notifySourceCodeObservers();
     }
 
-    private extractComments(sourceCode: string): [any, string] {
+    private extractComments(sourceCode: string): [any, string, number] {
         let lineComments: string[] = [];
         let lineNo = 1;
         let regexp = new RegExp("/\\*\\*\\*([\\s\\S]*?)\\*\\*\\*/"); /*** Comment ***/
@@ -140,6 +143,6 @@ export class CodeRenderer {
             lineNo++;
         }
 
-        return [lineComments, newCode.substring(0, newCode.length - 1)];
+        return [lineComments, newCode.substring(0, newCode.length - 1), lineNo];
     }
 }
