@@ -115,8 +115,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templateGraph = '<div style="display: table-cell; margin-left:3px; margin-top: 3px; resize:vertical; overflow:auto; width: {{width}}px; height:{{height}}px;"> \
     </div>';
 
-    protected readonly height: number = 35;
-    protected readonly width: number = 35;
+    protected readonly height: number = 30;
+    protected readonly width: number = 30;
 
     protected htmlElement: HTMLElement = undefined;
     protected keyValueElements: Record<string | number | symbol, HTMLElement> = {};
@@ -236,7 +236,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
 
         let directionToBounds = (w: number, h: number) => {
-            let paddingPercent = 1.3;
+            let paddingPercent = 1.2;
             w *= paddingPercent; h *= paddingPercent;
 
             if (/*w > maxWidth || */h > maxHeight)
@@ -334,7 +334,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         this.clientViewModel.reset(observable.getValue(), observable.getName());
 
         let rendered = MustacheIt.render(this.templatePrimitive, {
-            width: 35, height: 35
+            width: this.width, height: this.height
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
@@ -494,7 +494,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         this.clientViewModel.reset(observable.getValue(), observable.getName());
 
         let rendered = MustacheIt.render(observable.isEmpty() ? this.templateEmptyGraph : this.templateGraph, {
-            width: observable.isEmpty() ? 35 : this.htmlElement.clientWidth, height: observable.isEmpty() ? 35 : 35 * 10
+            width: observable.isEmpty() ? this.width : this.htmlElement.clientWidth, height: observable.isEmpty() ? this.height : 350
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);

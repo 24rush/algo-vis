@@ -4,6 +4,7 @@ import json
 
 DESC_HEADER = "//DESC:"
 LEVEL_HEADER = "//LEVEL:"
+ID_HEADER = "//ID:"
 
 LANGS = ['ro', 'en']
 
@@ -17,27 +18,35 @@ def determineLang(pathFileName):
 def extractSnippets(code_lines):
     snippets = []
 
+    is_first_desc_header = True
     desc_value = ""
     level_value = ""
     code = ""
+    id = ""
 
     for line in code_lines:
         if DESC_HEADER in line:            
-            if desc_value != '':
-                snippets.append({'code': code[:-1], 'desc' : desc_value, 'level': level_value})
+            if is_first_desc_header:            
+                is_first_desc_header = False
+            else:
+                snippets.append({'code': code[:-1], 'desc' : desc_value, 'level': level_value, 'id': id})
                 desc_value = ''
                 level_value = ''
                 code = ''
+                id = ''  
             desc_value = line.replace(DESC_HEADER, '').strip()
+
         elif LEVEL_HEADER in line and level_value == '':
             level_value = line.replace(LEVEL_HEADER, '').strip()
+        elif ID_HEADER in line and id == '':
+            id = line.replace(ID_HEADER, '').strip()
         else:
             code += line
         
     if desc_value != '':
-        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value})
+        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value, 'id': id})
     elif code != '':
-        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value})
+        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value, 'id': id})
 
     return snippets
 

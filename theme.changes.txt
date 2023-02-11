@@ -5,13 +5,20 @@ style.css:1676
   height: auto;
 }
 
-styles.css: 780 
+style.css: 780 
 /* Links
 --------------------------------------------- */
 a {
   color: var(--askella-link-color);
 +updated  text-decoration: none !important;
   transition: ease-in-out 0.05s;
+}
+
+style.css 698
+ul,
+ol {
+-  margin: 0 0 1.5em 3em;
++  margin: 0 0 1.5em 0em;
 }
 
 =================

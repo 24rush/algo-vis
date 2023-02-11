@@ -56,4 +56,8 @@ export class RuntimeScopeMonitor {
     public extendScopeNameWith(scopeName: string, extensionScope: string) : string {
         return scopeName + "." + extensionScope;
     }
+
+    public static scopeNameToFunctionScope(scopeName: string): string {
+        return (scopeName != "global" && scopeName != "local") ? "!" + scopeName : scopeName;
+    }
 }

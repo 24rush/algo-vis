@@ -37,7 +37,7 @@ var ro_langMap : Record<number, string> = {
     5: "Eroare compilare",
     6: "Revenire",
     7: "Variabile",
-    8: "Consolă de iesire",
+    8: "Consolă de ieșire",
     9: "referă pe ",
     10: "funcția ",
     11: "scop local în ",

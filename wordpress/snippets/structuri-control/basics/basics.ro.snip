@@ -1,0 +1,61 @@
+//DESC:
+//ID: 0
+let temperatura = prompt("Temperatura exterioara este ");
+
+if (temperatura < 0) {
+    alert('Temperatura de inghet')
+} else {
+    alert('Nu exista risc de inghet')
+}
+
+//DESC:
+//ID: 1
+for (let i = 1; i <= 100; i++) {
+    console.log(i);
+}
+
+//DESC: switch
+//ID: 2
+let nume = prompt('Introdu nume')
+
+switch (nume) 
+{
+    case 'Maria':
+        console.log('Ii plac perele'); 
+        break;
+    case 'Remus':
+        console.log('Ii plac portocalele'); 
+        break;
+    case 'Adina':
+        console.log('Ii plac prunele'); 
+        break;
+    case 'Alex':
+    case 'Victor':
+        console.log('Le place kiwi'); 
+        break;
+    default:
+        console.log('Nu stiu ce fructe ii plac lui ' + nume); 
+}
+
+//DESC: while
+//ID: 3
+let numar = prompt('Introdu un numar');
+
+while (i % 2 == 0) {
+    console.log('Numarul este par');       
+    numar = prompt('Introdu iar un numar');
+}
+
+//DESC: while + break
+//ID: 4
+let numar = prompt('Introdu un numar');
+while (i % 2 == 0) {
+        console.log('Numar par');       
+   
+        If (numar == 0) {
+           console.log('Terminare joc');
+           break;
+        }
+
+        numar = prompt('Introdu un numar');
+}

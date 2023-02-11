@@ -66,7 +66,7 @@ class AVViewModel {
         this.selectedSnippetIdx = 0;
         this.hasMoreSnippets = false;
         
-        this.showComments = false; // needs sync with UI checked
+        this.showComments = true; // needs sync with UI checked
         
         this.hasCompilationError = false;
         this.compilatonErrorMessage = "";
@@ -110,10 +110,11 @@ export class Scene {
         this.promptToast = new bootstrap.Toast(this.promptWidget);
 
         let hasAutoPlayOption = app.hasAttribute('av-autoplay');
-        let isReadOnly = app.hasAttribute('av-ro');
+        let isWriteable = app.hasAttribute('av-write');
         let hasCommentsOn = app.hasAttribute('av-comments');
+        let selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
 
-        this.codeRenderer = new CodeRenderer(codeEditor, isReadOnly);
+        this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable);
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
@@ -153,10 +154,13 @@ export class Scene {
             onSnippetSelected(snippetId);
         }
 
-        avViewModel.isSnippetSet = snippets.length > 1;
+        avViewModel.isSnippetSet = snippets.length > 1 && selectedSnippedId == -1;
         
         if (snippets.length > 0) {
-            onSnippetSelected(snippets[0].id);
+            if (selectedSnippedId != -1 && snippets.findIndex(value => { return value.id == selectedSnippedId }) != -1)
+                onSnippetSelected(selectedSnippedId);
+            else 
+                onSnippetSelected(snippets[0].id);
         }
 
         this.viewModel.onFullscreen = () => {
