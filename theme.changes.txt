@@ -21,6 +21,28 @@ ol {
 +  margin: 0 0 1.5em 0em;
 }
 
+style.css 1569
+.sidebar-nav .metismenu a:focus,
+.sidebar-nav .metismenu a:active {
+  background: var(--askella-menu-sec-color);
+ + font-weight: 600;
+}
+
+style.css 1550
+.sidebar-nav .metismenu a {
+    position: relative;
+    display: block;
++   padding: 8px 10px;
+    color: var(--askella-menu-font-color);
+    outline-width: 0;
+}
+
+style.css 1565
+.sidebar-nav .metismenu a:hover {
+  background: var(--askella-menu-sec-hover-color);
+  transform: translate(6px, 0px);
+  transition-duration: 100ms;
+}
 =================
 functions.php:152
 +added

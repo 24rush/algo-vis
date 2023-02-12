@@ -78,7 +78,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templatePrimitive: string =
         '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-            <span av-bind-style-display="{!isString : none}">\'</span><span id="var-value" style="vertical-align:middle;"></span><span av-bind-style-display="{!isString : none}">\'</span> \
+            <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value" style="vertical-align:middle;"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
      </span>';
 
     protected readonly templateArray = '<span style="display: table;"> \
@@ -88,7 +88,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         {{#cols}} \
             <div style="padding:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
                 <span class="var-value" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
-                <span av-bind-style-display="{!isString : none}">\'</span><span id="var-value"></span><span av-bind-style-display="{!isString : none}">\'</span> \
+                <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
                 </span> \
                 <span av-bind-style-display="{isNotQueueOrStack : table, !isNotQueueOrStack : none}" style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
             </div> \

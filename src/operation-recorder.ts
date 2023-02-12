@@ -72,7 +72,7 @@ class RWIndexedObjectOperationPayload {
 }
 
 class GraphObjectOperationPayload {
-    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ParentSide) {    
+    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ParentSide) {
         switch (operationType) {
             case OperationType.GRAPH_ADD_EDGE:
                 (observableGraph as Graph).addEdge(source, destinationOrParent);
@@ -309,7 +309,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     constructor() {
-        super();        
+        super();
     }
 
     // Runtime data
@@ -323,11 +323,11 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
 
-    private codeProcessor : CodeProcessor = new CodeProcessor();
+    private codeProcessor: CodeProcessor = new CodeProcessor();
 
     private resetExecutionState() {
         this.runtimeObservables = new Map();
-        this.refs = {}; 
+        this.refs = {};
 
         for (let primitiveObservers of this.observedVariables) {
             primitiveObservers.empty();
@@ -343,11 +343,11 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     public setSourceCode(code: string): boolean {
-        this.resetExecutionState();    
+        this.resetExecutionState();
 
         this.onCompilationError(false);
-        this.onExceptionMessage(false); 
-        
+        this.onExceptionMessage(false);
+
         let [success, errMsg] = this.codeProcessor.setCode(code);
 
         if (!success) {
@@ -392,7 +392,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     public startScope(scopeName: string) {
         this.rsMonitor.scopeStart(RuntimeScopeMonitor.scopeNameToFunctionScope(scopeName));
-        this.executeRuntimeObservableVarLifetime(OperationType.SCOPE_START, this.findRuntimeObservableFromName(undefined));
+        this.executeRuntimeObservableVarLifetime(OperationType.SCOPE_START, this.findRuntimeObservableFromName(undefined, VarType.var));
     }
 
     public endScope(scopeName: string) {
@@ -455,7 +455,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     /*
         PRIVATES
     */
-    private findRuntimeObservableFromName(varName: string): any[] {
+    private findRuntimeObservableFromName(varName: string, varType: VarType = VarType.let): any[] {
         let currentRuntimeScope = this.rsMonitor.getCurrentScope();
         let isVarVariable = false;
 
@@ -463,7 +463,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         //  - search local scope for let variables up until we reach a function border
         //  - search global scope for var variables
         let varDecls: [string, string][] = this.codeProcessor.getVarDeclsTillFuncBorder(
-            currentRuntimeScope, VarType.let, varName).map(v => [v.name, v.declarationScopeName]);
+            currentRuntimeScope, varType, varName).map(v => [v.name, v.declarationScopeName]);
 
         if (!varDecls.length) {
             varDecls = this.codeProcessor.searchVarInAllScopes(varName).map(v => [v.name, v.declarationScopeName]);
@@ -477,18 +477,24 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
         if (!varDecls.length) return runtimeObservables;
 
-        for (let [observableScope, observable] of this.runtimeObservables) {
-            if (isVarVariable) {
-                if (observable.name == varName) {
-                    runtimeObservables.push(observable);
-                }
-            } else {
-                let varScope = this.rsMonitor.attachVarToScope(varDecls[0][0], varDecls[0][1]);
-                if (observable.name == varName && observableScope.endsWith(varScope)) {
-                    runtimeObservables.push(observable);
+        for (let varDecl of varDecls) {
+            for (let [observableScope, observable] of this.runtimeObservables) {
+                if (isVarVariable) {
+                    if (observable.name == varName) {
+                        runtimeObservables.push(observable);
+                    }
+                } else {
+                    let varScope = this.rsMonitor.attachVarToScope(varDecl[0], varDecl[1]);
+                    if (observableScope.endsWith(varScope) && currentRuntimeScope.endsWith(varDecl[1])) {
+                        if (varName != undefined) {
+                            if (observable.name == varName)
+                                runtimeObservables.push(observable);
+                        } else {
+                            runtimeObservables.push(observable);
+                        }
+                    }
                 }
             }
-
         }
 
         return runtimeObservables;

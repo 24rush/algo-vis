@@ -12,6 +12,7 @@ const appTemplate = require('../assets/main.html').default;
 const fullScreenModalTemplate = require('../assets/fullscreen.html').default;
 
 let GITHUB_SNIPPETS_URL = "https://raw.githubusercontent.com/24rush/algo-vis/develop/wordpress/snippets/";
+GITHUB_SNIPPETS_URL = "../wp-content/uploads/2023/snips/";
 
 Localize.setLang(LangEnum.Ro);
 

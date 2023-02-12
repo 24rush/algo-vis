@@ -19,7 +19,7 @@ Elementele caracteristice ale unei variabile:
 - **continut sau valoare**: reprezinta informatia utila ce avem nevoie sa o retinem
 - **tip de continut**: aceasta valoare pe care o stocam poate fi un numar, un text (“Amalia”) sau orice alta structura mai complicata. Fiecare limbaj de programare are propriile reguli cand vine vorba de tipurile de date, Javascript este un limbaj permisiv care nu ne cere sa specificam exact ce tip de data urmeaza sa stocam intr-o variabila si mai mult putem modifica ulterior tipul de data al unei variabile. (in limbaje precum C++, o variabila poate contine un singur tip de data si va trebui sa il specificam din momentul cand definim aceasta variabila)
 
-In limbajul Javascript, o variabila se creaza utilizand cuvantul cheie ‘let’. Regula de folosire a acestui cuvant cheie este ca trebuie urmat de numele pe care vrem sa il dam variabile si optional si de o valoare initiala pe care vrem sa o dam variabilei (ceea ce se mai numeste si initializarea unei variabile)
+In limbajul Javascript, o variabila se creaza utilizand cuvantul cheie ‘let’. Regula de folosire a acestui cuvant cheie este ca trebuie urmat de numele pe care vrem sa il dam variabile si optional si de o valoare initiala pe care vrem sa o dam variabilei (ceea ce se mai numeste si initializarea unei variabile). Similar, putem declara o variabila folosind cuvantul cheie <code>const</code> insa in acest caz sunt fortati sa o initializam iar aceasta valoare initiala nu mai poate fi modificata ulterior (efectiv definind o constanta).
 
 <img src="../wp-content/uploads/2023/img/declarare1.png" class="img-box">
 

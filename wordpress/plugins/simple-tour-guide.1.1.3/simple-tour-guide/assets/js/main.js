@@ -1,6 +1,7 @@
 function SimpleTour() {
-    if (document.querySelector("[class=algovis]").querySelector('[av-bind-onclick="onAutoplayToggled"] > i').classList.contains('bi-pause-fill'))
-        document.querySelector('[class=algovis]').querySelector('[av-bind-onclick="onAutoplayToggled"]').click()
+    let algovisContainer = document.querySelector("[class=algovis]");
+    if (algovisContainer && algovisContainer.querySelector('[av-bind-onclick="onAutoplayToggled"] > i').classList.contains('bi-pause-fill'))
+        algovisContainer.querySelector('[av-bind-onclick="onAutoplayToggled"]').click()
         
     const tourObj = scriptParams.tour_object;
     if (!tourObj) {

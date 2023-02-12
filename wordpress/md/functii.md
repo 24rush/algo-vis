@@ -1,102 +1,103 @@
-Pana acum, toate programele prezentate in aceste materiale au fost alcatuite din secvente de instructiuni ce aveau fiecare un scop bine definit, facand fiecare parte dintr-un pas necesar rezolvarii problemelor prezentate. Pentru a putea refolosi aceste secvente si in alti pasi fara a copia in totalitate instructiunile ce le formeaza, a fost introdus conceptul de functie.  Putem privi o functie ca o insiruire de instructiuni pe care o putem folosi de oricate ori vrem fara a copia instructiunile ce o formeaza ci doar prin folosirea numelui ei.
+Pana acum, toate programele prezentate in aceste materiale au fost alcatuite din secvente de instructiuni ce aveau scopul de a rezolva problemele prezentate fie prin procesarea unor date de intrare si obtinerea unora de iesire fie prin simpla executare a unor instructiuni cum ar fi solicitarea unor date de la utilizator.
 
-Structura unei functii este dupa cum urmeaza:
+Pentru a putea refolosi aceste secvente si in alte sectiuni ale programului, fara a copia in totalitate instructiunile ce le formeaza, a fost introdus conceptul de **functie**. Putem privi o functie ca o insiruire de instructiuni pe care o putem folosi de oricate ori vrem fara a copia instructiunile ce o formeaza ci doar prin folosirea numelui ei.
 
-**function** <nume_functie> **(** lista de parametri **)**
+# Definire #
+Structura unei functii este urmatoarea:
+
+**function** nume_functie **(** lista parametri intrare **)**
 **{**
-&ensp;&ensp;&ensp;&ensp;<corp functie>
+&ensp;&ensp;&ensp;&ensp;corp functie
 **}**
 
+Observam urmatoarele elemente:
+- cuvantul cheie **function** care indica faptul ca vrem sa definim o functie noua
+- numele functiei este identificatorul prin care putem executa instructiunile ce o formeaza
+- lista de parametri ne ajuta sa specificam datele de intrare de care are nevoie functia
+- corpul functiei este format din setul de instructiuni pe care vrem sa-l contina
 
-Sa vedem cum ne ajuta o functie. Luam exemplul de mai jos in care vrem sa afisam valoarea a doua numere introdus de utilizator ridicate la puterea a doua. Prima oara vom solicita un numar pozitiv iar ulterior unul negativ.
-```
-let numar_poz = input(&#039;Numar pozitiv&#039;);
-console.log(&#039;Valoarea numarului la patrat este &#039; + numar * numar);
+Declaratia unei functii poate fi extinsa si pe langa definierea parametrilor de intrare si a instructiunilor de executat, se poate indica si o valoare rezultat a executiei functiei. Spunem in acest caz ca functia 'intoarce' o valoare iar de regula aceasta valoare este obtinuta pe baza parametrilor de intrare. Pentru a indica ce valoare rezultat dorim sa intoarca functia, vom folosi cuvantul rezervat **return** urmat de aceasta valoare.
 
-let numar_neg = input(&#039;Numar negativ&#039;);
-console.log(&#039;Valoarea numarului la patrat este &#039; + numar * numar);
-```
-Observam cum cele doua secvente sunt aproape identice. Sa refacem acum exemplul folosind functii.
-```
-function numar_la_patrat(tip_numar) {
-	let numar = input(tip_numar)
-
-	console.log(‘Valoarea numarului la patrat este ‘ + numar * numar);
-}
-
-numar_la_patrat(“numar pozitiv”);
-numar_la_patrat(“numar negativ”);
-```
-Am refacut astfel programul incat secvente duplicate de instructiuni sunt eliminate, fiind inlocuite cu functia _numar_la_patrat_ cu un singur parametru numit _tip_numar_ ce ne va indica felul de numar pe care il solicitat utilizatorului. Am definit astfel functia numar_la_patrat ca fiind o functie ce primeste un parametru. In liniile ulterioare observam cum este folosit numele functiei pentru a executa instructiunile aferente ei. Textele din paranteze reprezinta valoarea parametrului tip_numar. La prima apelare a functiei, acest parametru va avea valoare ‘numar pozitiv’ iar la cea de-a doua ‘numar negativ’.
-
-Declaratia unei functii poate fi extinsa si pe langa definierea parametrilor si a instructiunilor de executa, se poate indica si o valoare rezultat a executiei functiei.
-
-**_function_** <nume functie> **(** lista de parametri **)**
+**function** nume_functie **(** lista de parametri **)**
 **{**
-&ensp;&ensp;&ensp;&ensp;<lista instructiuni>
-
-&ensp;&ensp;&ensp;&ensp;**return** <valoare rezultat>
+&ensp;&ensp;&ensp;&ensp;lista instructiuni
+&ensp;&ensp;&ensp;&ensp;**return** valoare rezultat
 **}**
 
-Putem astfel reface exemplul de mai sus:
+# Apelul unei functii #
+Pentru a executa instructiunile aferente corpului functiei, va trebuie sa apelam functia ce le contine pentru ca doar simpla definire a functiei nu executa instructiunile. Luand exemplul de mai sus, pentru a executa corpul functiei va trebuie sa scriem:
+
+``` nume_functie(parametru1, parametru2, ...); ```
+
+``` parametru1, parametru2 ``` sunt datele de intrare de care functie are nevoie. Pot exista functii insa care nu au nevoie de niciun parametru caz in care nu vom specifica nimic intre paranteze.
+
+# Exemplu practic #
+Sa vedem cum ne ajuta o functie. Luam exemplul de mai jos in care vrem sa afisam valoarea a doua numere introduse de utilizator ridicate la puterea a doua. Prima oara vom solicita un numar pozitiv iar ulterior unul negativ.
 ```
-function patrat(numar) {
-    return numar * numar;
+let numar_poz = prompt('Introdu un numar pozitiv');
+while (numar_poz < 0) {
+	numar_poz = prompt('Introdu un numar pozitiv');
 }
 
-function numar_la_patrat(tip_numar) {
-	let numar = input(tip_numar)
+console.log("Valoarea numarului pozitiv la patrat este" + numar_poz * numar_poz);
 
-	console.log(‘Valoarea numarului la patrat este ‘ + patrat (numar));
+let numar_neg = prompt("Introdu un numar negativ");
+while (numar_neg >= 0) {
+	numar_neg = prompt('Introdu un numar negativ');
 }
-
-numar_la_patrat(“numar pozitiv”);
-numar_la_patrat(“numar negativ”);
+console.log("Valoarea numarului negativ la patrat este " + numar_neg * numar_neg);
 ```
-Am inlocuit asfel expresia _numar * numar_ cu apelul functiei patrat care intoarce rezultate ridicarii la putere a numarului primit ca parametru (in cazul nostru valoarea variabilei numar).
 
-Aceasta constructie ne permite sa extindem exemplul nostru prin ridicare la oricare putere a unui numar primit ca parametru.
+Observam cat de multe instructiuni se repeta si cat de similare par instructiunile pentru cele doua cazuri: numar pozitiv si negativ. Sa refacem acum exemplul folosind functii.
 ```
-function putere(numar, putere) {
-	let rezultat = 1;
+function solicita_numar(tip_numar) {
+	let numar = 0;
+	let este_valid = false;
 
-	for (let index = 1; index <= putere; index++) {
-		rezultat = rezultat * numar;
+	while (!este_valid) {		
+		numar = prompt(tip_numar);
+
+		if (tip_numar == 'negativ') {
+			este_valid = (numar <= 0);
+		} else {
+			este_valid = (numar >= 0);
+		}		
 	}
 
-	return rezultat;
+    return numar;
 }
 
 function numar_la_patrat(tip_numar) {
-	let numar = input(tip_numar)
-	console.log(‘Valoarea numarului la patrat este ‘ + putere (numar, 2));
+	let numar = solicita_numar(tip_numar)
+	console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + numar * numar);
 }
 
-numar_la_patrat(“numar pozitiv”);
-numar_la_patrat(“numar negativ”);
+numar_la_patrat('pozitiv');
+numar_la_patrat('negativ');
 ```
+Am refacut astfel programul incat secvente duplicate de instructiuni sunt eliminate, fiind inlocuite cu functiile <em>numar_la_patrat</em> si <em>solicita_numar</em> ce primesc ca parametru tipul de numar pe care il solicitam. In liniile ulterioare observam cum este folosit numele functiei pentru a executa instructiunile aferente ei. Textele din paranteze reprezinta valoarea parametrului <em>tip_numar</em>. La prima apelare a functiei parametrul va avea valoarea 'pozitiv’ iar la cea de-a doua 'negativ’. Acest parametru este transmis mai departe functiei <em>solicita_numar</em> care valideaza ca utilizatorul intr-adevar introduce un numar ce respecta criteriul de pozitiv/negativ. Parametrul <em>tip_numar</em> al functiei <em>solicita_numar</em> devine astfel o variabila in interiorul functiei si este folosit ca atare.
 
-Ulterior, daca dorim sa ridicam la orice putere, putem rescrie:
+Reusim astfel sa structuram programul nostru in secvente de instructiuni cu un scop precis si reutilizabil. Putem privi aceste functii ca pe niste cutii negre care pe baza unor **parametri de intrare** ne ofera un **rezultat** iar modalitatea prin care aceste functii ajung la rezultat este strict sarcina lor si mai mult, aceasta modalitate putand fi ulterior modificata fara a afecta corectitudinea programul nostru. Atat timp cat functia respecta cerintele initiale pentru care a fost create, mecanismul de implementare al functie poate fi reimplementat ori de cate ori este necesar.
+
+<img src="../wp-content/uploads/2023/img/black_box.png" class="img-box">
+
+In exemplul nostru, mai putem face o modificare si utiliza functia _Math.pow_ in loc sa multiplicam explicit cele doua valori.
+
 ```
-function numar_la_putere(tip_numar, putere) {
-	let numar = input(tip_numar)
-
-	console.log(‘Valoarea numarului la puterea ‘ + putere + ‘ este ‘ + putere (numar, putere));
-}
-
-let putere = input(‘Putere’)
-
-numar_la_putere(“numar pozitiv”, putere);
-numar_la_putere(“numar negativ”, putere);
+console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + Math.pow(numar, 2));
 ```
-Reusim astfel sa structuram programul nostru in secvente de instructiuni cu un scop precis si reutilizabil. Putem privi aceste functii ca pe niste cutii negre care pe baza unor parametri de intrare ne ofera un rezultat iar modalitatea prin care aceste functii ajung la rezultat este strict sarcina lor si mai mult, aceasta modalitate putand fi ulterior modificata fara a afecta programul nostru. Atat timp cat functia respecta cerintele, mecanismul de implementare al functie poate fi reimplementat ori de cate ori este necesar.
+Am folosit in acest caz functia _Math.pow_ care nu este definita de noi ci chiar de limbajul Javascript, fiind o functie implicit a acestuia (_built-in_) avand acelasi efect ca si multiplicarea pe care o faceam noi explicit.
 
-De exemplu, putem rescrie functia putere asftel:
-```
-function putere(numar, putere) {
-	return Math.pow(numar, putere);
-}
-```
-Observam ca in loc sa executam bucla for si sa inmultim numarul cu el insusi, folosim functia _Math.pow_. Aceasta functie nu este definita de noi ci chiar de limbajul Javascript, fiind o functie implicit a acestuia (built-in) avand acelasi efect cu bucla noastra for. Restul programului nostru ramane neschimbat chiar daca implementarea functiei putere a fost schimbata, ea respecta cerintele in continuare (intoare rezultatul ridicarii numarului la putere).
+Pe langa functiile definite de noi, exista o multitudine de alte functii predefinite ale limbajul Javascript pe care noi le putea utiliza. Acest lucru ne scuteste de efortul de a mai reimplementa cerintele acelor functii de la 0 – putem accesa acele functionalitati doar prin simplul lor apel (ex. _Math.cos(), Math.round(), parseInt(), isNan(), etc._)
 
-Pe langa functiile definite de noi, exista o multitudine de alte functii prefedinite de catre limbajul Javascript pe care noi le putea accesa. Acest lucru ne scuteste de efortul de a mai reimplementa cerintele acelor functii de la 0 – puteam accesa acele functionalitati doar prin simplul apel al unei functii (ex. _Math.cos(), Math.round()_)
+<div class="algovis" config-id="functii-basics.json" av-selected="0"></div>
+
+# Parametrii unei functii #
+Parametrii functiilor pot fi priviti ca fiind date de intrare ale acestora pe baza carora executa anumite instructiuni si eventual intorc un rezultat. Acesti parametri se transforma de altfel in variabile locale functiei in care sunt declarati, putand fi folositi ca orice alta variabila declarata in corpul functiei. Un aspect foarte important de mentionat este faptul ca orice modificare adusa acestor parametrii nu se va reflecta inapoi dupa terminarea apelului functiei. Cu alte cuvinte, clientii functiei (cei care o apeleaza folosind anumiti parametrii) nu vor vedea nicio modificare adusa parametrilor de intrare daca noi incercam sa le modificam valoarea in corpul functiei.
+
+<div class="algovis" config-id="functii-basics.json" av-selected="1"></div>
+
+Functia <code>dubleaza</code> primeste ca parametru un <code>numar</code> pe care noi incercam sa il modificam in speranta ca dupa apelul acestei functii de dublare, parametrul trimis isi va patra valoarea modificata. Ruland exemplul vedem cum instructiunea <code>numar = numar * 2;</code> are doar efect local, modificand valoarea parametrului doar in scopul functiei insa o data cu parasirea acesteia, variabila <code>x</code> aferenta parametrului <code>numar</code> are aceeasi valoare ca inainte de apelul functiei.
+
+<p class="tip-box">Mecanismul de transmitere a parametrilor se face prin copierea (duplicarea) variabilei specificate in apelul functiei asa ca orice modificare adusa parametrului in interiorul functiei s-ar face efectiv asupra acestei copii si nu asupra variabilei folosite in apel.
+</p>

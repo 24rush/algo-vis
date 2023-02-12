@@ -7,10 +7,12 @@ export class RuntimeScopeMonitor {
     }
 
     public scopeStart(scopeName: string) {
+        console.log('start ' + scopeName);
         this.currentScope.push(scopeName);
     }
 
     public scopeEnd(scopeName: string) {
+        console.log('end ' + scopeName);
         if (this.currentScope[this.currentScope.length - 1] == scopeName)
             this.currentScope.pop();
         else {
@@ -58,6 +60,6 @@ export class RuntimeScopeMonitor {
     }
 
     public static scopeNameToFunctionScope(scopeName: string): string {
-        return (scopeName != "global" && scopeName != "local") ? "!" + scopeName : scopeName;
+        return (scopeName != "global" && scopeName != "local" && scopeName[0] != '!') ? "!" + scopeName : scopeName;
     }
 }

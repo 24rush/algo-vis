@@ -109,8 +109,8 @@ export class CodeProcessor {
                             this.createVariable(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.var, decl.init.body.range[0] + 1);
                         }
 
-                        this.scopes.push(new ScopeDeclaration(decl.id.name, decl.init.body.range[0] + 1, decl.init.body.range[1] - 1));
-                        this.extractVariables(decl.id.name, decl.init.body);
+                        this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(decl.id.name), decl.init.body.range[0] + 1, decl.init.body.range[1] - 1));
+                        this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(decl.id.name), decl.init.body);
 
                         break;
                     }
@@ -148,27 +148,25 @@ export class CodeProcessor {
                             this.createVariable(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.let, item.body.range[0] + 1);
                         }
 
-                        this.scopes.push(new ScopeDeclaration(funcName, item.body.range[0] + 1, item.body.range[1] - 1));
+                        this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item.body.range[0] + 1, item.body.range[1] - 1));
                         this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item);
                         break;
                     }
                 case "ReturnStatement":
                     {
                         let indexReturnStatement = item.range[0];
-                        for (let scope in this.scopes) {
-                            let scopeDecl = this.scopes[scope];
-
-                            let parentScope = scope.split('.local').join('');
+                        for (let scopeDecl of this.scopes) {
+                            let parentScope = scopeDecl.name.split('.local').join('');
 
                             if (parentScope != scopeName)
                                 continue;
 
                             if (scopeDecl.startOfDefinitionIndex < indexReturnStatement &&
                                 scopeDecl.endOfDefinitionIndex > indexReturnStatement) {
-                                if (scope.indexOf("global") != -1)
+                                if (scopeDecl.name.indexOf("global") != -1)
                                     continue;
 
-                                this.scopes[scope].endOfDefinitionIndex = indexReturnStatement;
+                                    scopeDecl.endOfDefinitionIndex = indexReturnStatement;
                             }
                         }
                         break;
@@ -208,7 +206,7 @@ export class CodeProcessor {
                 case 'BlockStatement':
                     {
                         this.markLineOverrides.push(item.body.range ? item.body.range[0] + 1 : item.range[0] + 1);
-                        this.scopes.push(new ScopeDeclaration("local", item.range[0] + 0, item.range[1] - 1));
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0] + 0, item.range[1] ));
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
@@ -608,7 +606,8 @@ export class CodeProcessor {
                     continue;
 
                 foundVars.push(variable);
-                break;
+                if (varName != undefined)
+                    break;
             }
 
             foundScopes.pop();

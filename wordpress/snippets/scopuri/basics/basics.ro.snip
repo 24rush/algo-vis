@@ -1,0 +1,29 @@
+//DESC:
+//ID: 0
+function boo() {
+    let x = 5;
+    x = 6;
+}
+
+console.log(x);
+//DESC:
+//ID: 1
+let x = 5;
+
+function boo() {    
+    x = 6;
+}
+
+console.log(x);
+//DESC:
+//ID: 2
+
+function boo() {    
+    let x = 5;
+    if (x == 5) {
+        let y = 6;
+        console.log(x);
+    }
+
+    console.log(y);
+}

@@ -1,0 +1,37 @@
+//DESC:
+//ID: 0
+function solicita_numar(tip_numar) {
+    let numar = 0;
+	let este_valid = false;
+
+	while (!este_valid) {		
+		numar = prompt(tip_numar);
+
+		if (tip_numar == 'negativ') {
+			este_valid = (numar <= 0);
+		} else {
+			este_valid = (numar >= 0);
+		}		
+	}
+
+    return numar;
+}
+
+function numar_la_patrat(tip_numar) {
+	let numar = solicita_numar(tip_numar)
+	console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + numar * numar);
+}
+
+numar_la_patrat('pozitiv');
+numar_la_patrat('negativ');
+
+//DESC:
+//ID: 1
+function dubleaza(numar) {	
+	numar = numar * 2;
+	console.log(numar);
+}
+
+let x = 5;
+dubleaza(x);
+console.log(x);

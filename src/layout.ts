@@ -125,9 +125,12 @@ export class Layout {
         return true;
     }
 
-    private removeScope(parentScopeHtmlElement: HTMLElement, htmlElement: HTMLElement, onLayoutOperationsStatus: OnLayoutOperationsStatus = undefined) {
+    private removeScope(scopeName: string, parentScopeHtmlElement: HTMLElement, htmlElement: HTMLElement, onLayoutOperationsStatus: OnLayoutOperationsStatus = undefined) {
         let fadingHtmlElem = htmlElement ?? parentScopeHtmlElement;
 
+        if (!fadingHtmlElem)
+            return;
+            
         if (onLayoutOperationsStatus)
             onLayoutOperationsStatus(true);
 
@@ -135,8 +138,10 @@ export class Layout {
             if (htmlElement)
                 parentScopeHtmlElement.children[1].removeChild(htmlElement);
 
-            if (!htmlElement /*&& parentScopeHtmlElement.children[1].children.length <= 1*/) {
+            // ATTENTION!
+            if (!htmlElement || parentScopeHtmlElement.children[1].children.length <= 1) {
                 parentScopeHtmlElement.remove();
+                this.scopes.delete(scopeName);
             }
 
             if (onLayoutOperationsStatus)
@@ -151,7 +156,7 @@ export class Layout {
         let key = scopeName + (observable ? "." + observable.name : "");
 
         if (!observable) {
-            this.removeScope(parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
+            this.removeScope(scopeName, parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
             delete this.observableToVisualizer[key];
             this.scopes.delete(scopeName);
 
@@ -164,13 +169,13 @@ export class Layout {
         for (let obsKey of Object.keys(this.observableToVisualizer)) {
             let visualizer = this.observableToVisualizer[obsKey];
             if (visualizer.getHTMLElement() == htmlElement) {
-                this.removeScope(parentScopeHtmlElement, htmlElement, onLayoutOperationsStatus);
+                this.removeScope(scopeName, parentScopeHtmlElement, htmlElement, onLayoutOperationsStatus);
                 let wholeScopeRemoval = parentScopeHtmlElement.children[1].children.length == 1;
 
                 visualizer.detach();
 
                 if (wholeScopeRemoval) {
-                    this.removeScope(parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
+                    this.removeScope(scopeName, parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
                     this.scopes.delete(scopeName);
                 }
 
