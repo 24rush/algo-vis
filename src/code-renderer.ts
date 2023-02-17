@@ -47,6 +47,7 @@ export class CodeRenderer {
 
         this.editor.setOptions({
             useWorker: false,
+            wrap: true,
             maxLines: codeLines.length + 5,
         });
 

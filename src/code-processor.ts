@@ -197,6 +197,10 @@ export class CodeProcessor {
                 case "IfStatement":
                     {
                         this.markLineOverrides.push(item.range[0]);
+                        if (item.alternate) { // No marklines before else
+                            this.addNoMarklineZone(item.consequent.range[1], item.alternate.range[0]);
+                        }
+
                         this.extractVariables(scopeName + ".local", item.consequent);
                         this.extractVariables(scopeName + ".local", item.alternate);
 
@@ -563,7 +567,7 @@ export class CodeProcessor {
             for (let variableName of Object.keys(varsInScope)) {
                 let variable = this.varDeclarations[scopeName][variableName];
 
-                if (variable.vartype == VarType.var && variable.name == varName)
+                if ((variable.vartype == VarType.var || variable.declarationScopeName == "global") && variable.name == varName)
                     foundVars.push(variable);
             }
         }

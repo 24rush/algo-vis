@@ -4,11 +4,12 @@ Pentru a putea refolosi aceste secvente si in alte sectiuni ale programului, far
 
 # Definire #
 Structura unei functii este urmatoarea:
-
-**function** nume_functie **(** lista parametri intrare **)**
-**{**
-&ensp;&ensp;&ensp;&ensp;corp functie
-**}**
+<p class="code-box">
+<strong>function</strong> nume_functie ( lista parametri intrare )
+{
+&ensp;&ensp;&ensp;&ensp;< instructiuni functie >
+}
+</p>
 
 Observam urmatoarele elemente:
 - cuvantul cheie **function** care indica faptul ca vrem sa definim o functie noua
@@ -18,11 +19,13 @@ Observam urmatoarele elemente:
 
 Declaratia unei functii poate fi extinsa si pe langa definierea parametrilor de intrare si a instructiunilor de executat, se poate indica si o valoare rezultat a executiei functiei. Spunem in acest caz ca functia 'intoarce' o valoare iar de regula aceasta valoare este obtinuta pe baza parametrilor de intrare. Pentru a indica ce valoare rezultat dorim sa intoarca functia, vom folosi cuvantul rezervat **return** urmat de aceasta valoare.
 
-**function** nume_functie **(** lista de parametri **)**
-**{**
-&ensp;&ensp;&ensp;&ensp;lista instructiuni
-&ensp;&ensp;&ensp;&ensp;**return** valoare rezultat
-**}**
+<p class="code-box">
+<strong>function</strong> nume_functie ( lista de parametri )
+{
+&ensp;&ensp;&ensp;&ensp;< instructiuni functie >
+&ensp;&ensp;&ensp;&ensp;<strong>return</strong> valoare rezultat
+}
+</p>
 
 # Apelul unei functii #
 Pentru a executa instructiunile aferente corpului functiei, va trebuie sa apelam functia ce le contine pentru ca doar simpla definire a functiei nu executa instructiunile. Luand exemplul de mai sus, pentru a executa corpul functiei va trebuie sa scriem:
@@ -54,14 +57,14 @@ function solicita_numar(tip_numar) {
 	let numar = 0;
 	let este_valid = false;
 
-	while (!este_valid) {		
+	while (!este_valid) {
 		numar = prompt(tip_numar);
 
 		if (tip_numar == 'negativ') {
 			este_valid = (numar <= 0);
 		} else {
 			este_valid = (numar >= 0);
-		}		
+		}
 	}
 
     return numar;

@@ -8,16 +8,53 @@ for (let a = 1; a <= Math.sqrt(numar); a++) {
 
 //DESC: Sa se converteasca un string la intreg
 //LEVEL: Ușor
-let valoareText = "-123";
+let valoareText = prompt("numar = "); /*** Obtinem numarul de la utilizator in format text ***/
 
 let esteNegativ = (valoareText[0] == '-');
 
 let valoareNumerica = 0; // Initializare variabila
 let codAsciiPtZero = '0'.charCodeAt(0); // Stocare cod ASCII pentru caracterul '0'
 for (let i = esteNegativ ? 1 : 0; i < valoareText.length; ++i) {
-    valoareNumerica = valoareNumerica * 10 + valoareText.charAt(i).charCodeAt(0) - codAsciiPtZero;
+    valoareNumerica = valoareNumerica * 10 + valoareText.charCodeAt(i) - codAsciiPtZero;
 }
 
 if (esteNegativ) {
     valoareNumerica = -1 * valoareNumerica; // Conversie la numar negativ
 }
+
+//DESC: Sa se afiseze caracterele duplicate dintr-un text
+//LEVEL: Ușor
+let text = "A A!BBca!sad - 0 12 AA!"
+
+let frecvente = Array(256).fill(0);
+let asciCodZero = ' '.charCodeAt(0);
+
+for (let indexC = 0; indexC < text.length; indexC++) {
+  let codAsciiPozCurenta = text.charCodeAt(indexC) - asciCodZero;
+  
+  frecvente[codAsciiPozCurenta] += 1;
+}
+
+for (let indexC = 0; indexC < frecvente.length; indexC++) {
+  if (frecvente[indexC] > 1)
+    console.log('Caracterul \'' + String.fromCharCode(' '.charCodeAt(0) + indexC) + '\' este duplicat');
+}
+
+//DESC: Sa se genereze toate numerele bine ordonate de 3 cifre
+//LEVEL: Ușor
+/*
+  Un numar bine ordonat este un numar care are cifrele in ordine crescatoare
+  Ex. 123, 578, 378
+*/
+let nrNumere = 0;
+for (let s = 1; s < 10; s++) {
+ for (let z = s + 1; z < 10; z++) {
+  for (let u = z + 1; u < 10; u++)  {
+    let numar = s * 100 + z * 10 + u;
+    nrNumere++;
+    console.log (numar);
+  }
+ }
+}
+  
+console.log ('S-au generat: ' + nrNumere);

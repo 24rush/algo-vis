@@ -33,7 +33,7 @@ class AVViewModel {
     hasException: boolean = false;
     exceptionMessage: string = "";
 
-    onAdvance(): any { }
+    onAdvance(evt: Event): any { console.log('ff'); }
     onRestart(): any { }
     onFullscreen(): any { }
 
@@ -118,8 +118,6 @@ export class Scene {
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
-        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(snippetsList).bindTo(rightPane).bindTo(this.promptWidget);
-
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
         avViewModel.setDefaults();
         avViewModel.showComments = hasCommentsOn;
@@ -271,6 +269,10 @@ export class Scene {
             avViewModel.isFunctionalityDisabled = false;
         }
 
+        new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(snippetsList).bindTo(rightPane).bindTo(this.promptWidget);
+
+        // ---------------------------------------
+        
         this.codeRenderer.registerEventNotifier({
             onSourceCodeUpdated(newCode: string) {
                 avViewModel.consoleOutput = "";

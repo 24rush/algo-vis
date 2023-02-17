@@ -217,9 +217,7 @@ export class UIBinder {
             if (!propertyBound) continue;
 
             if (propertyBound in this.viewModel) {
-                htmlElement.addEventListener('click', (event) => {
-                    (this.viewModel as any)[propertyBound](event.target);
-                });
+                htmlElement.addEventListener('click', (this.viewModel as any)[propertyBound]);
             } else {
                 throw "Property '" + propertyBound + "' does not exist on view model";
             }

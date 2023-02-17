@@ -64,8 +64,8 @@ class VisualizerViewModel {
 
 export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
-        '<div class="var-box" style="display: table-row;" av-bind-onclick="onVarNameClicked"> \
-        <span id="var-name" class="var-name" style="display: table-cell; text-align: right; width: 20%;">{{name}}:</span> \
+        '<div class="var-box" style="display: flex; align-items: baseline;" av-bind-onclick="onVarNameClicked"> \
+        <span id="var-name" class="var-name" style="text-align: right; min-width: 20%;">{{name}}:</span> \
     </div> \
     ';
 
@@ -76,14 +76,14 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
      </span>';
 
     protected readonly templatePrimitive: string =
-        '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" \
+        '<span class="var-value" style="min-width: {{width}}px;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
             <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value" style="vertical-align:middle;"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
      </span>';
 
-    protected readonly templateArray = '<span style="display: table;"> \
+    protected readonly templateArray = '<span style=""> \
     {{#rows}} \
-        <div style="padding-left:7px; display: table-row;">\
+        <div style="display: flex; flex-wrap: wrap;">\
         <span class="align-self-baseline" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
         {{#cols}} \
             <div style="padding:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \

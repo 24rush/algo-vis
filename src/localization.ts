@@ -30,12 +30,12 @@ var en_langMap : Record<number, string> = {
 
 var ro_langMap : Record<number, string> = {
     0: "Scop global",
-    1: "Rulează",
+    1: "Rulează tot",
     2: "Pauză",
     3: "Arată comentarii",
     4: "Execută linie",
     5: "Eroare compilare",
-    6: "Revenire",
+    6: "De la început",
     7: "Variabile",
     8: "Consolă de ieșire",
     9: "referă pe ",

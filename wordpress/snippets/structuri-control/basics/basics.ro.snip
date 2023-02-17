@@ -52,10 +52,22 @@ let numar = prompt('Introdu un numar');
 while (i % 2 == 0) {
         console.log('Numar par');       
    
-        If (numar == 0) {
+        if (numar == 0) {
            console.log('Terminare joc');
            break;
         }
 
         numar = prompt('Introdu un numar');
+}
+
+//DESC: continue
+//ID: 5
+let i = 0;
+while (i < 10) {
+    i++;
+    if (i % 2 == 0) {
+        continue;
+    }
+
+    console.log(i);
 }

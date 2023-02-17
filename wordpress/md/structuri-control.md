@@ -75,6 +75,13 @@ In exemplu de mai jos, introducem posibilitate de a intrerupe jocul atunci cand 
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="4"></div>
 
+# continue #
+Un cuvant cheie similar lui <em>break</em> este <strong>continue</strong> care insa in loc sa intrerupa complet bucla in care este folosit, va intrerupe doar pasul curent si va forta executia sa treaca la urmatorul pas din iteratie. Putem considera acest cuvant cheie ca un mecanism de a sari (<em>skip</em>)peste un anumit pas dintr-o interatie in functie de o conditie.
+
+In exemplul de mai jos, vom afisa toate numerele impare de la 1 la 10 sarind la fiecare iteratie peste afisarea celor pare.
+
+<div class="algovis" config-id="structuri-control-basics.json" av-selected="5"></div>
+
 # switch #
 Ultima structura pe care o vom prezenta nu este una repetitiva ci una decizionala similara celei _if-else_. Aceasta se cheama **switch** si arata astfel:
 ```

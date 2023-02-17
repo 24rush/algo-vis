@@ -195,19 +195,25 @@ highlight {
 }
 
 .attention-box {
-  background: #ffdd0040;
+  background: #ffdd0033;
   border-color: #ff9d00 !important;
-  padding: 20px 30px;
+  padding: 20px 15px;
   margin-top: 1rem;
   border-left: 9px solid;
   border-radius: 4px;
 }
 
 .tip-box {
-  background: #eaf8ff;
+  background: #eaf8ffa3;
   border-color: #1eb4ff !important;
-  padding: 20px 30px;
+  padding: 20px 15px;
   border-left: 9px solid;
+  border-radius: 4px;
+}
+
+.code-box {
+  background: #0000000d;  
+  padding: 20px 15px;  
   border-radius: 4px;
 }
 
