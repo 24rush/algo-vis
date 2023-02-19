@@ -559,8 +559,10 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 this.drawPrimitive(observable);
             }
             else {
-                this.fitText(this.text, newValue, this.width, this.height);
-                this.resetAnimation(this.text);
+                if (this.text.textContent != newValue) {
+                    this.fitText(this.text, newValue, this.width, this.height);
+                    this.resetAnimation(this.text);
+                }
             }
         }
     }

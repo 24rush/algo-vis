@@ -44,7 +44,10 @@ export class RuntimeScopeMonitor {
     public getScopeExclLast() {
         let scopes = [...this.currentScope];
         scopes.pop();
-
+        
+        if (scopes.length == 0)
+            scopes.push("global");
+            
         return scopes.join('.');
     }
 

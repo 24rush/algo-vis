@@ -35,3 +35,45 @@ function dubleaza(numar) {
 let x = 5;
 dubleaza(x);
 console.log(x);
+
+//DESC:
+//ID: 2
+let numar_poz = prompt('Introdu un numar pozitiv');
+while (numar_poz < 0) {
+	numar_poz = prompt('Introdu un numar pozitiv');
+}
+
+console.log("Valoarea numarului pozitiv la patrat este " + numar_poz * numar_poz);
+
+let numar_neg = prompt("Introdu un numar negativ");
+while (numar_neg >= 0) {
+	numar_neg = prompt('Introdu un numar negativ');
+}
+console.log("Valoarea numarului negativ la patrat este " + numar_neg * numar_neg);
+
+//DESC:
+//ID: 3
+function solicita_numar(tip_numar) {
+	let numar = 0;
+	let este_valid = false;
+
+	while (!este_valid) {
+		numar = prompt(tip_numar);
+
+		if (tip_numar == 'negativ') {
+			este_valid = (numar <= 0);
+		} else {
+			este_valid = (numar >= 0);
+		}
+	}
+
+    return numar;
+}
+
+function numar_la_patrat(tip_numar) {
+	let numar = solicita_numar(tip_numar)
+	console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + numar * numar);
+}
+
+numar_la_patrat('pozitiv');
+numar_la_patrat('negativ');

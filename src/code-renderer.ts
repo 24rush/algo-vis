@@ -106,7 +106,7 @@ export class CodeRenderer {
         return this.editor.getValue();
     }
 
-    public getLineComment(lineNo: number): string {
+    public getLineComment(lineNo: number): string {                
         if (lineNo >= this.lineComments.length)
             return "";
 

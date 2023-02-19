@@ -40,6 +40,7 @@ export class CodeProcessor {
     private fcnReturns: number[] = [];
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
+    private explicitBraces: IndexRange[] = []; // braces for missing blocks
 
     getCode() { return this.code; }
     setCode(code: string) {
@@ -53,11 +54,12 @@ export class CodeProcessor {
         this.emptyCodeLineNumbers = [];
         this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
         this.funcDefs = {}; this.pushFuncParams = [];
-        this.markLineOverrides = []; this.noMarkLineZone = [];
+        this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];
     }
 
     public dumpDebugInfo() {
         console.log("VARS: "); console.log(this.varDeclarations);
+        console.log("BRACES: "); console.log(this.explicitBraces);
         console.log("SCOPES: "); console.log(this.scopes);
         console.log("FUNCDEFS: "); console.log(this.funcDefs);
         console.log("PUSHPARAMS: "); console.log(this.pushFuncParams);
@@ -166,7 +168,7 @@ export class CodeProcessor {
                                 if (scopeDecl.name.indexOf("global") != -1)
                                     continue;
 
-                                    scopeDecl.endOfDefinitionIndex = indexReturnStatement;
+                                scopeDecl.endOfDefinitionIndex = indexReturnStatement;
                             }
                         }
                         break;
@@ -185,11 +187,13 @@ export class CodeProcessor {
                     }
                 case "ForStatement":
                     {
-                        //this.fcnReturns.push(item.body.range[0] + 1);
-                        //this.markLineOverrides.push(item.range[0]);
-
+                        // Add braces even if they exist
+                        let indexParen = this.code.indexOf(')', item.range[0]);                                        
+                        this.explicitBraces.push(new IndexRange(indexParen + 1, item.body.range[1]));
+                        
+                        this.markLineOverrides.push(indexParen + 1);
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
-                        this.parseVariable(scopeName + ".local", item.init, item.body.range[0] + 1);
+                        this.parseVariable(scopeName + ".local", item.init, indexParen + 1);
 
                         this.extractVariables(scopeName + ".local", item);
                         break;
@@ -206,11 +210,18 @@ export class CodeProcessor {
 
                         break;
                     }
+                case 'DoWhileStatement':
+                    {
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
+                        this.extractVariables(scopeName + ".local", item);
+                        
+                        break;
+                    }
                 case 'WhileStatement':
                 case 'BlockStatement':
                     {
                         this.markLineOverrides.push(item.body.range ? item.body.range[0] + 1 : item.range[0] + 1);
-                        this.scopes.push(new ScopeDeclaration("local", item.range[0] + 0, item.range[1] ));
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
                         this.extractVariables(scopeName + ".local", item);
                         break;
                     }
@@ -299,6 +310,10 @@ export class CodeProcessor {
                         if (!varName && item.left.object.object) { // handle matrix assignment
                             varName = item.left.object.object.name;
                         }
+
+                        if (!varName && item.left && item.left.object && item.left.object.type == "ThisExpression") {
+                            varName = "this";
+                        }
                     }
                     else if (item.type == "UpdateExpression") // ++ operator
                     {
@@ -307,12 +322,20 @@ export class CodeProcessor {
                     else
                         varName = item.argument.object.name;
 
-                    let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
+                    let varDeclarations = [];
+                    let foundInScope = scopeName;
 
-                    if (vardeclaration.length > 0) {
-                        this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
+                    if (varName == "this") {
+                        varDeclarations.push(new VariableDeclaration(scopeName, varName, VarType.let, -1));
+                    }
+                    else {
+                        [foundInScope, varDeclarations] = this.searchScopeAndParent(scopeName, varName);                        
                     }
 
+                    if (varDeclarations.length > 0) {
+                        this.createVariable(foundInScope, varName, varDeclarations[0].vartype, item.range[1] + 1);
+                    }
+                    
                     if (item.right && item.right.type == "ObjectExpression") {
                         this.addNoMarklineZone(item.range[0], item.range[1]);
                     }
@@ -372,6 +395,11 @@ export class CodeProcessor {
 
             injectAtIndex[index].push(injectedCode);
         };
+
+        for (const explicitBrace of this.explicitBraces) {
+            addCodeInjection(explicitBrace.s, "{");
+            addCodeInjection(explicitBrace.e, "}");
+        }
 
         // Scope start setting
         for (const scope of this.scopes) {
@@ -442,7 +470,7 @@ export class CodeProcessor {
         try {
             syntax = esprima.parseScript(this.code, { range: true });
             console.log(syntax);
-        } catch (error) {            
+        } catch (error) {
             return [false, "line " + error.lineNumber + ": " + error.description];
         }
 
@@ -535,7 +563,7 @@ export class CodeProcessor {
         return [true, ""];
     }
 
-    
+
     private searchScopeAndParent(startScope: string, varName: string): [string, VariableDeclaration[]] {
         let foundInScope = startScope;
 

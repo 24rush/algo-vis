@@ -147,6 +147,7 @@ export class CodeExecutorProxy {
                     this.codeExecutorEventHandler.userInteractionRequest(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.forceMarkLine:
+                    Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
                     this.codeExecutorEventHandler.forceMarkLine(params[0])
                     break;
                 case CodeExecutorCommands.startScope:

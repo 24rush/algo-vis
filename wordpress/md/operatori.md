@@ -32,6 +32,10 @@ Combinatiile de operatori si operanzi observam ca au mereu un rezultat obtinut i
 
 De foarte multe ori vom vedea expresii care intorc rezultate de tipul <em>adevarat</em> sau <em>fals</em>, numindu-le in acest caz <strong>expresii relationale</strong> (de ex. <code>4 > 12</code> se va evalua la fals pentru ca 4 nu este mai mare ca 12). Combinand apoi mai multe expresii relationale folosind operatori logici (<code>&amp;&amp;, ||, !</code>) vom obtine <strong>expresii logice</strong> care la randul lor intorc tot rezultate boolene (adevarat/fals).
 
+Tabelul de adevar de mai jos ne va ajuta sa intelegem rezultatul expresiilor logice in functie de valorile sub-expresiilor ce le compun.
+
+<img src="../wp-content/uploads/2023/img/tabellogic.png" class="img-box">
+
 ## Operatorul ternar ##
 Pentru structura if-else exista o alternativa de exprimare a acesteia prin folosirea unui operator special si anume operatorul ternar. Dupa cum ii spune si numele, este un operator ce solicita 3 operanzi, din acest motiv fiind special pentru ca este singurul de acest fel.
 

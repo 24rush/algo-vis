@@ -36,48 +36,13 @@ Pentru a executa instructiunile aferente corpului functiei, va trebuie sa apelam
 
 # Exemplu practic #
 Sa vedem cum ne ajuta o functie. Luam exemplul de mai jos in care vrem sa afisam valoarea a doua numere introduse de utilizator ridicate la puterea a doua. Prima oara vom solicita un numar pozitiv iar ulterior unul negativ.
-```
-let numar_poz = prompt('Introdu un numar pozitiv');
-while (numar_poz < 0) {
-	numar_poz = prompt('Introdu un numar pozitiv');
-}
 
-console.log("Valoarea numarului pozitiv la patrat este" + numar_poz * numar_poz);
-
-let numar_neg = prompt("Introdu un numar negativ");
-while (numar_neg >= 0) {
-	numar_neg = prompt('Introdu un numar negativ');
-}
-console.log("Valoarea numarului negativ la patrat este " + numar_neg * numar_neg);
-```
+<div class="algovis" config-id="functii-basics.json" av-selected="2"></div>
 
 Observam cat de multe instructiuni se repeta si cat de similare par instructiunile pentru cele doua cazuri: numar pozitiv si negativ. Sa refacem acum exemplul folosind functii.
-```
-function solicita_numar(tip_numar) {
-	let numar = 0;
-	let este_valid = false;
 
-	while (!este_valid) {
-		numar = prompt(tip_numar);
+<div class="algovis" config-id="functii-basics.json" av-selected="3"></div>
 
-		if (tip_numar == 'negativ') {
-			este_valid = (numar <= 0);
-		} else {
-			este_valid = (numar >= 0);
-		}
-	}
-
-    return numar;
-}
-
-function numar_la_patrat(tip_numar) {
-	let numar = solicita_numar(tip_numar)
-	console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + numar * numar);
-}
-
-numar_la_patrat('pozitiv');
-numar_la_patrat('negativ');
-```
 Am refacut astfel programul incat secvente duplicate de instructiuni sunt eliminate, fiind inlocuite cu functiile <em>numar_la_patrat</em> si <em>solicita_numar</em> ce primesc ca parametru tipul de numar pe care il solicitam. In liniile ulterioare observam cum este folosit numele functiei pentru a executa instructiunile aferente ei. Textele din paranteze reprezinta valoarea parametrului <em>tip_numar</em>. La prima apelare a functiei parametrul va avea valoarea 'pozitiv’ iar la cea de-a doua 'negativ’. Acest parametru este transmis mai departe functiei <em>solicita_numar</em> care valideaza ca utilizatorul intr-adevar introduce un numar ce respecta criteriul de pozitiv/negativ. Parametrul <em>tip_numar</em> al functiei <em>solicita_numar</em> devine astfel o variabila in interiorul functiei si este folosit ca atare.
 
 Reusim astfel sa structuram programul nostru in secvente de instructiuni cu un scop precis si reutilizabil. Putem privi aceste functii ca pe niste cutii negre care pe baza unor **parametri de intrare** ne ofera un **rezultat** iar modalitatea prin care aceste functii ajung la rezultat este strict sarcina lor si mai mult, aceasta modalitate putand fi ulterior modificata fara a afecta corectitudinea programul nostru. Atat timp cat functia respecta cerintele initiale pentru care a fost create, mecanismul de implementare al functie poate fi reimplementat ori de cate ori este necesar.

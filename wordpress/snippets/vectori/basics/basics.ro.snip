@@ -1,0 +1,39 @@
+//DESC: creare vector
+//ID: 0
+let vector = [1, 2, 3, 4];
+console.log(vector[0]);
+console.log(vector[1]);
+
+//DESC: parcurgere vector
+//ID: 1
+let vector = ["A", "B", "C"];
+for (let i = 0; i < vector.length; i++) {
+    console.log(vector[i]);
+}
+
+//DESC: metode vector
+//ID: 2
+let vectorA = [1, 2, 3, 4];
+let vectorB = [11, 12, 13, 14, 15];
+
+console.log('Lungimea vectorului A este: ' + vectorA.length);
+
+vectorA.push(5); /*** Adaugam o valoare noua la sfarsitul colectiei ***/
+console.log('Lungimea vectorului A este acum: ' + vectorA.length);
+
+vectorA[0] = 7; /*** Modificam o valoare existenta ***/
+console.log(vectorA);
+
+let vectorC = vectorA.concat(vectorB);
+console.log('Lungimea vectorului C este: ' + vectorC.length);
+
+let ultimulElement = vectorC.pop();
+console.log('Ultimul element din vectorC a fost: ' + ultimulElement);
+
+let sectiune = vectorC.slice(0, 3); /*** Extragem elementele dintre indexul 0 si 3 ***/
+console.log(sectiune);
+
+let reverse = vectorC.reverse();
+console.log(reverse);
+
+console.log('Pozitia elementului 2 este: ' + reverse.indexOf(2));

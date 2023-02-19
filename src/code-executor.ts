@@ -148,9 +148,12 @@ export class CodeExecutor implements GraphVariableChangeCbk {
     }
 
     protected origCode: string;
+    private lastLineNo: number = -1;
     public advanceFlag: Int32Array = undefined;
 
     public setSourceCode(code: string) {
+        this.lastLineNo = -1;
+
         let regex = new RegExp("(alert)|(confirm)|(prompt)", 'g')
         this.origCode = code.toString().replace(regex, '$&Wrap')
     }
@@ -222,10 +225,35 @@ export class CodeExecutor implements GraphVariableChangeCbk {
     }
 
     private forceMarkLine(lineNumber: number) {
+        let codex = codeExec();
+
+        if (codex.lastLineNo == lineNumber)
+            return;
+
+        if (!codex.advanceFlag) {
+            throw 'AdvanceFlag not received';
+        }
+
         self.postMessage({
             cmd: CodeExecutorCommands.forceMarkLine,
             params: Array.from(arguments)
         });
+
+        while (true) {
+            let status = Atomics.wait(codex.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
+
+            if (status != 'not-equal') {
+                let auxFlag: number = Atomics.load(codex.advanceFlag as Int32Array, CodeExecutorSlots.Aux);
+
+                if (auxFlag == CodeExecutorMessages.Stop) {
+                    throw "__STOP__";
+                }
+
+                break;
+            }
+        }
+
+        codex.lastLineNo = lineNumber;
     }
 
     private markStartCodeLine(lineNumber: number) {
@@ -253,6 +281,8 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 break;
             }
         }
+
+        codex.lastLineNo = lineNumber;
     }
 
     private startScope(scopeName: string) {

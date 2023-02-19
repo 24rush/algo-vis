@@ -37,8 +37,8 @@ class AVViewModel {
     onRestart(): any { }
     onFullscreen(): any { }
 
-    onSnippetSelected(_event: any) : any {};
-    onNextSnippet() {}
+    onSnippetSelected(_event: any): any { };
+    onNextSnippet() { }
 
     onPlaybackSpeedChangedSSlow(): any { }
     onPlaybackSpeedChangedSlow(): any { }
@@ -46,8 +46,8 @@ class AVViewModel {
 
     promptTitle: string = "";
     promptDefaultValue: string = "";
-    hasCancelBtn : boolean = true;
-    hasInputBox : boolean = true;
+    hasCancelBtn: boolean = true;
+    hasInputBox: boolean = true;
     onPromptOk(): any { };
     onPromptCancel(): any { };
 
@@ -56,7 +56,7 @@ class AVViewModel {
 
     public setDefaults() {
         this.consoleOutput = "";
-        
+
         this.isPaused = true;
         this.isExecutionCompleted = false;
 
@@ -65,19 +65,19 @@ class AVViewModel {
         this.selectedSnippetDesc = "";
         this.selectedSnippetIdx = 0;
         this.hasMoreSnippets = false;
-        
+
         this.showComments = true; // needs sync with UI checked
-        
+
         this.hasCompilationError = false;
         this.compilatonErrorMessage = "";
         this.hasException = false;
         this.exceptionMessage = "";
-        
+
         this.promptTitle = "";
         this.promptDefaultValue = "";
         this.hasCancelBtn = true;
         this.hasInputBox = true;
-        
+
         this.isFunctionalityDisabled = false;
         this.userInteraction = UserInteractionType.Alert;
     }
@@ -111,7 +111,6 @@ export class Scene {
 
         let hasAutoPlayOption = app.hasAttribute('av-autoplay');
         let isWriteable = app.hasAttribute('av-write');
-        let hasCommentsOn = app.hasAttribute('av-comments');
         let selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
 
         this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable);
@@ -120,15 +119,14 @@ export class Scene {
         let viewModelObs = new ObservableViewModel(this.viewModel);
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
         avViewModel.setDefaults();
-        avViewModel.showComments = hasCommentsOn;
-        
+
         let self = this;
-        
-        let onSnippetSelected = (snippetId: number) => {            
+
+        let onSnippetSelected = (snippetId: number) => {
             let idxSnippet = snippets.findIndex(value => { return value.id == snippetId });
 
             if (idxSnippet != -1) {
-                let selectedSnippet = snippets[idxSnippet];                
+                let selectedSnippet = snippets[idxSnippet];
 
                 avViewModel.selectedSnippetDesc = selectedSnippet.desc;
                 avViewModel.hasMoreSnippets = idxSnippet < (snippets.length - 1);
@@ -136,7 +134,7 @@ export class Scene {
                 avViewModel.selectedSnippetIdx = idxSnippet;
 
                 this.codeRenderer.setSourceCode(selectedSnippet.code);
-            }            
+            }
         };
 
         avViewModel.onNextSnippet = () => {
@@ -147,17 +145,17 @@ export class Scene {
             }
         }
 
-        avViewModel.onSnippetSelected = (event : any) => {
+        avViewModel.onSnippetSelected = (event: any) => {
             let snippetId = Number.parseInt(event.getAttribute('av-id'));
             onSnippetSelected(snippetId);
         }
 
         avViewModel.isSnippetSet = snippets.length > 1 && selectedSnippedId == -1;
-        
+
         if (snippets.length > 0) {
             if (selectedSnippedId != -1 && snippets.findIndex(value => { return value.id == selectedSnippedId }) != -1)
                 onSnippetSelected(selectedSnippedId);
-            else 
+            else
                 onSnippetSelected(snippets[0].id);
         }
 
@@ -243,10 +241,10 @@ export class Scene {
 
         enum OkCancel { Ok, Cancel }
 
-        let retValueOnButton = (userInteraction: UserInteractionType, button: OkCancel, value: any) : any => {
+        let retValueOnButton = (userInteraction: UserInteractionType, button: OkCancel, value: any): any => {
             switch (userInteraction) {
                 case UserInteractionType.Alert:
-                    return undefined;                    
+                    return undefined;
                 case UserInteractionType.Confirm:
                     return button == OkCancel.Ok;
                 case UserInteractionType.Prompt:
@@ -259,7 +257,7 @@ export class Scene {
         this.viewModel.onPromptOk = () => {
             let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;
             this.promptToast.hide();
-        
+
             this.operationRecorder.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Ok, value));
             avViewModel.isFunctionalityDisabled = false;
         }
@@ -272,19 +270,6 @@ export class Scene {
         new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(snippetsList).bindTo(rightPane).bindTo(this.promptWidget);
 
         // ---------------------------------------
-        
-        this.codeRenderer.registerEventNotifier({
-            onSourceCodeUpdated(newCode: string) {
-                avViewModel.consoleOutput = "";
-                layout.clearAll();
-
-                var doc = new DOMParser().parseFromString(newCode, "text/html");
-                newCode = doc.documentElement.textContent;
-
-                self.operationRecorder.setSourceCode(newCode);
-                self.operationRecorder.startReplay();
-            }
-        });
 
         this.operationRecorder.registerNotificationObserver({
             onEnterScopeVariable: (scopeName: string, observable: ObservableJSVariable) => {
@@ -304,8 +289,8 @@ export class Scene {
             onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
                 self.promptToast.show();
 
-                let inputBox = self.promptWidget.querySelector('[class=form-control]') as HTMLInputElement;                
-                inputBox.addEventListener("keyup", function(event) {
+                let inputBox = self.promptWidget.querySelector('[class=form-control]') as HTMLInputElement;
+                inputBox.addEventListener("keyup", function (event) {
                     if (event.key === "Enter") {
                         self.viewModel.onPromptOk();
                     }
@@ -350,25 +335,48 @@ export class Scene {
             }
         });
 
+        this.codeRenderer.registerEventNotifier({
+            onSourceCodeUpdated(newCode: string) {
+                avViewModel.consoleOutput = "";
+                layout.clearAll();
+
+                var doc = new DOMParser().parseFromString(newCode, "text/html");
+                newCode = doc.documentElement.textContent;
+
+                self.operationRecorder.setSourceCode(newCode);
+                self.operationRecorder.startReplay();
+            }
+        });
+
         var options = {
             'content': "",
-            "maxLines" : "12"
+            "maxLines": "12"
+        };
+
+        let getAceCursorElem = () : HTMLElement => { return document.querySelector("[class=myMarker]") as HTMLElement; }
+
+        var displayCommentsPopover = (aceCursor: any) => {
+            if (!avViewModel.showComments)
+                return;
+
+            if (self.commentsPopover) self.commentsPopover.dispose();
+            let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
+
+            commentsElement.style['left'] = aceCursor.style['left'];
+            commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
+
+            self.commentsPopover = new bootstrap.Popover(commentsElement, options);
+            self.commentsPopover.show();
         };
 
         var observer = new MutationObserver(function (mutations) {
             mutations.forEach(function (mutationRecord) {
-                let aceCursor = document.querySelector("[class=myMarker]") as HTMLElement;
-                if (!avViewModel.showComments || mutationRecord.target != aceCursor)
+                let aceCursor = getAceCursorElem();
+
+                if (mutationRecord.target != aceCursor)
                     return;
 
-                if (self.commentsPopover) self.commentsPopover.dispose();
-                let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
-
-                commentsElement.style['left'] = aceCursor.style['left'];
-                commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
-
-                self.commentsPopover = new bootstrap.Popover(commentsElement, options);
-                self.commentsPopover.show();
+                displayCommentsPopover(aceCursor);
             });
         });
 
@@ -377,19 +385,39 @@ export class Scene {
 
             let lineComment = this.codeRenderer.getLineComment(lineNo);
 
-            if (avViewModel.showComments && lineComment !== "") {
+            if (lineComment !== "") {
                 options.content = lineComment;
                 let checkerFunc = () => {
-                    let aceCursor = document.querySelector("[class=myMarker]") as HTMLElement;
+                    let aceCursor = getAceCursorElem();
 
-                    aceCursor ?
-                        observer.observe(aceCursor, { attributes: true, attributeFilter: ['style'] }) :
+                    if (aceCursor) {                        
+                        observer.observe(aceCursor, { attributes: true, attributeFilter: ['style'] });
+                        // Sometimes the event is lost so trigger it manually
+                        displayCommentsPopover(aceCursor);
+                    } else {
                         setTimeout(checkerFunc, 200);
-                }
+                    }
+                };
 
                 checkerFunc();
             } else options.content = "";
         };
+
+        setTimeout(() => {
+            for (let lineMarker of app.querySelectorAll('.ace_gutter-cell')) {
+                lineMarker.addEventListener('mouseover', (e) => {
+                    let hoveredLineNo = parseInt((e.target as HTMLElement).textContent);
+                    
+                    options.content = this.codeRenderer.getLineComment(hoveredLineNo);
+                    displayCommentsPopover(e.target);
+                });
+
+                lineMarker.addEventListener('mouseout', () => {
+                    options.content = this.codeRenderer.getLineComment(this.lineNoToBeExecuted);
+                    displayCommentsPopover(getAceCursorElem());
+                });
+            }
+        }, 500);
 
         if (hasAutoPlayOption) {
             this.viewModel.onAutoplayToggled();
