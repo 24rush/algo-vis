@@ -187,10 +187,10 @@ export class CodeProcessor {
                     }
                 case "ForStatement":
                     {
-                        // Add braces even if they exist
-                        let indexParen = this.code.indexOf(')', item.range[0]);                                        
+                        // Add braces even if they exist (last closed paren before the body)
+                        let indexParen = this.code.lastIndexOf(')', item.body.range[0]);
                         this.explicitBraces.push(new IndexRange(indexParen + 1, item.body.range[1]));
-                        
+
                         this.markLineOverrides.push(indexParen + 1);
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
                         this.parseVariable(scopeName + ".local", item.init, indexParen + 1);
@@ -214,10 +214,21 @@ export class CodeProcessor {
                     {
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
                         this.extractVariables(scopeName + ".local", item);
-                        
+
                         break;
                     }
                 case 'WhileStatement':
+                    {
+                        // Add braces even if they exist (last closed paren before the body)
+                        let indexParen = this.code.lastIndexOf(')', item.body.range[0]);
+                        this.explicitBraces.push(new IndexRange(indexParen + 1, item.body.range[1]));
+
+                        this.markLineOverrides.push(indexParen + 1);
+                        this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
+                        this.extractVariables(scopeName + ".local", item);
+
+                        break;
+                    }
                 case 'BlockStatement':
                     {
                         this.markLineOverrides.push(item.body.range ? item.body.range[0] + 1 : item.range[0] + 1);
@@ -329,13 +340,13 @@ export class CodeProcessor {
                         varDeclarations.push(new VariableDeclaration(scopeName, varName, VarType.let, -1));
                     }
                     else {
-                        [foundInScope, varDeclarations] = this.searchScopeAndParent(scopeName, varName);                        
+                        [foundInScope, varDeclarations] = this.searchScopeAndParent(scopeName, varName);
                     }
 
                     if (varDeclarations.length > 0) {
                         this.createVariable(foundInScope, varName, varDeclarations[0].vartype, item.range[1] + 1);
                     }
-                    
+
                     if (item.right && item.right.type == "ObjectExpression") {
                         this.addNoMarklineZone(item.range[0], item.range[1]);
                     }
