@@ -31,7 +31,7 @@ class VisualizerViewModel {
 
     public reset(value: any, varname: string) {
         this.isBorderless = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0) || typeof value == 'string';
-        this.isString = (typeof value == 'string') || (value[0] != undefined && typeof value[0] == 'string');
+        this.isString = (typeof value == 'string') || (value && value[0] != undefined && typeof value[0] == 'string');
 
         if (value instanceof ObservableGraph)
             this.isBorderless = (value as ObservableGraph).isEmpty();
@@ -78,7 +78,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templatePrimitive: string =
         '<span class="var-value" style="min-width: {{width}}px;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-            <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value" style="vertical-align:middle;"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
+            <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value" style="vertical-align:baseline;"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
      </span>';
 
     protected readonly templateArray = '<span style=""> \
