@@ -52,3 +52,8 @@ Acest mecanism diferit de transmitere a tipurilor obiect face ca modificarile ad
 Putem observa cum variabila <code>a</code> nu mai este o copie a variabilei <code>numar</code> ci o copie ce contine o referinta catre variabila <code>numar</code> iar orice modificare adusa proprietatilor sale vor fi acum vizibile in variabila <code>numar</code> pe care o refera.
 
 <p class="attention-box">Chiar daca putem modifica proprietatile unui parametru de tip obiect, nu putem in schimb sa modificam complet obiectul cu unul nou, adica o atribuire <code>a = { }</code> nu va avea niciun efect intrucat modificam o copie a unei referinte care se va pierde la iesirea din functie.</p>
+
+# Rezumat #
+- Un obiect este o colectie de proprietati asociata unei entitati
+- Atribuirea unui obiect altui obiect va duce la crearea unei referinte si nu a unei copii
+- Obiectele transmise ca parametri functiilor pot fi modificati in interiorul acestora iar modificarile vor fi vizibile dupa sfarsitul apelului functiei

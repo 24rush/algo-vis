@@ -1,4 +1,20 @@
 //DESC:
+//ID: 4
+function esteAnBisect(an) {
+	if (an % 400 == 0) 
+		return true;
+	else if (an % 100 == 0) 
+		return false;
+	else if(an % 4 == 0) 
+		return true;	 
+	
+	return false;
+}
+
+let an = prompt('An:');
+console.log(esteAnBisect(an));
+
+//DESC:
 //ID: 0
 function solicita_numar(tip_numar) {
     let numar = 0;

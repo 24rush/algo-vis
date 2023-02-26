@@ -3,38 +3,44 @@ Pana acum, toate programele prezentate in aceste materiale au fost alcatuite din
 Pentru a putea refolosi aceste secvente si in alte sectiuni ale programului, fara a copia in totalitate instructiunile ce le formeaza, a fost introdus conceptul de **functie**. Putem privi o functie ca o insiruire de instructiuni pe care o putem folosi de oricate ori vrem fara a copia instructiunile ce o formeaza ci doar prin folosirea numelui ei.
 
 # Definire #
-Structura unei functii este urmatoarea:
-<p class="code-box">
-<strong>function</strong> nume_functie ( lista parametri intrare )
+Structura unei functii este formata din antetul functiei si corpul ei. Antetul functiei va contine numele functiei si eventual o lista de parametri, incadrata de paranteze, prin care functia comunica cu exteriorul ei. Corpul functiei va contine intre acolade declaratiile de variabile si instructiunile ce vor realiza efectiv functionalitatea sa.
+
+```
+function nume_functie ( lista optionala de parametri )
 {
-&ensp;&ensp;&ensp;&ensp;< instructiuni functie >
+    < declaratii + instructiuni functie >
 }
-</p>
+```
 
-Observam urmatoarele elemente:
-- cuvantul cheie **function** care indica faptul ca vrem sa definim o functie noua
-- numele functiei este identificatorul prin care putem executa instructiunile ce o formeaza
-- lista de parametri ne ajuta sa specificam datele de intrare de care are nevoie functia
-- corpul functiei este format din setul de instructiuni pe care vrem sa-l contina
+Ca sintaxa observam urmatoarele elemente:
+- cuvantul cheie **function** care indica faptul ca urmeaza sa definim o functie noua
+- numele functiei este identificatorul prin care vom putea executa instructiunile ce o formeaza
+- lista de parametri ne ajuta sa specificam datele de care are nevoie functia
+- corpul functiei este format din declaratiile de variabile si din setul de instructiuni pe care vrem sa-l contina
 
-Declaratia unei functii poate fi extinsa si pe langa definierea parametrilor de intrare si a instructiunilor de executat, se poate indica si o valoare rezultat a executiei functiei. Spunem in acest caz ca functia 'intoarce' o valoare iar de regula aceasta valoare este obtinuta pe baza parametrilor de intrare. Pentru a indica ce valoare rezultat dorim sa intoarca functia, vom folosi cuvantul rezervat **return** urmat de aceasta valoare.
+Declaratia unei functii poate fi extinsa si pe langa definierea parametrilor si a instructiunilor de executat, se poate indica si o valoare rezultat a functiei. Spunem in acest caz ca functia 'intoarce' o valoare. Pentru a indica ce rezultat dorim sa intoarca functia, vom folosi cuvantul rezervat **return** urmat de aceasta valoare.
 
-<p class="code-box">
-<strong>function</strong> nume_functie ( lista de parametri )
+```
+function nume_functie ( lista optionala de parametri )
 {
-&ensp;&ensp;&ensp;&ensp;< instructiuni functie >
-&ensp;&ensp;&ensp;&ensp;<strong>return</strong> valoare rezultat
+    < declaratii + instructiuni functie >
+    
+    return < valoare rezultat >
 }
-</p>
+```
+
+O functie poate contine mai multe cuvinte cheie <code>return</code> iar aceste cuvinte pot sa apara oriunde in corpul functiei. Ca si in cazul unui singur cuvant cheie <code>return</code> acesta nu e obligatoriu sa apara la sfarsit doar ca daca acesta apare mai devreme trebuie sa avem in vedere ce orice intructiuni aflate dupa el nu se vor mai executa - acest cuvant indica sfarsitul functiei si intoarcerea executiei programului inapoi la locatia de la care s-a facut apelul functiei.
 
 # Apelul unei functii #
-Pentru a executa instructiunile aferente corpului functiei, va trebuie sa apelam functia ce le contine pentru ca doar simpla definire a functiei nu executa instructiunile. Luand exemplul de mai sus, pentru a executa corpul functiei va trebuie sa scriem:
+Pentru a executa instructiunile aferente corpului functiei, va trebuie sa apelam functia ce le contine pentru ca doar simpla definire a functiei nu va executa instructiunile. Luand exemplul de mai sus, pentru a executa corpul functiei va trebuie sa scriem:
 
 ``` nume_functie(parametru1, parametru2, ...); ```
 
 ``` parametru1, parametru2 ``` sunt datele de intrare de care functie are nevoie. Pot exista functii insa care nu au nevoie de niciun parametru caz in care nu vom specifica nimic intre paranteze.
 
-# Exemplu practic #
+<p class="tip-box">O functie extrem de utila in dezvoltarea programelor Javascript este <code>console.log()</code> care ne ajuta sa afisam continutul variabilelor in <em>Consola de iesire</em> si totodata in consola de depanare a browserului (apasa tasta F12 in browserul Chrome si apoi selecteaza Console)</p>
+
+# Exemple #
 Sa vedem cum ne ajuta o functie. Luam exemplul de mai jos in care vrem sa afisam valoarea a doua numere introduse de utilizator ridicate la puterea a doua. Prima oara vom solicita un numar pozitiv iar ulterior unul negativ.
 
 <div class="algovis" config-id="functii-basics.json" av-selected="2"></div>
@@ -49,7 +55,7 @@ Reusim astfel sa structuram programul nostru in secvente de instructiuni cu un s
 
 <img src="../wp-content/uploads/2023/img/black_box.png" class="img-box">
 
-In exemplul nostru, mai putem face o modificare si utiliza functia _Math.pow_ in loc sa multiplicam explicit cele doua valori.
+In exemplul nostru mai putem face o modificare si utiliza functia _Math.pow_ in loc sa multiplicam explicit cele doua valori.
 
 ```
 console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + Math.pow(numar, 2));
@@ -61,11 +67,14 @@ Pe langa functiile definite de noi, exista o multitudine de alte functii predefi
 <div class="algovis" config-id="functii-basics.json" av-selected="0"></div>
 
 # Parametrii unei functii #
-Parametrii functiilor pot fi priviti ca fiind date de intrare ale acestora pe baza carora executa anumite instructiuni si eventual intorc un rezultat. Acesti parametri se transforma de altfel in variabile locale functiei in care sunt declarati, putand fi folositi ca orice alta variabila declarata in corpul functiei. Un aspect foarte important de mentionat este faptul ca orice modificare adusa acestor parametrii nu se va reflecta inapoi dupa terminarea apelului functiei. Cu alte cuvinte, clientii functiei (cei care o apeleaza folosind anumiti parametrii) nu vor vedea nicio modificare adusa parametrilor de intrare daca noi incercam sa le modificam valoarea in corpul functiei.
+Parametrii functiilor (denumiti si parametrii formali) pot fi priviti ca fiind datele prin care putem comunica cu functia si cu ajutorul carora putem executa anumite instructiuni in corpul functiei. Acesti parametri se transforma de altfel in variabile in corpul functiei putand fi folositi ca orice alta variabila declarata in corpul functiei. Un aspect foarte important de mentionat este ca orice modificare adusa acestor parametri nu se va reflecta dupa terminarea apelului functiei daca variabila modificata este de tip primitiv (numar, text). Cu alte cuvinte, clientii functiei (cei care o apeleaza folosind anumiti parametrii) nu vor vedea nicio modificare adusa parametrilor de intrare daca noi incercam sa le modificam valoarea in corpul functiei. Acest lucru se intampla deoarece acesta lista de parametri este de fapt o lista de copii a parametrilor folositi atunci cand se efectueaza apelul functiei iar orice modificare aduse lor va fi facuta efectiv asupra copiilor si nu asupra parametrilor mentionati in apelul functiei.
 
 <div class="algovis" config-id="functii-basics.json" av-selected="1"></div>
 
 Functia <code>dubleaza</code> primeste ca parametru un <code>numar</code> pe care noi incercam sa il modificam in speranta ca dupa apelul acestei functii de dublare, parametrul trimis isi va patra valoarea modificata. Ruland exemplul vedem cum instructiunea <code>numar = numar * 2;</code> are doar efect local, modificand valoarea parametrului doar in scopul functiei insa o data cu parasirea acesteia, variabila <code>x</code> aferenta parametrului <code>numar</code> are aceeasi valoare ca inainte de apelul functiei.
 
-<p class="tip-box">Mecanismul de transmitere a parametrilor se face prin copierea (duplicarea) variabilei specificate in apelul functiei asa ca orice modificare adusa parametrului in interiorul functiei s-ar face efectiv asupra acestei copii si nu asupra variabilei folosite in apel.
-</p>
+# Rezumat #
+- O functie este formata din antet plus corp adica numele sau si lista de parametrii urmata de declaratii de variabile si instructiuni
+- Optional o functie poate intoarce un rezultat prin folosirea cuvantului cheie <code>return</code>
+- Beneficiul principal al folosirii functiilor este de a reduce duplicarea instructiunilor insa vom invata si de alte avantaje in articolele urmatoare
+- Mecanismul de transmitere a parametrilor de tip primitiv se face prin copierea variabilei specificate la apelul functiei asa ca orice modificare adusa parametrului in interiorul functiei se face efectiv asupra acestei copii si nu asupra variabilei folosite in apel
