@@ -1,81 +1,106 @@
 import argparse
 import os
 import json
-
-DESC_HEADER = "//DESC:"
-LEVEL_HEADER = "//LEVEL:"
-ID_HEADER = "//ID:"
+import re
 
 LANGS = ['ro', 'en']
 
 def determineLang(pathFileName):
     for lang in LANGS:
-        if '.' + lang + '.js' in pathFileName:
+        if '.' + lang + '.' in pathFileName:
             return lang
 
     return 'ro'
 
-def extractSnippets(code_lines):
-    snippets = []
+def extractData(quizFile):
+    topObject = {}
+    currObj = topObject
+    objRefs = []
+    inArraySeq = False
 
-    is_first_desc_header = True
-    desc_value = ""
-    level_value = ""
-    code = ""
-    id = ""
+    rgxHeaderValue = r"^\s*\Â§\s*(\w+)\s*(:*)\s*((\[+\n*)|[^\Â§]*)$"
 
-    for line in code_lines:
-        if DESC_HEADER in line:            
-            if is_first_desc_header:            
-                is_first_desc_header = False
-            else:
-                snippets.append({'code': code[:-1], 'desc' : desc_value, 'level': level_value, 'id': id})
-                desc_value = ''
-                level_value = ''
-                code = ''
-                id = ''  
-            desc_value = line.replace(DESC_HEADER, '').strip()
+    matches = re.findall(rgxHeaderValue, quizFile, flags=re.M)
 
-        elif LEVEL_HEADER in line and level_value == '':
-            level_value = line.replace(LEVEL_HEADER, '').strip()
-        elif ID_HEADER in line and id == '':
-            id = line.replace(ID_HEADER, '').strip()
-        else:
-            code += line
+    if (not len(matches)):
+        print ("Warning: NO MATCHES")
+
+    for match in matches:        
+        key = match[0].strip()
+        value = match[2].strip()
         
-    if desc_value != '':
-        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value, 'id': id})
-    elif code != '':
-        snippets.append({'code': code.rstrip('\n'), 'desc' : desc_value, 'level': level_value, 'id': id})
+        isObject = (match[1] == None or match[1] == '')
+        isStartOfArrayObjects = (value == '[')
+        isEndOfArrayObjects = (value == ']')
 
-    return snippets
+        # if value array then load it as array
+        if (len(value) > 1 and value[0] == '[' and value[len(value) - 1] == ']'):
+            value = json.loads(value)            
 
-def processSnippet(inputFolder, pathFileName, dir, jsonData):
-    if dir != None:
-        jsonFile = inputFolder + dir.replace('\\', '-') + ".json"
+        if isObject:        
+            currObj = (objRefs[1] if len(objRefs) > 1 else topObject)            
+            currObj[key] = {}
+            objRefs.insert(0, currObj)            
+            currObj = currObj[key]   
+                 
+            continue
+
+        if isStartOfArrayObjects:              
+            currObj[key] = [{}]
+            objRefs.insert(0, currObj)
+            objRefs.insert(0, currObj[key])                        
+            currObj = currObj[key][0]            
+
+            inArraySeq = True            
+            continue
+
+        if isEndOfArrayObjects and inArraySeq:        
+            objRefs.pop(0)            
+            currObj = objRefs[0]
+            
+            inArraySeq = False            
+            continue
+        
+        if key in currObj:
+            currObj = {}
+            currObj[key] = value
+
+            if len(objRefs) <= 1:
+                topObject = [topObject]
+                objRefs.insert(0, topObject)
+
+            objRefs[0].append(currObj)
+            
+            continue
+                
+        currObj[key] = value        
     
+    return topObject
+
+def process(inputFolder, pathFileName, dir, jsonData):    
     lang = determineLang(pathFileName)
+
+    if dir != None:
+        jsonFile = inputFolder + pathFileName.replace(inputFolder, '').replace('\\', '-')
+
+    jsonFile = jsonFile.replace('.' + lang, '')
+    jsonFile = jsonFile.replace('.snip', '.json').replace('.quiz', '.json')
 
     print("Processing file (" + lang + ") " + pathFileName + ' to '+ jsonFile)
 
     if not jsonFile in jsonData:
         jsonData[jsonFile] = {}
 
-    if not lang in jsonData[jsonFile]:
-        jsonData[jsonFile][lang] = []
-
     with open(os.getcwd() + os.path.sep + pathFileName, 'r') as jsFile:    
-        code_lines = jsFile.readlines()
-
-        for snippet in extractSnippets(code_lines):            
-            snippet['src'] = pathFileName.replace(inputFolder, '')
-            jsonData[jsonFile][lang].append(snippet)
+        dataObjs = extractData(jsFile.read())                
+        jsonData[jsonFile][lang] = dataObjs
+        jsonData[jsonFile]['src-' + lang] = pathFileName.replace(inputFolder, '')        
 
     return jsonData
 
 def generateJsons(inputFolder):
     jsonData = {}  
-
+    
     if not inputFolder.endswith(os.path.sep):
         inputFolder = inputFolder + os.path.sep
 
@@ -87,8 +112,9 @@ def generateJsons(inputFolder):
                 dir = root[idxSlash+1:]
 
             fileName = os.path.join(root, name)
-            if fileName.endswith('snip'):
-                jsonData = processSnippet(inputFolder, fileName, dir, jsonData)
+            
+            if fileName.endswith('snip') or fileName.endswith('quiz'):
+                jsonData = process(inputFolder, fileName, dir, jsonData)
 
     return jsonData
 
