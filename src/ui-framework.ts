@@ -90,7 +90,7 @@ export class UIBinder {
 
     public bindTo(widget: Element): UIBinder {
         // Search for all known binding attributes
-        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-value", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style"];
+        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-value", "av-bind-style-width", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style"];
         let bindingType = BindingType.undefined;
         let styleTargetProp: string = undefined;
 
@@ -119,6 +119,7 @@ export class UIBinder {
                             bindingType = BindingType.VALUE;
                             break;
                         }
+                    case "av-bind-style-width":
                     case "av-bind-style-display":
                     case "av-bind-style-border":
                     case "av-bind-style-font-style":
@@ -217,7 +218,7 @@ export class UIBinder {
             if (!propertyBound) continue;
 
             if (propertyBound in this.viewModel) {
-                htmlElement.addEventListener('click', (this.viewModel as any)[propertyBound]);
+                htmlElement.addEventListener('click', (this.viewModel as any)[propertyBound].bind(this.viewModel));
             } else {
                 throw "Property '" + propertyBound + "' does not exist on view model";
             }
@@ -293,6 +294,9 @@ export class UIBinder {
                                     let targetStyle = bindingContext.getStyleTargetProp();
 
                                     switch (targetStyle) {
+                                        case "width":
+                                            bindingContext.htmlElement.style.width = propValueAfterEval;
+                                            break;
                                         case "display":
                                             bindingContext.htmlElement.style.setProperty("display", propValueAfterEval, "important")
                                             break;
@@ -325,10 +329,24 @@ export class UIBinder {
                                     bindingContext.htmlElement.classList.add(propValueAfterEval);
                                 }
                             } else {
-                                if (bindingContext.getBindingType() == BindingType.VALUE) {
-                                    (bindingContext.htmlElement as HTMLInputElement).value = newValue;
-                                } else {
-                                    bindingContext.htmlElement.textContent = newValue;
+                                switch (bindingContext.getBindingType()) {
+                                    case BindingType.VALUE:
+                                        (bindingContext.htmlElement as HTMLInputElement).value = newValue;
+                                        break;
+                                    case BindingType.STYLE:
+                                        {
+                                            let targetStyle = bindingContext.getStyleTargetProp();
+
+                                            switch (targetStyle) {
+                                                case "width":
+                                                    bindingContext.htmlElement.style.width = newValue;
+                                                    break;
+                                            }
+
+                                            break;
+                                        }
+                                    default:
+                                        bindingContext.htmlElement.textContent = newValue;
                                 }
                             }
                         }

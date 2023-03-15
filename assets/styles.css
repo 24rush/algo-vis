@@ -13,6 +13,11 @@
   max-width: 100% !important;
 }
 
+.quizContainer {
+  width: 70%;
+  margin: auto;
+}
+
 .commentsPopover {
   position: relative;
 }
@@ -107,6 +112,34 @@
   100% {
     color: black;
   }
+}
+
+/* FLIP EFFECT */
+
+.quizContainer {
+  position: relative;
+}
+
+.front {
+  z-index: 1;
+}
+
+.back {
+  display: none;
+  opacity: 0;
+  top: 0;
+  left: 0;
+}
+
+.quizContainerFlip {
+  transition: 1s;
+  transform: rotateY(180deg); 
+  opacity: 0;
+}
+
+.quizFaceShow {
+  transition: 1s;
+  opacity: 100;
 }
 
 /*

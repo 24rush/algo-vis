@@ -4,7 +4,7 @@ import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
 import { Localize } from "./localization";
-import { Snippet } from "./index";
+import { Snippet } from "./snippets";
 import { UserInteractionType } from "./code-executor";
 
 var bootstrap = require('bootstrap')
