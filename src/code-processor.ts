@@ -25,7 +25,7 @@ class ScopeDeclaration {
 }
 
 class PushFuncParams {
-    constructor(public startOfDefinitionIndex: number, public endOfDefinitionIndex: number, public varToParams: [string, string][]) { }
+    constructor(public startOfDefinitionIndex: number, public endOfDefinitionIndex: number, public funcScopeName: string, public varToParams: [string, string][]) { }
 }
 
 export class CodeProcessor {
@@ -41,13 +41,14 @@ export class CodeProcessor {
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
     private explicitBraces: IndexRange[] = []; // braces for missing blocks
+    private functionWrappers: IndexRange[] = []; // location of function calls
 
     getCode() { return this.code; }
-    setCode(code: string) {
+    setCode(code: string, injectMarkers: boolean = true) : [boolean, string] {
         this.resetCodeParsingState();
         this.code = code;
 
-        return this.parseCode();
+        return (injectMarkers ? this.parseCode() : [true, this.code]);
     }
 
     public resetCodeParsingState() {
@@ -55,18 +56,24 @@ export class CodeProcessor {
         this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
         this.funcDefs = {}; this.pushFuncParams = [];
         this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];
+        this.functionWrappers = [];
     }
 
-    public dumpDebugInfo() {
-        console.log("VARS: "); console.log(this.varDeclarations);
-        console.log("BRACES: "); console.log(this.explicitBraces);
-        console.log("SCOPES: "); console.log(this.scopes);
-        console.log("FUNCDEFS: "); console.log(this.funcDefs);
-        console.log("PUSHPARAMS: "); console.log(this.pushFuncParams);
-        console.log("NOMARKLINE: "); console.log(this.noMarkLineZone);
-        console.log("MARKLINEOVERRIDES: "); console.log(this.markLineOverrides);
+    private debugEnabled: boolean = true;
 
-        console.log(this.code);
+    public dumpDebugInfo() {
+        if (this.debugEnabled) {
+            console.log("VARS: "); console.log(this.varDeclarations);
+            console.log("BRACES: "); console.log(this.explicitBraces);
+            console.log("SCOPES: "); console.log(this.scopes);
+            console.log("FUNCDEFS: "); console.log(this.funcDefs);
+            console.log("FUNCWRAPPERS: "); console.log(this.functionWrappers);
+            console.log("PUSHPARAMS: "); console.log(this.pushFuncParams);
+            console.log("NOMARKLINE: "); console.log(this.noMarkLineZone);
+            console.log("MARKLINEOVERRIDES: "); console.log(this.markLineOverrides);
+
+            console.log(this.code);
+        }
     }
 
     private parseVariable(scopeName: string, vardata: any, declIndexOverwrite: number = -1) {
@@ -150,7 +157,7 @@ export class CodeProcessor {
                             this.createVariable(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.let, item.body.range[0] + 1);
                         }
 
-                        this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item.body.range[0] + 1, item.body.range[1] - 1));
+                        //this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item.body.range[0] + 1, item.body.range[1] - 1));
                         this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item);
                         break;
                     }
@@ -200,10 +207,30 @@ export class CodeProcessor {
                     }
                 case "IfStatement":
                     {
-                        this.markLineOverrides.push(item.range[0]);
-                        if (item.alternate) { // No marklines before else
-                            this.addNoMarklineZone(item.consequent.range[1], item.alternate.range[0]);
+                        //this.markLineOverrides.push(item.range[0]);
+
+                        let addScopeIfBlockStatement = (item: any) => {
+                            if (item && item.type == "BlockStatement") {
+                                this.scopes.push(new ScopeDeclaration("local", item.range[0] + 1, item.range[1] - 1));
+                            }
+                        };
+
+                        if (item.consequent && item.consequent.type != "BlockStatement") {
+                            let indexParen = this.code.lastIndexOf(')', item.consequent.range[0]);
+                            this.explicitBraces.push(new IndexRange(indexParen + 1, item.consequent.range[1]));
                         }
+
+                        if (item.alternate) {
+                            if (item.alternate.type != "BlockStatement" && item.alternate.type != "IfStatement") {
+                                this.explicitBraces.push(new IndexRange(item.alternate.range[0], item.alternate.range[1]));
+                            }
+
+                            // No marklines before else
+                            this.addNoMarklineZone(item.consequent.range[1], item.alternate.range[0] - 4); // minus else keyword
+                        }
+
+                        addScopeIfBlockStatement(item.consequent);
+                        addScopeIfBlockStatement(item.alternate);
 
                         this.extractVariables(scopeName + ".local", item.consequent);
                         this.extractVariables(scopeName + ".local", item.alternate);
@@ -270,7 +297,7 @@ export class CodeProcessor {
                             this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
                         }
                     }
-                    else {
+                    else if (item.callee.name in this.funcDefs) { // ignoring functions not defined in program
                         let calledFunc = item.callee.name;
 
                         let varToParamPairs: [string, string][] = [];
@@ -287,13 +314,20 @@ export class CodeProcessor {
                         }
 
                         this.pushFuncParams.push(new PushFuncParams(varDeclStart != undefined ? varDeclStart : item.range[0],
-                            varDeclEnd != undefined ? varDeclEnd : item.range[1], varToParamPairs));
+                            varDeclEnd != undefined ? varDeclEnd : item.range[1],
+                            RuntimeScopeMonitor.scopeNameToFunctionScope(calledFunc),
+                            varToParamPairs));
+
+                        this.functionWrappers.push(new IndexRange(item.range[0], item.range[1]));
                     }
 
                     if (item.arguments && item.arguments.length) {
                         // Don't add line markers in between function parameters
                         this.addNoMarklineZone(item.range[0] + 1, item.range[1]);
                     }
+
+                    for (let arg of item.arguments)
+                        this.extractVariables(scopeName, arg);
 
                     break;
                 }
@@ -407,9 +441,16 @@ export class CodeProcessor {
             injectAtIndex[index].push(injectedCode);
         };
 
+        // Add missing braces
         for (const explicitBrace of this.explicitBraces) {
             addCodeInjection(explicitBrace.s, "{");
             addCodeInjection(explicitBrace.e, "}");
+        }
+
+        // Insert function wrappers
+        for (const functionWrapper of this.functionWrappers) {
+            addCodeInjection(functionWrapper.s, "funcWrap(");
+            addCodeInjection(functionWrapper.e, "");
         }
 
         // Scope start setting
@@ -442,10 +483,10 @@ export class CodeProcessor {
 
         // Push function parameters
         for (const pushParams of this.pushFuncParams) {
-            let injectedCode = `;pushParams(${JSON.stringify(pushParams.varToParams)});`;
+            let injectedCode = `{f: () => { pushParams(${JSON.stringify(pushParams.varToParams)}); startScope('` + pushParams.funcScopeName + `'); let ret = `;
             addCodeInjection(pushParams.startOfDefinitionIndex, injectedCode);
 
-            injectedCode = `;popParams(${JSON.stringify(pushParams.varToParams)});`;
+            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `'); return ret;}})`;
             addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);
         }
 
@@ -480,7 +521,7 @@ export class CodeProcessor {
 
         try {
             syntax = esprima.parseScript(this.code, { range: true });
-            console.log(syntax);
+            if (this.debugEnabled) console.log(syntax);
         } catch (error) {
             return [false, "line " + error.lineNumber + ": " + error.description];
         }

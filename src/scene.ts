@@ -17,6 +17,7 @@ class AVViewModel {
 
     isPaused = true;
     isExecutionCompleted = false;
+    isVisualisationDisabled = false;
     onAutoplayToggled(): any { }
 
     isSnippetSet = false;
@@ -59,6 +60,7 @@ class AVViewModel {
 
         this.isPaused = true;
         this.isExecutionCompleted = false;
+        this.isVisualisationDisabled = false;
 
         this.isSnippetSet = false;
         this.hasLevelSpecified = false;
@@ -96,7 +98,7 @@ export class Scene {
 
     private viewModel: AVViewModel = new AVViewModel();
 
-    private operationRecorder = new OperationRecorder();
+    private operationRecorder: OperationRecorder;
     private lineNoToBeExecuted = -1;
 
     constructor(app: HTMLElement, snippets: Snippet[], fullscreenCbk: RequestFullScreenCbk) {
@@ -109,16 +111,20 @@ export class Scene {
         this.promptWidget = app.querySelector("[id=toast-" + codeEditor.id);
         this.promptToast = new bootstrap.Toast(this.promptWidget);
 
-        let hasAutoPlayOption = app.hasAttribute('av-autoplay');
+        let isAutoPlay = app.hasAttribute('av-autoplay');
         let isWriteable = app.hasAttribute('av-write');
+        let isVisualisationDisabled = app.hasAttribute('av-novis');
         let selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
 
-        this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable);
+        this.operationRecorder = new OperationRecorder(!isVisualisationDisabled);
+        this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable, !isVisualisationDisabled);
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
         avViewModel.setDefaults();
+
+        avViewModel.isVisualisationDisabled = isVisualisationDisabled;
 
         let self = this;
 
@@ -175,18 +181,22 @@ export class Scene {
         };
 
         this.viewModel.onAutoplayToggled = () => {
-            if (avViewModel.isExecutionCompleted) {
-                this.viewModel.onRestart();
+            if (avViewModel.isVisualisationDisabled) {
+                this.autoReplayInterval = 0;
+                onSourceCodeUpdated(this.codeRenderer.getSourceCode());
             }
+            else
+                if (avViewModel.isExecutionCompleted) {
+                    this.viewModel.onRestart();
+                }
 
             avViewModel.isPaused = !avViewModel.isPaused;
 
             clearInterval(this.autoplayTimer);
             if (avViewModel.isPaused) {
-                hasAutoPlayOption = false;
+                isAutoPlay = false;
             }
-
-            if (!avViewModel.isPaused) {
+            else {
                 this.autoplayTimer = setInterval(() => {
                     avViewModel.isPaused = avViewModel.isExecutionCompleted;
 
@@ -329,34 +339,36 @@ export class Scene {
             onExecutionFinished(): void {
                 avViewModel.isExecutionCompleted = self.operationRecorder.isReplayFinished();
 
-                if (hasAutoPlayOption) {
+                if (isAutoPlay) {
                     self.viewModel.onAutoplayToggled();
                 }
             }
         });
 
-        this.codeRenderer.registerEventNotifier({
-            onSourceCodeUpdated(newCode: string) {
-                avViewModel.consoleOutput = "";
-                layout.clearAll();
+        let onSourceCodeUpdated = (newCode: string) => {
+            avViewModel.consoleOutput = "";
+            layout.clearAll();
 
-                var doc = new DOMParser().parseFromString(newCode, "text/html");
-                newCode = doc.documentElement.textContent;
+            var doc = new DOMParser().parseFromString(newCode, "text/html");
+            newCode = doc.documentElement.textContent;
 
-                self.operationRecorder.setSourceCode(newCode);
-                self.operationRecorder.startReplay();
-            }
-        });
+            self.operationRecorder.setSourceCode(newCode);
+            self.operationRecorder.startReplay();
+        };
+
+        if (!isVisualisationDisabled) {
+            this.codeRenderer.registerEventNotifier({ onSourceCodeUpdated: onSourceCodeUpdated });
+        }
 
         var options = {
             'content': "",
             "maxLines": "12"
         };
 
-        let getAceCursorElem = () : HTMLElement => { return document.querySelector("[class=myMarker]") as HTMLElement; }
+        let getAceCursorElem = (): HTMLElement => { return document.querySelector("[class=myMarker]") as HTMLElement; }
 
         var displayCommentsPopover = (aceCursor: any) => {
-            if (!avViewModel.showComments)
+            if (!avViewModel.showComments || isVisualisationDisabled)
                 return;
 
             if (self.commentsPopover) self.commentsPopover.dispose();
@@ -390,7 +402,7 @@ export class Scene {
                 let checkerFunc = () => {
                     let aceCursor = getAceCursorElem();
 
-                    if (aceCursor) {                        
+                    if (aceCursor) {
                         observer.observe(aceCursor, { attributes: true, attributeFilter: ['style'] });
                         // Sometimes the event is lost so trigger it manually
                         displayCommentsPopover(aceCursor);
@@ -407,7 +419,7 @@ export class Scene {
             for (let lineMarker of app.querySelectorAll('.ace_gutter-cell')) {
                 lineMarker.addEventListener('mouseover', (e) => {
                     let hoveredLineNo = parseInt((e.target as HTMLElement).textContent);
-                    
+
                     options.content = this.codeRenderer.getLineComment(hoveredLineNo);
                     displayCommentsPopover(e.target);
                 });
@@ -419,7 +431,7 @@ export class Scene {
             }
         }, 500);
 
-        if (hasAutoPlayOption) {
+        if (isAutoPlay) {
             this.viewModel.onAutoplayToggled();
         }
     }

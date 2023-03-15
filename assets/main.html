@@ -23,20 +23,21 @@
         </button>
     </div>
     <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
-        <button av-bind-onclick="onAdvance" type="button"
+        <button av-bind-onclick="onAdvance" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
             class="popover-dismiss rounded-right btn btn-light btn-overrides av-btn"
             av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}">
             <i class="bi bi-play-fill"></i>
             <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
         </button>
 
-        <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides"
-            av-bind-class="{isFunctionalityDisabled : disabled}">
+        <button av-bind-onclick="onAutoplayToggled" type="button" 
+            class="btn btn-light btn-overrides"
+            av-bind-class="{isFunctionalityDisabled : disabled, isVisualisationDisabled: av-btn}" >
             <i class="bi bi-fast-forward-fill"
                 av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
             <span av-bind-text='{isPaused: LangStrId.1, !isPaused: LangStrId.2}'>Execute all</span>
         </button>
-        <button av-bind-onclick="onRestart" type="button" class="btn btn-light btn-overrides"
+        <button av-bind-onclick="onRestart" av-bind-style-display="{isVisualisationDisabled: none}" type="button" class="btn btn-light btn-overrides"
             av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
             <i class="bi bi-arrow-clockwise"></i>
             <span av-bind-text="LangStrId.6">Restart</span>
@@ -47,7 +48,7 @@
             <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>
         </button>
 
-        <div>
+        <div av-bind-style-display="{isVisualisationDisabled: none}" >
             <button class="btn btn-light btn-overrides" type="button" id="dropdownMenuButton-{{codeEditorId}}"
                 data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-auto-close="outside">
                 <span class="bi bi-three-dots-vertical"></span>
@@ -133,7 +134,7 @@
                 av-bind-text='exceptionMessage'></button>
         </li>
 
-        <li class="list-group-item fw-semibold av-variables"><span av-bind-text="LangStrId.7">Variables</span>
+        <li av-bind-style-display="{isVisualisationDisabled: none}" class="list-group-item fw-semibold av-variables"><span av-bind-text="LangStrId.7">Variables</span>
             <div class="panelVariables" style="margin-left: -1em;">
             </div>
         </li>

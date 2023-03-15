@@ -6,6 +6,7 @@ export interface CodeRendererEventNotifier {
 }
 
 export class CodeRenderer {
+    private readonly MaxCodeLines = 20;
     private editor: any;
     private marker: any;
     private Range = ace.require('ace/range').Range;
@@ -13,11 +14,11 @@ export class CodeRenderer {
     private lineComments: string[] = [];
     private skipEventsCount = 0;
 
-    constructor(codeEditorHtmlElement: HTMLElement, isReadonly: boolean = false) {
+    constructor(codeEditorHtmlElement: HTMLElement, isReadonly: boolean = false, autoRefresh: boolean = true) {
         let code = codeEditorHtmlElement.textContent;
         let codeLines = code.split('\n');
 
-        if (codeLines && codeLines.length) {
+        if (codeLines.length) {
             if (codeLines[0].trim() == '')
                 codeLines.shift();
 
@@ -38,43 +39,44 @@ export class CodeRenderer {
         this.editor.setShowPrintMargin(false);
         this.editor.setAutoScrollEditorIntoView(true);
         this.editor.setReadOnly(isReadonly);
+        this.editor.setOption('maxLines', Math.max(this.MaxCodeLines, codeLines.length))
 
         this.editor.session.setMode("ace/mode/javascript");
-        this.editor.session.setValue(convert(newCode));
-
-        let timeoutReloadCode: any;
-        let recompileCodeInterval = 3000;
+        this.editor.session.setValue(convert(newCode));        
 
         this.editor.setOptions({
             useWorker: false,
-            wrap: true,
-            maxLines: codeLines.length + 5,
+            wrap: true
         });
 
-        this.editor.on('change', () => {
-            if (this.skipEventsCount > 0) {
-                this.skipEventsCount--;
-                return;
-            }
-            
-            let [, newCode, lineNo] = this.extractComments(this.editor.getSession().getValue());
-            let sanitizedCode = convert(newCode);
-            
-            if (sanitizedCode != newCode) {
-                this.editor.setOption('maxLines', lineNo > 20 ? 20 : lineNo)
-                this.editor.setValue(sanitizedCode);
-                return;
-            }
+        if (autoRefresh) {
+            let timeoutReloadCode: any;
 
-            if (timeoutReloadCode)
-                clearInterval(timeoutReloadCode);
+            this.editor.on('change', () => {
+                if (this.skipEventsCount > 0) {
+                    this.skipEventsCount--;
+                    return;
+                }
 
-            timeoutReloadCode = setTimeout(() => {
-                for (let notifier of this.eventListeners) {
-                    notifier.onSourceCodeUpdated(sanitizedCode);
-                };
-            }, recompileCodeInterval);
-        });
+                let [, newCode, lineNo] = this.extractComments(this.editor.getSession().getValue());
+                let sanitizedCode = convert(newCode);
+
+                if (sanitizedCode != newCode) {
+                    this.editor.setOption('maxLines', Math.max(this.MaxCodeLines, lineNo))
+                    this.editor.setValue(sanitizedCode);
+                    return;
+                }
+
+                if (timeoutReloadCode)
+                    clearInterval(timeoutReloadCode);
+
+                timeoutReloadCode = setTimeout(() => {
+                    for (let notifier of this.eventListeners) {
+                        notifier.onSourceCodeUpdated(sanitizedCode);
+                    };
+                }, 3000);
+            });
+        }
     }
 
     public registerEventNotifier(notifier: CodeRendererEventNotifier) {
@@ -106,7 +108,7 @@ export class CodeRenderer {
         return this.editor.getValue();
     }
 
-    public getLineComment(lineNo: number): string {                
+    public getLineComment(lineNo: number): string {
         if (lineNo >= this.lineComments.length)
             return "";
 

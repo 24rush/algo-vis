@@ -174,6 +174,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 endScope: this.endScope,
                 pushParams: this.pushParams,
                 popParams: this.popParams,
+                funcWrap: this.funcWrap,
                 forcemarkcl: this.forceMarkLine,
                 promptWrap: this.promptWrap,
                 alertWrap: this.alertWrap,
@@ -195,6 +196,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                          let endScope = Funcs.endScope; \
                          let pushParams = Funcs.pushParams; \
                          let popParams = Funcs.popParams; \
+                         let funcWrap = Funcs.funcWrap; \
                          let promptWrap = Funcs.promptWrap; \
                          let alertWrap = Funcs.alertWrap; \
                          let confirmWrap = Funcs.confirmWrap; \
@@ -224,7 +226,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
-    private forceMarkLine(lineNumber: number) {
+    private forceMarkLine(lineNumber: number) : boolean {
         let codex = codeExec();
 
         if (codex.lastLineNo == lineNumber)
@@ -254,6 +256,8 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
 
         codex.lastLineNo = lineNumber;
+
+        return true;
     }
 
     private markStartCodeLine(lineNumber: number) {
@@ -299,7 +303,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
-    private pushParams(params: [string, string][]) {
+    private pushParams(params: [string, string][]) {        
         self.postMessage({
             cmd: CodeExecutorCommands.pushParams,
             params: Array.from(arguments)
@@ -311,6 +315,11 @@ export class CodeExecutor implements GraphVariableChangeCbk {
             cmd: CodeExecutorCommands.popParams,
             params: Array.from(arguments)
         });
+    }
+
+    private funcWrap() {
+        //@ts-ignore
+        (arguments as unknown)[0].f();
     }
 
     private setVar(varname: string, object: any, varsource: string) {

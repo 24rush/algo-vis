@@ -308,7 +308,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, runtimeObservable, source.value, destination.value);
     }
 
-    constructor() {
+    constructor(private injectMarkers: boolean = true) {        
         super();
     }
 
@@ -348,7 +348,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.onCompilationError(false);
         this.onExceptionMessage(false);
 
-        let [success, errMsg] = this.codeProcessor.setCode(code);
+        let [success, errMsg] = this.codeProcessor.setCode(code, this.injectMarkers);
 
         if (!success) {
             this.onCompilationError(success, errMsg);

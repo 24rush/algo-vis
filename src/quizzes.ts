@@ -229,10 +229,7 @@ class QuizViewModel {
         this.updateStateOnNewQuiz();
     }
 
-    private updateStateOnNewQuiz() {
-        let quiz = this.getCurrentQuizData();
-        console.log(quiz);
-
+    private updateStateOnNewQuiz() {    
         this.quizViewModel.hasMoreQuizzes = this.currQuizIdx < (this.quizzes.length - 1);
         this.quizViewModel.hasExplanation = 'explanation' in this.getCurrentQuizData();
         this.quizViewModel.quizProgress = 100 * (this.quizzes.length ? (1 + this.currQuizIdx) / this.quizzes.length : 0) + "%";
