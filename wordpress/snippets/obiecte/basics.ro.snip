@@ -1,6 +1,6 @@
-§ desc: Obiect simplu
-§ id: 0
-§ code:
+§desc: Obiect simplu
+§id: 0
+§code:
 let sticlaApa = {
     'volum' : 500,
     'greutate': 700
@@ -9,9 +9,9 @@ let sticlaApa = {
 console.log(sticlaApa['volum']);
 console.log(sticlaApa.volum);
 
-§ desc: Ctor simplu
-§ id: 1
-§ code:
+§desc: Ctor simplu
+§id: 1
+§code:
 function SticlaApa(v, g) {
     this.volum = v;
     this.greutate = g;
@@ -20,9 +20,9 @@ function SticlaApa(v, g) {
 let sticlaApa = new SticlaApa(500, 700);
 console.log(sticlaApa.volum);
 
-§ desc: Ctor + validare
-§ id: 2
-§ code:
+§desc: Ctor + validare
+§id: 2
+§code:
 function SticlaApa(v, g) {
     if (v < 0) {
         this.volum = 0;
@@ -40,9 +40,9 @@ let sticla2 = new SticlaApa(-10, 150);
 console.log(sticla1.volum);
 console.log(sticla2.volum);
 
-§ desc: Pass primitive
-§ id: 3
-§ code:
+§desc: Pass primitive
+§id: 3
+§code:
 function foo(a) {
     console.log(a);
     a = 6;
@@ -53,9 +53,9 @@ foo(numar);
 
 console.log(numar);
 
-§ desc: Pass object
-§ id: 4
-§ code:
+§desc: Pass object
+§id: 4
+§code:
 function foo(a) {
     console.log(a);
     a.valoare = 6;
@@ -66,9 +66,9 @@ foo(numar);
 
 console.log(numar.valoare);
 
-§ desc: Copy object
-§ id: 5
-§ code:
+§desc: Copy object
+§id: 5
+§code:
 function SticlaApa(v, g) {
     this.volum = v;
     this.greutate = g;

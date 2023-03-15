@@ -2,6 +2,7 @@ import argparse
 import os
 import json
 import re
+import markdown
 
 LANGS = ['ro', 'en']
 
@@ -12,67 +13,86 @@ def determineLang(pathFileName):
 
     return 'ro'
 
+def processKeyValue(key, value):
+    # if value array then load it as array
+    if (len(value) > 1 and value[0] == '[' and value[len(value) - 1] == ']'):
+        value = json.loads(value)
+
+    if (key == "statement"):
+        value = markdown.markdown(value)
+
+    return value
+
 def extractData(quizFile):
-    topObject = {}
-    currObj = topObject
+    topObject = [{}]
+    currObj = topObject[0]    
     objRefs = []
-    inArraySeq = False
+    levels = []
+    arrayLevels = 0
+    level = 0
+    currObjLevel = 0
 
-    rgxHeaderValue = r"^\s*\Â§\s*(\w+)\s*(:*)\s*((\[+\n*)|[^\Â§]*)$"
-
+    rgxHeaderValue = r"^\s*\Â§(\s*\w+)\s*(:*)\s*((\[+\n*)|[^\Â§]*)$"
     matches = re.findall(rgxHeaderValue, quizFile, flags=re.M)
 
     if (not len(matches)):
         print ("Warning: NO MATCHES")
 
-    for match in matches:        
+    for match in matches:
+        # Mark the level of the previous key before going into current one
+        level = int(match[0].count(' ') / 4) + arrayLevels
+
         key = match[0].strip()
         value = match[2].strip()
-        
+
         isObject = (match[1] == None or match[1] == '')
         isStartOfArrayObjects = (value == '[')
         isEndOfArrayObjects = (value == ']')
 
-        # if value array then load it as array
-        if (len(value) > 1 and value[0] == '[' and value[len(value) - 1] == ']'):
-            value = json.loads(value)            
+        value = processKeyValue(key, value)
+                
+        if not isEndOfArrayObjects and len(levels) and currObjLevel > level:
+            while (len(objRefs) and currObjLevel > level):
+                currObj = objRefs.pop(0)
+                currObjLevel = levels.pop(0)
 
-        if isObject:        
-            currObj = (objRefs[1] if len(objRefs) > 1 else topObject)            
+        if isObject:     
+            # Starting new object, push current one and mark its level
+            objRefs.insert(0, currObj); levels.insert(0, currObjLevel)
             currObj[key] = {}
-            objRefs.insert(0, currObj)            
-            currObj = currObj[key]   
-                 
+            currObj = currObj[key]
+            currObjLevel = currObjLevel + 1
             continue
 
-        if isStartOfArrayObjects:              
+        if isStartOfArrayObjects:
+            arrayLevels = arrayLevels + 1
+
+            # Required for knowing where to come back after array ends
+            objRefs.insert(0, currObj); levels.insert(0, currObjLevel)
+
+            # Required for adding new objects to it
             currObj[key] = [{}]
-            objRefs.insert(0, currObj)
-            objRefs.insert(0, currObj[key])                        
-            currObj = currObj[key][0]            
-
-            inArraySeq = True            
+            objRefs.insert(0, currObj[key]); levels.insert(0, currObjLevel + 1)
+            
+            currObj = currObj[key][0]
+            currObjLevel = currObjLevel + 2
             continue
 
-        if isEndOfArrayObjects and inArraySeq:        
-            objRefs.pop(0)            
-            currObj = objRefs[0]
-            
-            inArraySeq = False            
+        if isEndOfArrayObjects:
+            arrayLevels = arrayLevels - 1
+
+            objRefs.pop(0); levels.pop(0)
+            currObj = objRefs.pop(0); 
+            currObjLevel = levels.pop(0)
             continue
         
         if key in currObj:
             currObj = {}
-            currObj[key] = value
+            if len(objRefs):
+                objRefs[0].append(currObj)
+            else:
+                topObject.append(currObj)
 
-            if len(objRefs) <= 1:
-                topObject = [topObject]
-                objRefs.insert(0, topObject)
-
-            objRefs[0].append(currObj)
-            
-            continue
-                
         currObj[key] = value        
     
     return topObject
