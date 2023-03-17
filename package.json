@@ -5,17 +5,24 @@
   "main": "build/bundle.js",
   "dependencies": {
     "@popperjs/core": "^2.11.6",
+    "@testdeck/mocha": "^0.3.3",
+    "@types/chai": "^4.3.4",
     "ace-builds": "^1.11.1",
     "bootstrap": "^5.2.1",
+    "chai": "^4.3.7",
     "cytoscape": "^3.23.0",
     "cytoscape-dagre": "^2.5.0",
     "esprima": "^4.0.1",
     "lodash": "^4.17.21",
+    "mocha": "^10.2.0",
     "mustache": "^4.2.0",
+    "nyc": "^15.1.0",
     "raw-loader": "^4.0.2",
-    "split.js": "^1.6.5"
+    "split.js": "^1.6.5",
+    "ts-node": "^10.9.1"
   },
   "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@types/ace": "0.0.48",
     "@types/cytoscape": "^3.19.9",
     "@types/lodash": "^4.14.185",
@@ -26,7 +33,7 @@
     "webpack-dev-server": "^4.11.1"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts'",
     "build": "webpack"
   },
   "repository": {

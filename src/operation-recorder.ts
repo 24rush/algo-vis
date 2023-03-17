@@ -213,12 +213,18 @@ class NotificationEmitter implements VariableScopingNotification, MessageNotific
         };
     }
 
-    // MessageNotification
     onTraceMessage(message: string): void {
         for (const notifier of this.traceMessageNotifications()) {
             notifier.onTraceMessage(message);
         };
     }
+    
+    onExceptionMessage(status: boolean, message?: string): void {
+        for (const notifier of this.exceptionNotifications()) {
+            notifier.onExceptionMessage(status, message);
+        };
+    }
+
     onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
         for (const notifier of this.traceMessageNotifications()) {
             notifier.onUserInteractionRequest(userInteraction, title, defValue);
@@ -228,12 +234,6 @@ class NotificationEmitter implements VariableScopingNotification, MessageNotific
     onCompilationError(status: boolean, message?: string): void {
         for (const notifier of this.compilationStatusNotifications()) {
             notifier.onCompilationError(status, message);
-        };
-    }
-
-    onExceptionMessage(status: boolean, message?: string): void {
-        for (const notifier of this.exceptionNotifications()) {
-            notifier.onExceptionMessage(status, message);
         };
     }
 
@@ -316,13 +316,12 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     protected rsMonitor = new RuntimeScopeMonitor();
     protected observedVariables: ObservableJSVariable[] = [];
     private runtimeObservables: Map<string, any> = new Map();
-    private refs: Record<string, string> = {}; // [funcName.paramName] = [scopeName.varName]
-
-    protected codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy(this);
+    private refs: Record<string, string> = {}; // [funcName.paramName] = [scopeName.varName]    
 
     protected status: OperationRecorderStatus = OperationRecorderStatus.Idle;
     public isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
 
+    protected codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy(this);
     private codeProcessor: CodeProcessor = new CodeProcessor();
 
     private resetExecutionState() {
@@ -369,6 +368,10 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         this.observedVariables.push(observable);
     }
 
+    public onUserInteractionResponse(interactionType: UserInteractionType, value?: string | boolean): void {
+        this.codeExecProxy.userInteractionResponse(interactionType, value);
+    }
+
     public forceMarkLine(lineNumber: number) {
         this.onLineExecuted(lineNumber);
     }
@@ -379,10 +382,6 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
 
     public userInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string) {
         this.onUserInteractionRequest(userInteraction, title, defValue);
-    }
-
-    public onUserInteractionResponse(interactionType: UserInteractionType, value?: string | boolean): void {
-        this.codeExecProxy.userInteractionResponse(interactionType, value);
     }
 
     public onExecutionCompleted(): void {
@@ -436,6 +435,47 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
             let attachedVar0 = this.rsMonitor.attachVarToScope(varToParamPair[0], this.rsMonitor.getCurrentScope());
             delete this.refs[attachedVar0];
         }
+    }
+
+    public setVar(varName: string, varValue: any, varSource: string) {
+        if (varValue instanceof NodeBase || varValue instanceof BinaryTreeNode)
+            return;
+
+        let runtimeScopeName = this.rsMonitor.getCurrentScope();
+
+        if (this.isReferenceObject(varValue)) {
+            let varRuntimeScope = this.rsMonitor.attachVarToScope(varName, runtimeScopeName);
+
+            if (varSource) {
+                runtimeScopeName = this.rsMonitor.getScopeExclLast();
+                this.refs[varRuntimeScope] = this.rsMonitor.extendScopeNameWith(runtimeScopeName, varSource);
+            }
+
+            let dstScopedVar = this.getReferencedObject(varRuntimeScope);
+
+            if (varRuntimeScope != dstScopedVar) {
+                let [isNew, runtimeObservable] = this.createRuntimeObservable(this.rsMonitor.getCurrentScope(), varName, varValue);
+
+                if (isNew) {
+                    this.executeRuntimeObservableVarLifetime(OperationType.CREATE_REF, this.findRuntimeObservableFromName(varName));
+                }
+
+                runtimeObservable.setReference(dstScopedVar);
+
+                // Overwrite with referenced variable
+                let indexDot = dstScopedVar.lastIndexOf('.');
+                varName = dstScopedVar.substring(indexDot + 1);
+                runtimeScopeName = dstScopedVar.substring(0, indexDot);
+            }
+        }
+
+        let [isNew, runtimeObservable] = this.createRuntimeObservable(runtimeScopeName, varName, varValue);
+
+        if (isNew) {
+            this.executeRuntimeObservableVarLifetime(OperationType.CREATE_VAR, [runtimeObservable]);
+        }
+
+        runtimeObservable.setValue(varValue);
     }
 
     private async executeSourceCode(): Promise<boolean> {
@@ -610,46 +650,5 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         }
 
         return scopeVarName;
-    }
-
-    public setVar(varName: string, varValue: any, varSource: string) {
-        if (varValue instanceof NodeBase || varValue instanceof BinaryTreeNode)
-            return;
-
-        let runtimeScopeName = this.rsMonitor.getCurrentScope();
-
-        if (this.isReferenceObject(varValue)) {
-            let varRuntimeScope = this.rsMonitor.attachVarToScope(varName, runtimeScopeName);
-
-            if (varSource) {
-                runtimeScopeName = this.rsMonitor.getScopeExclLast();
-                this.refs[varRuntimeScope] = this.rsMonitor.extendScopeNameWith(runtimeScopeName, varSource);
-            }
-
-            let dstScopedVar = this.getReferencedObject(varRuntimeScope);
-
-            if (varRuntimeScope != dstScopedVar) {
-                let [isNew, runtimeObservable] = this.createRuntimeObservable(this.rsMonitor.getCurrentScope(), varName, varValue);
-
-                if (isNew) {
-                    this.executeRuntimeObservableVarLifetime(OperationType.CREATE_REF, this.findRuntimeObservableFromName(varName));
-                }
-
-                runtimeObservable.setReference(dstScopedVar);
-
-                // Overwrite with referenced variable
-                let indexDot = dstScopedVar.lastIndexOf('.');
-                varName = dstScopedVar.substring(indexDot + 1);
-                runtimeScopeName = dstScopedVar.substring(0, indexDot);
-            }
-        }
-
-        let [isNew, runtimeObservable] = this.createRuntimeObservable(runtimeScopeName, varName, varValue);
-
-        if (isNew) {
-            this.executeRuntimeObservableVarLifetime(OperationType.CREATE_VAR, [runtimeObservable]);
-        }
-
-        runtimeObservable.setValue(varValue);
     }
 }
