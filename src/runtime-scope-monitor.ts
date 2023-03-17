@@ -6,13 +6,11 @@ export class RuntimeScopeMonitor {
         this.currentScope = [];
     }
 
-    public scopeStart(scopeName: string) {
-        console.log('start ' + scopeName);
+    public scopeStart(scopeName: string) {        
         this.currentScope.push(scopeName);
     }
 
-    public scopeEnd(scopeName: string) {
-        console.log('end ' + scopeName);
+    public scopeEnd(scopeName: string) {        
         if (this.currentScope[this.currentScope.length - 1] == scopeName)
             this.currentScope.pop();
         else {

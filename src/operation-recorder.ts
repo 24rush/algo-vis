@@ -308,7 +308,7 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
         GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_REMOVE_EDGE : OperationType.BINARY_TREE_REMOVE_EDGE, runtimeObservable, source.value, destination.value);
     }
 
-    constructor(private injectMarkers: boolean = true) {        
+    constructor(private injectMarkers: boolean = true) {
         super();
     }
 
@@ -396,8 +396,30 @@ export class OperationRecorder extends NotificationEmitter implements CodeExecut
     }
 
     public endScope(scopeName: string) {
-        this.executeRuntimeObservableVarLifetime(OperationType.SCOPE_END, this.findRuntimeObservableFromName(undefined));
-        this.rsMonitor.scopeEnd(RuntimeScopeMonitor.scopeNameToFunctionScope(scopeName));
+        let fcnEndScope = (scopeName: string) => {
+            this.executeRuntimeObservableVarLifetime(OperationType.SCOPE_END, this.findRuntimeObservableFromName(undefined));
+            this.rsMonitor.scopeEnd(RuntimeScopeMonitor.scopeNameToFunctionScope(scopeName));
+        }
+
+        if (scopeName) {
+            fcnEndScope(scopeName);
+            return;
+        }
+
+        // if scopeName is undefined then it's called from before a return statement
+        // which means we need to end the current function scope
+        let idxLastFunction = this.rsMonitor.getCurrentScope().lastIndexOf('!');
+
+        if (idxLastFunction != -1) {
+            scopeName = this.rsMonitor.getCurrentScope().substring(idxLastFunction);
+
+            for (let scopesUnderFunction of scopeName.split('.').reverse()) {
+                if (scopesUnderFunction.startsWith('!'))
+                    continue;
+                    
+                fcnEndScope(scopesUnderFunction);
+            }
+        }
     }
 
     public pushParams(params: [string, string][]) {

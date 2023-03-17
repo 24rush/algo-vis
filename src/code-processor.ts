@@ -178,6 +178,9 @@ export class CodeProcessor {
                                 scopeDecl.endOfDefinitionIndex = indexReturnStatement;
                             }
                         }
+
+                        this.fcnReturns.push(item.range[0]);
+
                         break;
                     }
                 case "ForOfStatement":
@@ -284,10 +287,7 @@ export class CodeProcessor {
                         this.extractVariables(scopeName, item.expression);
                         break;
                     }
-                case "CallExpression": {
-                    // TODO : INVESTIGATE
-                    //this.fcnReturns.push(item.range[1] + 1);
-
+                case "CallExpression": {                
                     if (item.callee && item.callee.object && item.callee.object.name) {
                         let varName = item.callee.object.name;
 
@@ -427,8 +427,6 @@ export class CodeProcessor {
 
             if (injectionIndex <= noMarkZoneRange.e)
                 noMarkZoneRange.e += injectionSize;
-
-            //console.log('inject ' + injectionIndex + ' ' + injectionSize + ' ' + noMarkZoneRange.s + ' ' + noMarkZoneRange.e);
         };
     }
 
@@ -591,13 +589,14 @@ export class CodeProcessor {
 
             line = line + '\n';
 
-            if (!this.isEmptyLine(lineIndex + 1)) {
-                let codeLineMarker = `;markcl(${lineIndex + 1});`;
-                line = replaceTokens("<FCNRET>", codeLineMarker, line);
+            if (!this.isEmptyLine(lineIndex + 1)) {          
+                // Function returns end the current scope      
+                line = replaceTokens("<FCNRET>", "endScope();", line);
 
                 let codeLineMarker2 = `forcemarkcl(${lineIndex + 1});`;
                 line = replaceTokens("<FORCEMARKLINE>", codeLineMarker2, line);
 
+                let codeLineMarker = `;markcl(${lineIndex + 1}); `;
                 let indxOfCommentEnding = line.indexOf('*/'); // Don't put line marker in comment section
                 if (indxOfCommentEnding != -1 && indxOfCommentEnding < line.length - 3) {
                     line = insertInLine(codeLineMarker, indxOfCommentEnding + 2, line);

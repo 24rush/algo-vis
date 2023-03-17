@@ -135,7 +135,7 @@ export class Layout {
             onLayoutOperationsStatus(true);
 
         fadingHtmlElem.ontransitionend = () => {
-            if (htmlElement)
+            if (htmlElement && parentScopeHtmlElement.children[1] == htmlElement)
                 parentScopeHtmlElement.children[1].removeChild(htmlElement);
 
             // ATTENTION!
