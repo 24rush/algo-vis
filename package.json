@@ -19,6 +19,7 @@
     "nyc": "^15.1.0",
     "raw-loader": "^4.0.2",
     "split.js": "^1.6.5",
+    "ts-mockito": "^2.6.1",
     "ts-node": "^10.9.1"
   },
   "devDependencies": {
@@ -33,7 +34,7 @@
     "webpack-dev-server": "^4.11.1"
   },
   "scripts": {
-    "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts'",
+    "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts' --timeout 10000",
     "build": "webpack"
   },
   "repository": {

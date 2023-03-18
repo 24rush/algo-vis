@@ -1,5 +1,6 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
 import { NodeBase, GraphType, ParentSide, GraphVariableChangeCbk, ObservableGraph } from './av-types-interfaces'
+import { MarkerFunctionEvents, UserInteractionEvents } from "./code-executor-proxy";
 
 export enum UserInteractionType {
     Alert,
@@ -36,8 +37,8 @@ export enum CodeExecutorCommands {
 
     // EVENTS
     setVar,
-    markStartCodeLine,
-    forceMarkLine,
+    markcl,
+    forcemarkcl,
     startScope,
     endScope,
 
@@ -50,8 +51,8 @@ export enum CodeExecutorCommands {
     onRemoveEdge,
     onRemoveNode,
 
-    onExceptionMessage,
-    onTraceMessage
+    onExceptionRaised,
+    onConsoleLog
 }
 
 let codeExec = (): CodeExecutor => {
@@ -88,7 +89,7 @@ self.onmessage = (event) => {
                     codex.advanceFlag = new Int32Array(event.data.params);
                 break;
             case CodeExecutorCommands.setSourceCode:
-                codex.setSourceCode(event.data.params);
+                codex.setSourceCode(event.data.params[0]);
                 break;
             case CodeExecutorCommands.execute:
                 codex.execute();
@@ -100,7 +101,7 @@ self.onmessage = (event) => {
     });
 };
 
-export class CodeExecutor implements GraphVariableChangeCbk {
+export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvents, UserInteractionEvents {
     // Events sent to CodeExecutorProxy
     onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any): void {
         throw new Error("Method not implemented.");
@@ -133,29 +134,27 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
-    onExceptionMessage(status: boolean, message?: string): void {
+    onExceptionRaised(status: boolean, message?: string): void {
         self.postMessage({
-            cmd: CodeExecutorCommands.onExceptionMessage,
+            cmd: CodeExecutorCommands.onExceptionRaised,
             params: Array.from(arguments)
         });
     }
 
-    onTraceMessage(message: string): void {
+    onConsoleLog(message: string): void {
         self.postMessage({
-            cmd: CodeExecutorCommands.onTraceMessage,
+            cmd: CodeExecutorCommands.onConsoleLog,
             params: Array.from(arguments)
         });
     }
 
-    protected origCode: string;
+    protected code: string;
     private lastLineNo: number = -1;
     public advanceFlag: Int32Array = undefined;
 
     public setSourceCode(code: string) {
         this.lastLineNo = -1;
-
-        let regex = new RegExp("(alert)|(confirm)|(prompt)", 'g')
-        this.origCode = code.toString().replace(regex, '$&Wrap')
+        this.code = code;
     }
 
     public execute() {
@@ -167,44 +166,11 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ParentSide,
             };
 
-            var Funcs = {
-                markcl: this.markStartCodeLine,
-                setVar: this.setVar,
-                startScope: this.startScope,
-                endScope: this.endScope,
-                pushParams: this.pushParams,
-                popParams: this.popParams,
-                funcWrap: this.funcWrap,
-                forcemarkcl: this.forceMarkLine,
-                promptWrap: this.promptWrap,
-                alertWrap: this.alertWrap,
-                confirmWrap: this.confirmWrap
-            };
+            var Funcs = this;
 
-            let code = "\"use strict\"; \
-                         let BinarySearchTree = Types.BinarySearchTree; \
-                         let BinaryTree = Types.BinaryTree;\
-                         let Graph = Types.Graph;\
-                         let GraphType = Types.GraphType; \
-                         let GraphNode = Types.GraphNode; \
-                         let BinaryTreeNode = Types.BinaryTreeNode; \
-                         let TreeNodeSide = Types.ParentSide;       \
-                         let markcl = Funcs.markcl; \
-                         let forcemarkcl = Funcs.forcemarkcl; \
-                         let setVar = Funcs.setVar; \
-                         let startScope = Funcs.startScope; \
-                         let endScope = Funcs.endScope; \
-                         let pushParams = Funcs.pushParams; \
-                         let popParams = Funcs.popParams; \
-                         let funcWrap = Funcs.funcWrap; \
-                         let promptWrap = Funcs.promptWrap; \
-                         let alertWrap = Funcs.alertWrap; \
-                         let confirmWrap = Funcs.confirmWrap; \
-                        " + this.origCode;
+            eval(this.code);
 
-            eval(code);
             this.hookConsoleLog(prevFcn, false);
-
             this.onExecutionFinished();
         } catch (e) {
             this.hookConsoleLog(prevFcn, false);
@@ -213,7 +179,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
 
             if (e != "__STOP__") {
                 let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
-                this.onExceptionMessage(true, message);
+                this.onExceptionRaised(true, message);
             }
 
             return false;
@@ -226,7 +192,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         });
     }
 
-    private forceMarkLine(lineNumber: number) : boolean {
+    forcemarkcl(lineNumber: number): boolean {
         let codex = codeExec();
 
         if (codex.lastLineNo == lineNumber)
@@ -237,7 +203,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
 
         self.postMessage({
-            cmd: CodeExecutorCommands.forceMarkLine,
+            cmd: CodeExecutorCommands.forcemarkcl,
             params: Array.from(arguments)
         });
 
@@ -260,7 +226,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         return true;
     }
 
-    private markStartCodeLine(lineNumber: number) {
+    markcl(lineNumber: number) {
         let codex = codeExec();
 
         if (!codex.advanceFlag) {
@@ -268,7 +234,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
 
         self.postMessage({
-            cmd: CodeExecutorCommands.markStartCodeLine,
+            cmd: CodeExecutorCommands.markcl,
             params: Array.from(arguments)
         });
 
@@ -289,40 +255,35 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         codex.lastLineNo = lineNumber;
     }
 
-    private startScope(scopeName: string) {
+    startScope(scopeName: string) {
         self.postMessage({
             cmd: CodeExecutorCommands.startScope,
             params: Array.from(arguments)
         });
     }
 
-    private endScope(scopeName: string) {
+    endScope(scopeName: string) {
         self.postMessage({
             cmd: CodeExecutorCommands.endScope,
             params: Array.from(arguments)
         });
     }
 
-    private pushParams(params: [string, string][]) {        
+    pushParams(params: [string, string][]) {
         self.postMessage({
             cmd: CodeExecutorCommands.pushParams,
             params: Array.from(arguments)
         });
     }
 
-    private popParams(params: [string, string][]) {
+    popParams(params: [string, string][]) {
         self.postMessage({
             cmd: CodeExecutorCommands.popParams,
             params: Array.from(arguments)
         });
     }
 
-    private funcWrap() {
-        //@ts-ignore
-        (arguments as unknown)[0].f();
-    }
-
-    private setVar(varname: string, object: any, varsource: string) {
+    setVar(varname: string, object: any, varsource: string) {
         self.postMessage({
             cmd: CodeExecutorCommands.setVar,
             params: Array.from(arguments)
@@ -342,7 +303,7 @@ export class CodeExecutor implements GraphVariableChangeCbk {
                 prevFcn = console.log;
 
             console.log = (message: any) => {
-                this.onTraceMessage(message);
+                this.onConsoleLog(message);
                 prevFcn.apply(console, [message]);
             };
         } else {
@@ -398,15 +359,20 @@ export class CodeExecutor implements GraphVariableChangeCbk {
         }
     }
 
-    private promptWrap(title?: string, defValue?: string): string {
+    funcWrap(func: any) {
+        //@ts-ignore
+        (arguments as unknown)[0].f();
+    }
+
+    promptWrap(title?: string, defValue?: string): string {
         return codeExec().userInteractionRequest(UserInteractionType.Prompt, title, defValue) as string;
     }
 
-    private alertWrap(title?: string) {
+    alertWrap(title?: string) {
         codeExec().userInteractionRequest(UserInteractionType.Alert, title);
     }
 
-    private confirmWrap(title?: string): boolean {
+    confirmWrap(title?: string): boolean {
         return codeExec().userInteractionRequest(UserInteractionType.Confirm, title) as boolean;
     }
 }

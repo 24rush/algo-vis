@@ -293,6 +293,14 @@ export class Scene {
         });
 
         this.operationRecorder.registerNotificationObserver({
+            onExceptionMessage(status: boolean, message?: string): void {
+                avViewModel.exceptionMessage = message;
+                avViewModel.hasException = status;
+            },
+            onCompilationError(status: boolean, message?: string): void {
+                avViewModel.compilatonErrorMessage = message;
+                avViewModel.hasCompilationError = status;
+            },
             onTraceMessage(message: string): void {
                 avViewModel.consoleOutput += message + '\r\n';
             },
@@ -313,20 +321,6 @@ export class Scene {
                 avViewModel.promptDefaultValue = defValue ?? "";
                 avViewModel.hasCancelBtn = (userInteraction != UserInteractionType.Alert);
                 avViewModel.hasInputBox = (userInteraction == UserInteractionType.Prompt);
-            }
-        });
-
-        this.operationRecorder.registerNotificationObserver({
-            onCompilationError(status: boolean, message?: string): void {
-                avViewModel.compilatonErrorMessage = message;
-                avViewModel.hasCompilationError = status;
-            }
-        });
-
-        this.operationRecorder.registerNotificationObserver({
-            onExceptionMessage(status: boolean, message?: string): void {
-                avViewModel.exceptionMessage = message;
-                avViewModel.hasException = status;
             }
         });
 

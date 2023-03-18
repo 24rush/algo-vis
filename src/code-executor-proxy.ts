@@ -1,9 +1,16 @@
-import { GraphVariableChangeCbk } from "./av-types-interfaces";
 import { CodeExecutorCommands, CodeExecutorMessages, CodeExecutorSlots, UserInteractionType } from "./code-executor";
+import { NotificationEmitter, NotificationTypes } from "./notification-emitter";
 
-export interface CodeExecutorEvents extends GraphVariableChangeCbk {
-    forceMarkLine(lineNumber: number): void;
-    markStartCodeLine(lineNumber: number): void;
+export interface UserInteractionEvents {
+    funcWrap(func: any) : void;
+    promptWrap(title?: string, defValue?: string): string;
+    alertWrap(title?: string) : void;
+    confirmWrap(title?: string): boolean;
+}
+
+export interface MarkerFunctionEvents {
+    forcemarkcl(lineNumber: number): void;
+    markcl(lineNumber: number): void;
 
     startScope(scopeName: string): void;
     endScope(scopeName: string): void;
@@ -12,11 +19,18 @@ export interface CodeExecutorEvents extends GraphVariableChangeCbk {
     popParams(params: [string, string][]): void;
 
     setVar(varname: string, object: any, varsource: string): void;
-    userInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void;
+}
 
-    onExecutionCompleted(): void;
+export interface CodeExecutorEvents extends MarkerFunctionEvents, UserInteractionEvents {
+    onExecutionFinished(): void;
     onExceptionMessage(status: boolean, message?: string): void;
     onTraceMessage(message: string): void;
+    onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void;
+
+    onAddEdge(observable: any, source: any, destination: any): void;
+    onAddNode(observable: any, vertex: any, parentValue: any, side: any): void;
+    onRemoveNode(observable: any, vertex: any): void;
+    onRemoveEdge(observable: any, source: any, destination: any): void;
 }
 
 export class CodeExecutorProxy {
@@ -116,15 +130,13 @@ export class CodeExecutorProxy {
 
     //@ts-ignore
     private codexWorker = new Worker(new URL('./code-executor.ts', import.meta.url));
-    private codeExecutorEventHandler: CodeExecutorEvents = undefined;
+    private codeExecutorEventHandler: NotificationEmitter = new NotificationEmitter();
     private sharedMem = new SharedArrayBuffer(128 * Int16Array.BYTES_PER_ELEMENT);
     private advanceFlag = new Int32Array(this.sharedMem);
     private executionHalted = false; // for prompts
 
-    constructor(eventHandler: CodeExecutorEvents) {
+    constructor() {
         Atomics.store(this.advanceFlag, 0, CodeExecutorMessages.Wait);
-
-        this.codeExecutorEventHandler = eventHandler;
 
         // MESSAGES from CodeExecutor
         this.codexWorker.onmessage = (event) => {
@@ -135,20 +147,20 @@ export class CodeExecutorProxy {
                     this.codeExecutorEventHandler.setVar(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.executionFinished:
-                    this.codeExecutorEventHandler.onExecutionCompleted();
+                    this.codeExecutorEventHandler.onExecutionFinished();
                     break;
-                case CodeExecutorCommands.markStartCodeLine:
+                case CodeExecutorCommands.markcl:
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.markStartCodeLine(params[0]);
+                    this.codeExecutorEventHandler.markcl(params[0]);
                     break;
                 case CodeExecutorCommands.userInteractionRequest:
                     this.executionHalted = true;
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.userInteractionRequest(params[0], params[1], params[2]);
+                    this.codeExecutorEventHandler.onUserInteractionRequest(params[0], params[1], params[2]);
                     break;
-                case CodeExecutorCommands.forceMarkLine:
+                case CodeExecutorCommands.forcemarkcl:
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.forceMarkLine(params[0])
+                    this.codeExecutorEventHandler.forcemarkcl(params[0])
                     break;
                 case CodeExecutorCommands.startScope:
                     this.codeExecutorEventHandler.startScope(params[0]);
@@ -174,16 +186,20 @@ export class CodeExecutorProxy {
                 case CodeExecutorCommands.onRemoveEdge:
                     this.codeExecutorEventHandler.onRemoveEdge(params[0], params[1], params[2]);
                     break;
-                case CodeExecutorCommands.onExceptionMessage:
+                case CodeExecutorCommands.onExceptionRaised:
                     this.codeExecutorEventHandler.onExceptionMessage(params[0], params[1]);
                     break;
-                case CodeExecutorCommands.onTraceMessage:
+                case CodeExecutorCommands.onConsoleLog:
                     this.codeExecutorEventHandler.onTraceMessage(params[0]);
                     break;
                 default:
                     throw 'Cant handle ' + event.data.cmd;
             }
         };
+    }
+
+    public registerNotificationObserver(notifier: NotificationTypes) {
+        this.codeExecutorEventHandler.registerNotificationObserver(notifier);
     }
 
     public init() {

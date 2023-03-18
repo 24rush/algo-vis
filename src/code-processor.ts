@@ -30,7 +30,7 @@ class PushFuncParams {
 
 export class CodeProcessor {
 
-    private code: string;
+    private code: string = "";
 
     private varDeclarations: Record<string, Record<string, VariableDeclaration>>; // [scopeName][varname] = VariableDeclaration
     private scopes: ScopeDeclaration[] = [];
@@ -44,14 +44,42 @@ export class CodeProcessor {
     private functionWrappers: IndexRange[] = []; // location of function calls
 
     getCode() { return this.code; }
-    setCode(code: string, injectMarkers: boolean = true) : [boolean, string] {
+    setCode(code: string, injectMarkers: boolean = true): [boolean, string] {
+        let status = true;
         this.resetCodeParsingState();
-        this.code = code;
 
-        return (injectMarkers ? this.parseCode() : [true, this.code]);
+        let regex = new RegExp("(alert)|(confirm)|(prompt)", 'g')
+        this.code = code.replace(regex, '$&Wrap')
+
+        if (injectMarkers) {
+            [status, ] = this.parseCode();
+        }
+            
+        this.code = '\'use strict\'; \
+            let BinarySearchTree = Types.BinarySearchTree; \
+            let BinaryTree = Types.BinaryTree;\
+            let Graph = Types.Graph;\
+            let GraphType = Types.GraphType; \
+            let GraphNode = Types.GraphNode; \
+            let BinaryTreeNode = Types.BinaryTreeNode; \
+            let TreeNodeSide = Types.ParentSide;       \
+            let markcl = Funcs.markcl; \
+            let forcemarkcl = Funcs.forcemarkcl; \
+            let setVar = Funcs.setVar; \
+            let startScope = Funcs.startScope; \
+            let endScope = Funcs.endScope; \
+            let pushParams = Funcs.pushParams; \
+            let popParams = Funcs.popParams; \
+            let funcWrap = Funcs.funcWrap; \
+            let promptWrap = Funcs.promptWrap; \
+            let alertWrap = Funcs.alertWrap; \
+            let confirmWrap = Funcs.confirmWrap; \n\
+        ' + this.code;
+
+        return [status, ""];
     }
 
-    public resetCodeParsingState() {
+    resetCodeParsingState() {
         this.emptyCodeLineNumbers = [];
         this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
         this.funcDefs = {}; this.pushFuncParams = [];
@@ -59,9 +87,9 @@ export class CodeProcessor {
         this.functionWrappers = [];
     }
 
-    private debugEnabled: boolean = true;
+    private debugEnabled: boolean = false;
 
-    public dumpDebugInfo() {
+    dumpDebugInfo() {
         if (this.debugEnabled) {
             console.log("VARS: "); console.log(this.varDeclarations);
             console.log("BRACES: "); console.log(this.explicitBraces);
@@ -287,7 +315,7 @@ export class CodeProcessor {
                         this.extractVariables(scopeName, item.expression);
                         break;
                     }
-                case "CallExpression": {                
+                case "CallExpression": {
                     if (item.callee && item.callee.object && item.callee.object.name) {
                         let varName = item.callee.object.name;
 
@@ -475,7 +503,7 @@ export class CodeProcessor {
 
         // Scope end setting
         for (const scope of this.scopes) {
-            let injectedCode = `;endScope('${scope.name}');`;
+            let injectedCode = `; endScope('${scope.name}');`;
             addCodeInjection(scope.endOfDefinitionIndex, injectedCode);
         };
 
@@ -513,8 +541,6 @@ export class CodeProcessor {
         if (!this.code)
             return [false, "No code"];
 
-        this.code += ";";
-
         let syntax = undefined;
 
         try {
@@ -530,7 +556,7 @@ export class CodeProcessor {
         this.markLineOverrides = [];
 
         this.scopes.push(new ScopeDeclaration('global', syntax.range[0], syntax.range[1]));
-        this.markLineOverrides.push(syntax.range[1] - 1);
+        this.markLineOverrides.push(syntax.range[1]);
 
         this.extractVariables('global', syntax);
 
@@ -572,7 +598,6 @@ export class CodeProcessor {
 
         // Mark lines with no code
         let skippedLineMarkers = ['{', '}'];
-
         let codeLineByLine = this.code.split('\n');
         this.code = "";
         for (let [lineIndex, line] of codeLineByLine.entries()) {
@@ -589,11 +614,11 @@ export class CodeProcessor {
 
             line = line + '\n';
 
-            if (!this.isEmptyLine(lineIndex + 1)) {          
+            if (!this.isEmptyLine(lineIndex + 1)) {
                 // Function returns end the current scope      
-                line = replaceTokens("<FCNRET>", "endScope();", line);
+                line = replaceTokens("<FCNRET>", ";endScope();", line);
 
-                let codeLineMarker2 = `forcemarkcl(${lineIndex + 1});`;
+                let codeLineMarker2 = `;forcemarkcl(${lineIndex + 1});`;
                 line = replaceTokens("<FORCEMARKLINE>", codeLineMarker2, line);
 
                 let codeLineMarker = `;markcl(${lineIndex + 1}); `;
@@ -605,7 +630,6 @@ export class CodeProcessor {
                     if (line.indexOf("case") == -1) {
                         line = insertInLine(codeLineMarker, line.trim()[0] == '{' ? line.indexOf('{') + 1 : 0, line);
                     }
-
             }
 
             this.code += line;
