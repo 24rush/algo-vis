@@ -35,7 +35,9 @@
   },
   "scripts": {
     "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts' --timeout 10000",
-    "build": "webpack"
+    "build": "webpack",
+    "gen-snippets" : "python scripts/snippets_generator.py -i wordpress/snippets",
+    "chrome-sab" : "powershell.exe -command \"& {&'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' --enable-features=SharedArrayBuffer --user-data-dir=D:\\temp}\""
   },
   "repository": {
     "type": "git",
