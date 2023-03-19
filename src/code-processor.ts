@@ -40,8 +40,7 @@ export class CodeProcessor {
     private fcnReturns: number[] = [];
     private markLineOverrides: number[] = [];
     private noMarkLineZone: IndexRange[] = [];
-    private explicitBraces: IndexRange[] = []; // braces for missing blocks
-    private functionWrappers: IndexRange[] = []; // location of function calls
+    private explicitBraces: IndexRange[] = []; // braces for missing blocks    
 
     getCode() { return this.code; }
     setCode(code: string, injectMarkers: boolean = true): [boolean, string] {
@@ -55,7 +54,7 @@ export class CodeProcessor {
             [status, ] = this.parseCode();
         }
             
-        this.code = '\'use strict\'; \
+        this.code = '\'use strict\'; \n\
             let BinarySearchTree = Types.BinarySearchTree; \
             let BinaryTree = Types.BinaryTree;\
             let Graph = Types.Graph;\
@@ -73,8 +72,7 @@ export class CodeProcessor {
             let funcWrap = Funcs.funcWrap; \
             let promptWrap = Funcs.promptWrap; \
             let alertWrap = Funcs.alertWrap; \
-            let confirmWrap = Funcs.confirmWrap; \n\
-        ' + this.code;
+            let confirmWrap = Funcs.confirmWrap; \n' + this.code;
 
         return [status, ""];
     }
@@ -83,11 +81,10 @@ export class CodeProcessor {
         this.emptyCodeLineNumbers = [];
         this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
         this.funcDefs = {}; this.pushFuncParams = [];
-        this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];
-        this.functionWrappers = [];
+        this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];        
     }
 
-    private debugEnabled: boolean = false;
+    private debugEnabled: boolean = true;
 
     dumpDebugInfo() {
         if (this.debugEnabled) {
@@ -95,7 +92,6 @@ export class CodeProcessor {
             console.log("BRACES: "); console.log(this.explicitBraces);
             console.log("SCOPES: "); console.log(this.scopes);
             console.log("FUNCDEFS: "); console.log(this.funcDefs);
-            console.log("FUNCWRAPPERS: "); console.log(this.functionWrappers);
             console.log("PUSHPARAMS: "); console.log(this.pushFuncParams);
             console.log("NOMARKLINE: "); console.log(this.noMarkLineZone);
             console.log("MARKLINEOVERRIDES: "); console.log(this.markLineOverrides);
@@ -341,12 +337,9 @@ export class CodeProcessor {
                             // throw ('Func unknown ' + calledFunc + " " + (calledFunc in this.funcDefs))
                         }
 
-                        this.pushFuncParams.push(new PushFuncParams(varDeclStart != undefined ? varDeclStart : item.range[0],
-                            varDeclEnd != undefined ? varDeclEnd : item.range[1],
+                        this.pushFuncParams.push(new PushFuncParams(item.range[0], item.range[1],
                             RuntimeScopeMonitor.scopeNameToFunctionScope(calledFunc),
-                            varToParamPairs));
-
-                        this.functionWrappers.push(new IndexRange(item.range[0], item.range[1]));
+                            varToParamPairs));                        
                     }
 
                     if (item.arguments && item.arguments.length) {
@@ -473,12 +466,6 @@ export class CodeProcessor {
             addCodeInjection(explicitBrace.e, "}");
         }
 
-        // Insert function wrappers
-        for (const functionWrapper of this.functionWrappers) {
-            addCodeInjection(functionWrapper.s, "funcWrap(");
-            addCodeInjection(functionWrapper.e, "");
-        }
-
         // Scope start setting
         for (const scope of this.scopes) {
             let injectedCode = `;startScope('${scope.name}');`;
@@ -509,10 +496,10 @@ export class CodeProcessor {
 
         // Push function parameters
         for (const pushParams of this.pushFuncParams) {
-            let injectedCode = `{f: () => { pushParams(${JSON.stringify(pushParams.varToParams)}); startScope('` + pushParams.funcScopeName + `'); let ret = `;
+            let injectedCode = `funcWrap( {f: () => { pushParams(${JSON.stringify(pushParams.varToParams)}); startScope('` + pushParams.funcScopeName + `'); let ret = `;
             addCodeInjection(pushParams.startOfDefinitionIndex, injectedCode);
 
-            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `'); return ret;}})`;
+            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `'); return ret;}} );`;
             addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);
         }
 

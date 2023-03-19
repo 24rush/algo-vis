@@ -2,7 +2,7 @@ import { CodeExecutorCommands, CodeExecutorMessages, CodeExecutorSlots, UserInte
 import { NotificationEmitter, NotificationTypes } from "./notification-emitter";
 
 export interface UserInteractionEvents {
-    funcWrap(func: any) : void;
+    funcWrap(func: any) : any;
     promptWrap(title?: string, defValue?: string): string;
     alertWrap(title?: string) : void;
     confirmWrap(title?: string): boolean;

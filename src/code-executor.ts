@@ -297,6 +297,23 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
         }
     }
 
+    funcWrap(func: any) : any {        
+        //@ts-ignore
+        return (arguments as unknown)[0].f();
+    }
+
+    promptWrap(title?: string, defValue?: string): string {
+        return codeExec().userInteractionRequest(UserInteractionType.Prompt, title, defValue) as string;
+    }
+
+    alertWrap(title?: string) {
+        codeExec().userInteractionRequest(UserInteractionType.Alert, title);
+    }
+
+    confirmWrap(title?: string): boolean {
+        return codeExec().userInteractionRequest(UserInteractionType.Confirm, title) as boolean;
+    }
+
     private hookConsoleLog(prevFcn: any, hook: boolean = true): any {
         if (hook) {
             if (prevFcn == undefined)
@@ -357,22 +374,5 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
                 }
             }
         }
-    }
-
-    funcWrap(func: any) {
-        //@ts-ignore
-        (arguments as unknown)[0].f();
-    }
-
-    promptWrap(title?: string, defValue?: string): string {
-        return codeExec().userInteractionRequest(UserInteractionType.Prompt, title, defValue) as string;
-    }
-
-    alertWrap(title?: string) {
-        codeExec().userInteractionRequest(UserInteractionType.Alert, title);
-    }
-
-    confirmWrap(title?: string): boolean {
-        return codeExec().userInteractionRequest(UserInteractionType.Confirm, title) as boolean;
     }
 }

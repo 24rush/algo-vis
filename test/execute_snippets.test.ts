@@ -24,7 +24,7 @@ class CodeMarkers {
     }
     setVar(varname: string, object: any, varsource: string): void {
     }
-    funcWrap(func: any): void {
+    funcWrap(func: any): any {
     }
     promptWrap(title?: string, defValue?: string): string {
         return "2";
