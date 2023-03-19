@@ -114,29 +114,37 @@ export class Snippets {
             let configId = widget.getAttribute('config-id');
             let codeEditorId = "code-editor-" + (index++).toString();
 
-            let widgetLoader = (mustacheSnippets: any[] = [], snippets: Snippet[] = []) => {
+            let widgetLoader = (mustacheSnippets: any[] = [], snippets: Snippet[] = []) => {             
                 widget.innerHTML = MustacheIt.render(appTemplate, {
                     codeEditorId: codeEditorId,
                     levels: mustacheSnippets,
                     code: widget.innerHTML
                 });
 
-                new Scene(widget as HTMLElement, snippets, () => {
+                // Move attributes from existing hooked element to the created child div                
+                let childWidget = (widget.firstChild as HTMLElement)
+
+                for (let attr of [...widget.attributes]) {                    
+                    childWidget.setAttribute(attr.name, attr.value);
+                    widget.removeAttribute(attr.name);
+                }                
+
+                new Scene(childWidget as HTMLElement, snippets, () => {
                     // Fullscreen callback
-                    SnippetsUI.appContainer = widget.parentElement;
-                    SnippetsUI.snippetsModalBody.appendChild(widget);
+                    SnippetsUI.appContainer = childWidget.parentElement;
+                    SnippetsUI.snippetsModalBody.appendChild(childWidget);
                     SnippetsUI.fullscreenModal.show();
                 });
 
-                let splitWidget = !widget.classList.contains('verticalView') ? Split([widget.children[0], widget.children[1]]) : undefined;
+                let splitWidget = !childWidget.classList.contains('verticalView') ? Split([childWidget.children[0], childWidget.children[1]]) : undefined;
 
                 SnippetsUI.orientationWatcher.addEventListener("change", function (e) {
                     if (e.matches) {
                         if (splitWidget)
                             splitWidget.destroy();
                     } else {
-                        if (!widget.classList.contains('verticalView'))
-                            splitWidget = Split([widget.children[0], widget.children[1]]);
+                        if (!childWidget.classList.contains('verticalView'))
+                            splitWidget = Split([childWidget.children[0], childWidget.children[1]]);
                     }
                 });
             };

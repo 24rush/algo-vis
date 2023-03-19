@@ -1,146 +1,149 @@
-<div class="halfScreen">
-    <div class="btn-group btn-group-sm d-flex flex-row dropdown-center av-snippets"
-        av-bind-style-display="{isSnippetSet: flex, !isSnippetSet: none}">
-        <button class="dropdown-toggle btn btn-light btn-overrides" type="button" data-bs-toggle="dropdown"
-            aria-expanded="false" av-bind-text="selectedSnippetDesc">
-        </button>
-        <ul class="dropdown-menu" av-bind-onclick="onSnippetSelected" style="cursor: pointer;">
-            {{#levels}}
-            <li>
-                <h5 class="dropdown-header dropdown-header-av" av-bind-style-display="{hasLevelSpecified: flex, !hasLevelSpecified: none}">
-                    {{level}}</h5>
-            </li>
-            {{#snippets}}
-            <li><a class="dropdown-item" av-id="{{id}}">{{desc}}</a></li>
-            {{/snippets}}
-            {{/levels}}
-        </ul>
-
-        <button av-bind-onclick="onNextSnippet" type="button" class="btn btn-light btn-overrides"
-            av-bind-class="{!hasMoreSnippets : disabled}"
-            style="flex-grow: 0 !important;">
-            <span class="bi bi-arrow-right-square" style="padding: 0.4rem;"></span>
-        </button>
-    </div>
-    <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
-        <button av-bind-onclick="onAdvance" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
-            class="popover-dismiss rounded-right btn btn-light btn-overrides av-btn"
-            av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}">
-            <i class="bi bi-play-fill"></i>
-            <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
-        </button>
-
-        <button av-bind-onclick="onAutoplayToggled" type="button" 
-            class="btn btn-light btn-overrides"
-            av-bind-class="{isFunctionalityDisabled : disabled, isVisualisationDisabled: av-btn}" >
-            <i class="bi bi-fast-forward-fill"
-                av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
-            <span av-bind-text='{isPaused: LangStrId.1, !isPaused: LangStrId.2}'>Execute all</span>
-        </button>
-        <button av-bind-onclick="onRestart" av-bind-style-display="{isVisualisationDisabled: none}" type="button" class="btn btn-light btn-overrides"
-            av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
-            <i class="bi bi-arrow-clockwise"></i>
-            <span av-bind-text="LangStrId.6">Restart</span>
-        </button>
-
-        <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides"
-            style="flex-grow: 0 !important;">
-            <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>
-        </button>
-
-        <div av-bind-style-display="{isVisualisationDisabled: none}" >
-            <button class="btn btn-light btn-overrides" type="button" id="dropdownMenuButton-{{codeEditorId}}"
-                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-auto-close="outside">
-                <span class="bi bi-three-dots-vertical"></span>
+<div>
+    <div class="halfScreen">
+        <div class="btn-group btn-group-sm d-flex flex-row dropdown-center av-snippets"
+            av-bind-style-display="{isSnippetSet: flex, !isSnippetSet: none}">
+            <button class="dropdown-toggle btn btn-light btn-overrides" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false" av-bind-text="selectedSnippetDesc">
             </button>
-            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton-{{codeEditorId}}">
-                <li class="dropdown-item">
-                    <div class="form-check form-switch">
-                        <label class="form-check-label" style="font-size: 0.875rem !important"
-                            for="showCommentsCheck-{{codeEditorId}}" av-bind-text="LangStrId.3">
-                            Show comments
-                        </label>
-                        <input class="form-check-input radiusOverwrite" style="border-width: 0.5px;" type="checkbox"
-                            role="switch" checked av-bind-onclick="onShowComments"
-                            id="showCommentsCheck-{{codeEditorId}}">
-                    </div>
-                </li>
+            <ul class="dropdown-menu" av-bind-onclick="onSnippetSelected" style="cursor: pointer;">
+                {{#levels}}
                 <li>
-                    <h6 class="dropdown-header" av-bind-text="LangStrId.13">Playback speed</h6>
+                    <h5 class="dropdown-header dropdown-header-av"
+                        av-bind-style-display="{hasLevelSpecified: flex, !hasLevelSpecified: none}">
+                        {{level}}</h5>
                 </li>
-                <li><a class="dropdown-item">
-                        <div class="btn-group btn-group-sm" role="group">
-                            <input type="radio" class="btn-check" checked name="btnradio-{{codeEditorId}}"
-                                id="btnradio1-{{codeEditorId}}" autocomplete="off"
-                                av-bind-onclick="onPlaybackSpeedChangedSSlow">
-                            <label class="btn btn-outline-primary radiusOverwrite-left" for="btnradio1-{{codeEditorId}}"
-                                av-bind-text="LangStrId.14">Slooow</label>
-
-                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
-                                id="btnradio2-{{codeEditorId}}" autocomplete="off"
-                                av-bind-onclick="onPlaybackSpeedChangedSlow">
-                            <label class="btn btn-outline-primary" style="border-right: none;"
-                                for="btnradio2-{{codeEditorId}}" av-bind-text="LangStrId.15">Slow</label>
-
-                            <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
-                                id="btnradio3-{{codeEditorId}}" autocomplete="off"
-                                av-bind-onclick="onPlaybackSpeedChangedRealtime">
-                            <label class="btn btn-outline-primary radiusOverwrite-right"
-                                for="btnradio3-{{codeEditorId}}" av-bind-text="LangStrId.16">Realtime</label>
-                        </div>
-                    </a>
-                </li>
+                {{#snippets}}
+                <li><a class="dropdown-item" av-id="{{id}}">{{desc}}</a></li>
+                {{/snippets}}
+                {{/levels}}
             </ul>
+
+            <button av-bind-onclick="onNextSnippet" type="button" class="btn btn-light btn-overrides"
+                av-bind-class="{!hasMoreSnippets : disabled}" style="flex-grow: 0 !important;">
+                <span class="bi bi-arrow-right-square" style="padding: 0.4rem;"></span>
+            </button>
         </div>
-    </div>
+        <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
+            <button av-bind-onclick="onAdvance" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
+                class="popover-dismiss rounded-right btn btn-light btn-overrides av-btn"
+                av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}">
+                <i class="bi bi-play-fill"></i>
+                <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
+            </button>
 
-    <div class="commentsPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">
-    </div>
+            <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides"
+                av-bind-class="{isFunctionalityDisabled : disabled, isVisualisationDisabled: av-btn}">
+                <i class="bi bi-fast-forward-fill"
+                    av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
+                <span av-bind-text='{isPaused: LangStrId.1, !isPaused: LangStrId.2}'>Execute all</span>
+            </button>
+            <button av-bind-onclick="onRestart" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
+                class="btn btn-light btn-overrides"
+                av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span av-bind-text="LangStrId.6">Restart</span>
+            </button>
 
-    <div id="toast-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3"
-        style="pointer-events: all; position:relative; width: 100%" aria-live="assertive" aria-atomic="true">
-        <div class="toast-header" style="margin-bottom: 0;">
-            <strong class="me-auto" av-bind-text="promptTitle"></strong>
-        </div>
+            <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides"
+                style="flex-grow: 0 !important;">
+                <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>
+            </button>
 
-        <div class="toast-body fade show">
-            <input av-focused type="text" class="form-control" av-bind-value="promptDefaultValue"
-                av-bind-style-display="{!hasInputBox : none, hasInputBox: inline-block}">
-            <div class="mt-2 pt-2">
-                <button type="button" class="btn btn-primary btn-sm" av-bind-onclick="onPromptOk"
-                    av-bind-text="LangStrId.18">OK</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast"
-                    av-bind-style-display="{!hasCancelBtn : none, hasCancelBtn: inline-block}"
-                    av-bind-onclick="onPromptCancel" av-bind-text="LangStrId.19">Cancel</button>
+            <div av-bind-style-display="{isVisualisationDisabled: none}">
+                <button class="btn btn-light btn-overrides" type="button" id="dropdownMenuButton-{{codeEditorId}}"
+                    data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-auto-close="outside">
+                    <span class="bi bi-three-dots-vertical"></span>
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton-{{codeEditorId}}">
+                    <li class="dropdown-item">
+                        <div class="form-check form-switch">
+                            <label class="form-check-label" style="font-size: 0.875rem !important"
+                                for="showCommentsCheck-{{codeEditorId}}" av-bind-text="LangStrId.3">
+                                Show comments
+                            </label>
+                            <input class="form-check-input radiusOverwrite" style="border-width: 0.5px;" type="checkbox"
+                                role="switch" checked av-bind-onclick="onShowComments"
+                                id="showCommentsCheck-{{codeEditorId}}">
+                        </div>
+                    </li>
+                    <li>
+                        <h6 class="dropdown-header" av-bind-text="LangStrId.13">Playback speed</h6>
+                    </li>
+                    <li><a class="dropdown-item">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <input type="radio" class="btn-check" checked name="btnradio-{{codeEditorId}}"
+                                    id="btnradio1-{{codeEditorId}}" autocomplete="off"
+                                    av-bind-onclick="onPlaybackSpeedChangedSSlow">
+                                <label class="btn btn-outline-primary radiusOverwrite-left"
+                                    for="btnradio1-{{codeEditorId}}" av-bind-text="LangStrId.14">Slooow</label>
+
+                                <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
+                                    id="btnradio2-{{codeEditorId}}" autocomplete="off"
+                                    av-bind-onclick="onPlaybackSpeedChangedSlow">
+                                <label class="btn btn-outline-primary" style="border-right: none;"
+                                    for="btnradio2-{{codeEditorId}}" av-bind-text="LangStrId.15">Slow</label>
+
+                                <input type="radio" class="btn-check" name="btnradio-{{codeEditorId}}"
+                                    id="btnradio3-{{codeEditorId}}" autocomplete="off"
+                                    av-bind-onclick="onPlaybackSpeedChangedRealtime">
+                                <label class="btn btn-outline-primary radiusOverwrite-right"
+                                    for="btnradio3-{{codeEditorId}}" av-bind-text="LangStrId.16">Realtime</label>
+                            </div>
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
+
+        <div class="commentsPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">
+        </div>
+
+        <div id="toast-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3"
+            style="pointer-events: all; position:relative; width: 100%" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header" style="margin-bottom: 0;">
+                <strong class="me-auto" av-bind-text="promptTitle"></strong>
+            </div>
+
+            <div class="toast-body fade show">
+                <input av-focused type="text" class="form-control" av-bind-value="promptDefaultValue"
+                    av-bind-style-display="{!hasInputBox : none, hasInputBox: inline-block}">
+                <div class="mt-2 pt-2">
+                    <button type="button" class="btn btn-primary btn-sm" av-bind-onclick="onPromptOk"
+                        av-bind-text="LangStrId.18">OK</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast"
+                        av-bind-style-display="{!hasCancelBtn : none, hasCancelBtn: inline-block}"
+                        av-bind-onclick="onPromptCancel" av-bind-text="LangStrId.19">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="{{codeEditorId}}" class="codeEditor">{{code}}</div>
     </div>
 
-    <div id="{{codeEditorId}}" class="codeEditor">{{code}}</div>
-</div>
+    <div class="halfScreen rightPane">
+        <ul class="list-group" style="margin: 0px !important">
+            <li class="list-group-item fw-semibold"
+                av-bind-style-display="{!hasCompilationError : none, hasCompilationError: block}"><span
+                    av-bind-text="LangStrId.5">Compilation error</span>
+                <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
+                    av-bind-text='{hasCompilationError: compilationErrorMessage()}'></button>
+            </li>
 
-<div class="halfScreen rightPane">
-    <ul class="list-group" style="margin: 0px !important">
-        <li class="list-group-item fw-semibold"
-            av-bind-style-display="{!hasCompilationError : none, hasCompilationError: block}"><span
-                av-bind-text="LangStrId.5">Compilation error</span>
-            <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
-                av-bind-text='{hasCompilationError: compilationErrorMessage()}'></button>
-        </li>
+            <li class="list-group-item fw-semibold" av-bind-style-display="{!hasException : none, hasException: block}">
+                <span av-bind-text="LangStrId.17">Exception</span>
+                <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
+                    av-bind-text='exceptionMessage'></button>
+            </li>
 
-        <li class="list-group-item fw-semibold" av-bind-style-display="{!hasException : none, hasException: block}">
-            <span av-bind-text="LangStrId.17">Exception</span>
-            <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
-                av-bind-text='exceptionMessage'></button>
-        </li>
-
-        <li av-bind-style-display="{isVisualisationDisabled: none}" class="list-group-item fw-semibold av-variables"><span av-bind-text="LangStrId.7">Variables</span>
-            <div class="panelVariables" style="margin-left: -1em;">
-            </div>
-        </li>
-        <li class="list-group-item fw-semibold av-console"><span av-bind-text="LangStrId.8">Console output</span>
-            <textarea class="form-control" style="background-color:white; width: 100%; max-width: 100%;" rows="2"
-                max-rows="8" av-bind-text="consoleOutput" disabled></textarea>
-        </li>
-    </ul>
+            <li av-bind-style-display="{isVisualisationDisabled: none}"
+                class="list-group-item fw-semibold av-variables"><span av-bind-text="LangStrId.7">Variables</span>
+                <div class="panelVariables" style="margin-left: -1em;">
+                </div>
+            </li>
+            <li class="list-group-item fw-semibold av-console"><span av-bind-text="LangStrId.8">Console output</span>
+                <textarea class="form-control" style="background-color:white; width: 100%; max-width: 100%;" rows="2"
+                    max-rows="8" av-bind-text="consoleOutput" disabled></textarea>
+            </li>
+        </ul>
+    </div>
 </div>
