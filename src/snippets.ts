@@ -88,6 +88,7 @@ class SnippetsUI {
     public static fullscreenModal: any;
     public static snippetsModalBody: HTMLElement;
     public static appContainer: HTMLElement;
+    public static orientationWatcher: MediaQueryList = window.matchMedia("(orientation: portrait)");
 
     static initialize() {
         document.body.append(DOMmanipulator.fromTemplate(fullScreenModalTemplate));
@@ -127,7 +128,17 @@ export class Snippets {
                     SnippetsUI.fullscreenModal.show();
                 });
 
-                Split([widget.children[0], widget.children[1]]);
+                let splitWidget = !widget.classList.contains('verticalView') ? Split([widget.children[0], widget.children[1]]) : undefined;
+
+                SnippetsUI.orientationWatcher.addEventListener("change", function (e) {
+                    if (e.matches) {
+                        if (splitWidget)
+                            splitWidget.destroy();
+                    } else {
+                        if (!widget.classList.contains('verticalView'))
+                            splitWidget = Split([widget.children[0], widget.children[1]]);
+                    }
+                });
             };
 
             if (configId) {

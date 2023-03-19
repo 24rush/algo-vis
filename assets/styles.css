@@ -1,11 +1,22 @@
 .algovis {
   max-width: 100% !important;
-  /* height: 500px;*/
   resize: both;
   overflow: auto;
   display: flex;
   justify-content: center;
   margin: 1em 0 1em;
+}
+
+/* Explicit class to use after .algovis to force vertical view */
+.verticalView {
+  display: inline!important;
+  width: 100%!important;
+}
+
+@media (orientation: portrait) {
+  .algovis {
+    display: inline;
+  }
 }
 
 .codeEditor {
@@ -60,7 +71,7 @@
 }
 
 .halfScreen {
-  width: 50%;
+  
 }
 
 .list-group-mine {
