@@ -2,7 +2,10 @@
 ``` npx webpack serve --live-reload ```
 
 # Start chrome to allow SAB #
-``` chrome.exe --enable-features=SharedArrayBuffer --user-data-dir="D:\temp" ```
+``` npm run chrome-sab ```
+
+# Run tests #
+``` npm run test ```
 
 # Generate snippets or quizzes #
 ### General structure of files ###
@@ -30,8 +33,12 @@
 - sections named _statement_ can be written using markdown and their content will be converted to html in the output json
 
 ### Run generator from project root ###
-``` python scripts/snippets_generator.py -i wordpress/snippets```
+``` npm run gen-snippets ```
 Output json will be in folder pointed by ```-i```
 
 ### HTML ###
 - use ```av-quiz``` class on button to launch the quiz
+
+# Snippet files and standalone editor deployment#
+- .json snippet files to ``` public_html/wp-content/uploads/2023/snips ```
+- standalone/index.html to ``` public_html/wp-content/uploads/2023/standalone/index.html ```
