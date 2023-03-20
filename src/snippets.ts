@@ -37,14 +37,17 @@ class SnippetsConfig {
         }
     }
 
-    public loadFromJson(json: any) {
-        if (json) {
+    public loadFromJson(jsonData: any) {
+        if (jsonData) {
             let counterSnippets = 0;
-            Object.keys(json).forEach((snippetLang: any) => {
+            Object.keys(jsonData).forEach((snippetLang: any) => {
                 if (!(snippetLang in this.snippetsForLang))
                     this.snippetsForLang[snippetLang] = {};
-
-                json[snippetLang].forEach((snippetObj: any) => {
+                                    
+                Object.values(jsonData[snippetLang]).forEach((snippetObj: any) => {                    
+                    if (snippetLang.indexOf("src-") != -1)
+                        return;
+                        
                     let snippet = new Snippet(snippetObj, counterSnippets++);
 
                     if (!(snippet.level in this.snippetsForLang[snippetLang]))
@@ -114,7 +117,7 @@ export class Snippets {
             let configId = widget.getAttribute('config-id');
             let codeEditorId = "code-editor-" + (index++).toString();
 
-            let widgetLoader = (mustacheSnippets: any[] = [], snippets: Snippet[] = []) => {             
+            let widgetLoader = (mustacheSnippets: any[] = [], snippets: Snippet[] = []) => {
                 widget.innerHTML = MustacheIt.render(appTemplate, {
                     codeEditorId: codeEditorId,
                     levels: mustacheSnippets,
@@ -124,10 +127,10 @@ export class Snippets {
                 // Move attributes from existing hooked element to the created child div                
                 let childWidget = (widget.firstChild as HTMLElement)
 
-                for (let attr of [...widget.attributes]) {                    
+                for (let attr of [...widget.attributes]) {
                     childWidget.setAttribute(attr.name, attr.value);
                     widget.removeAttribute(attr.name);
-                }                
+                }
 
                 new Scene(childWidget as HTMLElement, snippets, () => {
                     // Fullscreen callback
@@ -136,7 +139,11 @@ export class Snippets {
                     SnippetsUI.fullscreenModal.show();
                 });
 
-                let splitWidget = !childWidget.classList.contains('verticalView') ? Split([childWidget.children[0], childWidget.children[1]]) : undefined;
+                // Don't create the Splitter if we have explicit verticalView or we are in portrait
+                let splitWidget : any = undefined;
+
+                if (!SnippetsUI.orientationWatcher.matches && !childWidget.classList.contains('verticalView'))
+                    splitWidget = Split([childWidget.children[0], childWidget.children[1]]);
 
                 SnippetsUI.orientationWatcher.addEventListener("change", function (e) {
                     if (e.matches) {
