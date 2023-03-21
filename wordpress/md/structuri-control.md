@@ -1,122 +1,132 @@
-Un program nu va putea efectua nimic important numai prin declararea de variabile. Vor exista situatii in care vom avea nevoie sa specificam ca vrem sa executam anumite secvente de cod numai cand anumite conditii sunt adevarate (sau false) sau vom dori sa executam o secventa de cod de un anumit numar de ori. Pentru acest gen de situatii au fost create structurile de control care nu sunt altceva decat niste cuvinte cheie cu un anumit set de reguli care ne permit sa descriem situatiile enuntate mai sus.
+<div class="tip-box">
+<strong>Ce vom afla din acest articol:</strong>
+- cu ce ne ajută structurile de control
+- structura decizionala și operatorul ternar
+- ce sunt structurile repetitive și care sunt ele
+- cuvintele cheie speciale break și continue
+- structura switch
+</div>
+
+Un program nu vă putea efectua nimic important doar prin declararea de variabile. Vor exista situații în care vom avea nevoie să executam anumite secvențe de cod numai când anumite condiții sunt adevărate (sau false) sau vom dori să executăm o secvență de cod de un anumit număr de ori. Pentru acest gen de situații au fost create structurile de control care nu sunt altceva decât niște cuvinte cheie cu un anumit set de reguli care ne permit să descriem situațiile enunțate mai sus.
 
 # if-else #
-Cea mai utilizata structura de control este structura **if** care s-ar traduce prin *daca [..] atunci [..]*. 
+Cea mai utilizată structură de control este structura **if** care s-ar traduce prin *dacă [..] atunci [..]*. 
 ```
-if (<expresie>) {
-    <instructiuni de executat>
+if () {
+    
 }
 ```
 
-Aceasta structura foloseste doi parametri: 
-- expresia pe care sa o evalueze
-- secventa de cod sa fie executata daca expresia este adevarata. 
+Aceasta structură folosește doi parametri: 
+- expresia pe care să o evalueze
+- secvența de cod de executat dacă expresia este adevărată. 
 
-O alta varianta a acestei structuri este cea **if-else** in care putem specifica pe langa secventa de cod ce ar trebui executata in cazul in care expresia este adevarata si o secventa ce ar trebui executa in cazul contrar (cand conditia se evalueaza la fals). De retinut ca mereu intr-o structura if-else vom executa o singura ramura ori cea de pe ramura adevarat ori invers.
+O alta variantă a acestei structuri este cea **if-else** în care putem specifica pe lângă secvență de cod ce ar trebui executată în cazul în care expresia este adevărată și o secvență ce ar trebui executată în cazul contrar (când condiția se evaluează la fals). De reținut că mereu într-o structură if-else vom executa o singură ramură: ori cea de pe ramura adevărat ori invers.
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="0"></div>
 
 ## Operatorul ternar ##
-Pentru structura if-else exista o alternativa de exprimare a acesteia prin folosirea unui operator special si anume operatorul ternar. Dupa cum ii spune si numele, este un operator ce solicita 3 operanzi, din acest motiv fiind special pentru ca este singurul de acest fel.
+Pentru structura if-else există o alternativă de exprimare a acesteia prin folosirea unui operator special și anume operatorul ternar. După cum îi spune și numele, este un operator ce solicită 3 operanzi, din acest motiv fiind special pentru că este singurul de acest fel.
 
 <img src="../wp-content/uploads/2023/img/ternar.png" class="img-box">
 
-Structura operatorului este urmatoarea:
-- <code>conditie</code>: conditia ce urmeaza sa fie evaluata
-- <code>expresie1</code>: expresia ce urmeaza a fi evaluata si returnata in cazul in care conditia este adevarata
-- <code>expresie2</code>: expresia ce urmeaza a fi evaluata si returnata in cazul in care conditia este falsa
+Structura operatorului este următoarea:
+- <code>condiție</code>: condiția ce urmează să fie evaluată
+- <code>expresie1</code>: expresia ce urmează a fi evaluată și returnată în cazul în care condiția este adevărată
+- <code>expresie2</code>: expresia ce urmează a fi evaluată și returnată în cazul în care condiția este falsă
 
-Putem astfel folosi o singura linie de cod pentru a exprima secventa de mai jos:
+Putem astfel folosi o singură linie de cod pentru a exprima secvență de mai jos:
 ```
-let rezultat = 0;
-if (conditie) {
+leț rezultat = 0;
+if (condiție) {
     rezultat = expresie1;
 } else {
     rezultat = expresie2;
 }
 ```
 
-Singura limitare a acestui operator este ca expresiile folosite nu pot fi formate decat dintr-o singura instructiune;
+Singura limitare a acestui operator este că expresiile folosite nu pot fi formate decât dintr-o singură instrucțiune;
 
 # for #
-Am aflat cum putem executa secvente de cod in functie de o anumita conditie iar acum vom vedea cum sa executam aceasi secventa de mai multe ori. Structura care ne va ajuta se cheama **for** (sau for-loop) care s-ar traduce prin bucla. 
+Am aflat cum putem executa secvențe de cod în funcție de o anumită condiție iar acum vom vedea cum să executăm aceeași secvență de mai multe ori. Structura care ne vă ajută se cheamă **for** (sau for-loop) care s-ar traduce prin buclă. 
 
 ```
-for (<expresie initiala>; <conditie de testat>; <expresie de actualizare>) {
-    <instructiuni de executat>
+for (; ; ) {
+    
 }
 ```
 
-Observam ca are nevoie de patru parametri (din care doi sunt optionali): 
-- expresie initiala (optionala)
-- expresie care sa indice cat timp sa executam secventa
-- expresie de executat dupa fiecare iteratie (optionala) care sa ne indice pasul la care ne aflam
-- setul de instructiuni de executat la fiecare iteratie (mai poarta numele si de corpul blocului for)
+Observăm că are nevoie de patru parametri (din care doi sunt opționali): 
+- expresie inițială (opțională)
+- expresie care să indice cât timp să executăm secvență
+- expresie de executat după fiecare iterație (opțională) care să ne indice pasul la care ne aflăm
+- setul de instrucțiuni de executat la fiecare iterație (mai poartă numele și de corpul blocului for)
 
-Ordinea in care se executa operatiile unei structuri for este urmatoarea:
-1. ```expresia initiala``` este executata
-2. ```conditia de testat``` este evaluata iar daca este falsa se va termina in intregime executia blocului for, altfel va trece la pasul 3
-3. ```instructiuni de executat``` se vor executa in intregime
-4. ```expresie de actualizare``` se va executa daca exista
-5. se va sari inapoi la pasul 2
+Ordinea în care se execută operațiile unei structuri for este următoarea:
+1. ```expresia inițială``` este executată
+2. ```condiția de testat``` este evaluată iar dacă este falsă se vă termina în întregime execuția blocului for, altfel vă trece la pasul 3
+3. ```instrucțiuni de executat``` se vor executa în întregime
+4. ```expresie de actualizare``` se va executa dacă există
+5. se va sări înapoi la pasul 2
 
-In exemplul urmator se vor afisa toate numerele de la 1 pana la 100.
+În exemplul următor se vor afișă toate numerele de la 1 până la 100.
 
 <div class="algovis" config-id="structuri-control-basics.json"  av-selected="1"></div>
 
-<code>let i = 1</code> este expresia initiala care ne declara o variabila <code>i</code> pe care o si initializam cu 1.
+<code>let i = 1</code> este expresia inițială care ne declară o variabilă <code>i</code> pe care o și initializam cu 1.
 
-<code>i <= 100</code> este expresia care ne indica cat timp se va executa bucla, in acest caz va fi executata cat timp ```i``` este mai mic decat 100
+<code>i <= 100</code> este expresia care ne indică cât timp se vă executa bucla, în acest caz vă fi executată cât timp ```i``` este mai mic decât 100
 
-<code>i++</code> este expresia ce se va executa dupa fiecare iteratie, in cazul nostru va aduna 1 de fiecare data la valoarea lui <code>i</code>, facandu-l dupa fiecare iteratie sa se apropie de 100 pana cand va ajunge la 101 iar conditia <code>i <= 100</code> va deveni falsa si intrerupe bucla.
+<code>i++</code> este expresia ce se vă executa după fiecare iterație, în cazul nostru vă aduna 1 de fiecare dată la valoarea lui i, făcându-l după fiecare iterație să se apropie de 100 până când vă ajunge la 101 iar condiția <code>i <= 100</code> va deveni falsă și întrerupe bucla.
 
 # while #
-O structura repetitiva similara celei anterioare este blocul **while** (trad. cat-timp). Scopul acestei structuri este acelasi ca si in cazul buclei for, de a executa o secventa de cod de mai multe ori.
+O structură repetitiva similară celei anterioare este blocul **while** (trad. cât-timp). Scopul acestei structuri este același că și în cazul buclei for, de a executa o secvență de cod de mai multe ori.
 ```
-while (<expresie de testat>) {
-      <instructiuni de executat>
+while () {
+      
 }
 ```
 
-Parametrii acestei structuri sunt:
-- expresia de testat care atat timp se va evalua la adevarat va determina executarea corpului blocului.
-- instructiunile de executat sau corpul blocului while
+Parametri acestei structuri sunt:
+- expresia de testat care atât timp cât se va evalua la adevărat va determina executarea corpului blocului.
+- instrucțiunile de executat sau corpul blocului while
 
-In secventa de mai jos, solicitam numere de la utilizator atat timp cat ultimul numar introdus a fost par. Bucla se va termina dupa introducerea primului numai impar.
+În secvență de mai jos, solicităm numere de la utilizator atât timp cât ultimul număr introdus a fost par. Bucla se va termina după introducerea primului numai impar.
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="3"></div>
 
 <p class="tip-box">
-Structurile <strong>for</strong> si <strong>while</strong> sunt echivalente insa vom folosi cu precadere structura <em>for</em> atunci cand stim exact de cate ori urmeaza sa executam corpul blocului iar pe cea <em>while</em> in caz contrar (numarul de pasi ne este necunoscut si va fi determinat doar de cate ori conditia de testat a blocului while se va evalua la adevarat).
+Structurile <strong>for</strong> și <strong>while</strong> sunt echivalente însă vom folosi cu precădere structura <em>for</em> atunci când știm exact de câte ori urmează să executăm corpul blocului iar pe cea <em>while</em> în caz contrar (numărul de pași ne este necunoscut și va fi determinat doar de câte ori condiția de testat a blocului while se va evalua la adevărat).
 </p>
 
 # do-while #
-O structura similara celei **while** este **do-while** care functioneaza aproape identic, singura diferenta este ca instructiunile din corpul blocului vor fi executate cel putin odata deoarece evaluarea expresiei de testat se face dupa aceasta prima executie. Daca expresia se va evalua la fals atunci se va iesi din bloc altfel se va relua executarea corpului blocului.
+O structură similară celei **while** este **do-while** care funcționează aproape identic, singura diferență este că instrucțiunile din corpul blocului vor fi executate cel puțin o dată deoarece evaluarea expresiei de testat se face după această primă execuție. Dacă expresia se va evalua la fals atunci se va ieși din bloc altfel se va relua executarea corpului blocului.
 
 ```
 do {
-      <instructiuni de executat>
-} while (<expresie de testat>);
+      
+} while ();
 ```
 
 # break #
-Un cuvant cheie des utilizat in contextul structurilor repetitive este **break** (trad. intrerupe). Dupa cum si numele indica, scopul sau este de a intrerupe bucla in care este folosit. Este util in cazurile in care in urma evaluarii unei conditii in corpul blocului decidem ca nu vrem sa continuam repetarea sa ci sa parasim bucla mai devreme.
+Un cuvânt cheie des utilizat în contextul structurilor repetitive este **break** (trad. întrerupe). După cum și numele indică, scopul său este de a întrerupe bucla în care este folosit. Este util în cazurile în care în urma evaluării unei condiții în corpul blocului decidem că nu vrem să continuăm repetarea sa ci să părăsim bucla mai devreme.
 
-In exemplu de mai jos, introducem posibilitate de a intrerupe jocul atunci cand este introdusa valoarea 0. Executarea instructiunii _break_ va duce la intreruperea executarii blocului _while_ cu alte cuvinte vom parasi corpul blocului.
+În exemplu de mai jos, introducem posibilitate de a întrerupe jocul atunci când este introdusă valoarea 0. Executarea instrucțiunii _break_ va duce la întreruperea executării blocului _while_ cu alte cuvinte vom părăsi corpul blocului.
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="4"></div>
 
-<p class="tip-box">Cuvantul cheie <code>break</code> va determina iesirea din blocurile <code>switch, while, for, do-while</code></p>
+<p class="tip-box">Cuvânt cheie <code>break</code> va determina ieșirea din blocurile <code>switch, while, for, do-while</code>
+</p>
 
 # continue #
-Un cuvant cheie similar lui <em>break</em> este <strong>continue</strong> care insa in loc sa intrerupa complet bucla in care este folosit, va intrerupe doar pasul curent si va forta executia sa treaca la urmatorul pas din iteratie. Putem considera acest cuvant cheie ca un mecanism de a sari (<em>skip</em>)peste un anumit pas dintr-o interatie in functie de o conditie.
+Un cuvânt cheie similar lui <em>break</em> este <strong>continue</strong> care însă în loc să întrerupă complet bucla în care este folosit, va întrerupe doar pasul curent și va forța execuția să treacă la următorul pas din iterație. Putem considera acest cuvânt cheie ca un mecanism de a sări (<em>skip</em>) peste un anumit pas dintr-o interatie în funcție de o condiție.
 
-In exemplul de mai jos, vom afisa toate numerele impare de la 1 la 10 sarind la fiecare iteratie peste afisarea celor pare.
+În exemplul de mai jos, vom afișa toate numerele impare de la 1 la 10 sărind la fiecare iterație peste afișarea celor pare.
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="5"></div>
 
 # switch #
-Ultima structura pe care o vom prezenta nu este una repetitiva ci una decizionala similara celei _if-else_. Aceasta se cheama **switch** si arata astfel:
+Ultima structură pe care o vom prezenta nu este una repetitiva ci una decizională similară celei _if-else_. Aceasta se cheamă **switch** și arată astfel:
 ```
 switch (<expresie de evaluat>) {
    case <expresie constanta 1>:
@@ -131,18 +141,18 @@ switch (<expresie de evaluat>) {
        <set de instructiuni implicite>
 }
 ```
-Observam ca are o multitudine de parametri:
-- expresie de evaluat este expresia pe care o testam
-- rezultat evaluare este o valoare constanta de care suntem interesati iar in cazul in care expresia de evaluat este egala cu ea, sa rulam setul de instructuni x
-- default este o ramura optionala ce ne permite sa specificam setul de instructiuni de rulat in cazul in care nicio ramura de mai sus nu a obtinut egalitate
+Observăm că are o multitudine de parametri:
+- expresie de evaluat este expresia pe care o testăm
+- rezultat evaluare este o valoare constantă de care suntem interesați iar în cazul în care expresia de evaluat este egală cu ea, să rulăm setul de instructuni x
+- default este o ramură opțională ce ne permite să specificăm setul de instrucțiuni de rulat în cazul în care nicio ramură de mai sus nu a obținut egalitate
 
-Pasii ce se efectueaza in cazul unui block switch sunt urmatorii:
-- se evalueaza ```expresia de evaluat```
-- rezultatul evaluarii va fi testat pentru fiecare ramura in parte ( <code>case</code> ) pana cand se va obtine o egalitate, caz in care <code>setul de instructiuni</code> aferent ramurii vor fi executate iar intalnirea cuvantului cheie <code>break</code> va duce la parasirea structurii switch. 
-- daca nu se obtine egalitatea pentru nicio ramura, se vor executa <code>setul de instructiuni implicite</code> ale ramurii <code>default</code>
-Aceasta ramura este de altfel optionala iar lipsa ei va duce pur si simplu la parasirea blocului in cazul ca in care pentru nicio alta ramura nu se obtine egalitatea.
+Pașii ce se efectuează în cazul unui block switch sunt următorii:
+- se evaluează ```expresia de evaluat```
+- rezultatul evaluării va fi testat pentru fiecare ramură în parte ( <code>case</code> ) până când se va obține o egalitate, caz în care <code>setul de instructiuni</code> aferent ramurii va fi executat iar întâlnirea cuvântului cheie  <code>break</code> va duce la părăsirea structurii switch. 
+- dacă nu se obține egalitatea pentru nicio ramură, se va executa <code>setul de instructiuni implicite</code> ale ramurii <code>default</code>
+Această ramură este de altfel opțională iar lipsa ei va duce pur și simplu la părăsirea blocului în cazul în care pentru nicio altă ramură nu se obține egalitatea.
 
-Structura switch ar fi echivalenta cu un bloc **if-else-if**:
+Structura switch ar fi echivalentă cu un bloc **if-else-if**:
 ```
 if (<expresia de evaluat> == <expresie constanta 1>) {
     <set de instructiuni 1>
@@ -154,12 +164,20 @@ if (<expresia de evaluat> == <expresie constanta 1>) {
     <set de instructiuni default>
 }
 ```
-Chiar daca cele doua structuri obtin acelasi rezultat, structura _switch_ ne ajuta sa obtinem un cod care este mai usor de inteles.
+Chiar dacă cele două structuri obțin același rezultat, structura _switch_ ne ajută să obținem un cod care este mai ușor de înțeles.
 
-Putem afirma atunci ca structura _switch_ ne este utila atunci cand exista o varietate mare de posibilitati ce trebuie interpretate pentru o expresie iar o structura **if-else-if** nu ar arata asa de usor de inteles pentru cineva care ne-ar citi codul ulterior.
+Putem afirma atunci că structura _switch_ ne este utilă atunci când există o varietate mare de posibilități ce trebuie interpretate pentru o expresie iar o structură **if-else-if** nu ar arăta așa de ușor de înțeles pentru cineva care ne-ar citi codul ulterior.
 
-In exemplul urmator vom afisa ce fructe ii plac persoanei al carei nume a fost introdus de utilizator si pentru care stim aceasta informatie. Observam ramura _default_ care ne indica setul de instructiuni pe care sa il executam atunci cand nu am putut satisface nicio conditie de mai sus (in cazul nostru cand a fost introdus un nume de persoana pentru care nu stim ce fructe ii plac). Mai observam ca in cazul lui 'Alex' si 'Victor' carora le plac ambilor kiwi, am putut sa specificam acest lucru prin alaturarea clauzelor _case_ aferente numelor lor.
+În exemplul următor vom afișa ce fructe îi plac persoanei al cărei nume a fost introdus de utilizator și pentru care știm aceasta informație. Observăm ramura _default_ care ne indică setul de instrucțiuni pe care să îl executăm atunci când nu am putut satisface nicio condiție de mai sus (în cazul nostru când a fost introdus un nume de persoană pentru care nu știm ce fructe îi plac). Mai observăm că în cazul lui 'Alex' și 'Victor' cărora le plac ambilor kiwi, am putut să specificăm acest lucru prin alăturarea clauzelor _case_ aferente numelor lor.
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="2"></div>
 
-Vom folosi structura **switch** atunci cand dorim sa testam egalitatea dintre o expresie si un set de valori constante (stiute deja in momentul scrierii programului) dar nu si contra altor expresii (ce ar urma sa fie determinate in timpul executiei). Daca avem nevoie sa testam contra unor expresii atunci va trebui sa folosim structura **if-else-if**.
+Vom folosi structura **switch** atunci când dorim să testam egalitatea dintre o expresie și un set de valori constante (știute deja în momentul scrierii programului) dar nu și contra altor expresii (ce ar urma să fie determinate în timpul execuției). Dacă avem nevoie să testăm contra unor expresii atunci va trebui să folosim structura **if-else-if**.
+
+<div class="attention-box">
+<strong>Rezumat:</strong>
+- structurile decizionale <strong>if-else-if</strong> ne ajută să executăm secvențe de cod doar dacă anumite condiții sunt adevărate sau false
+- structurile repetitive <strong>for, while, do-while</strong> ne permit să executăm secvențe de cod de un număr predefinit de ori sau cât timp o condiție este adevărată sau falsă
+- pentru întreruperea unei bucle putem folosi cuvântul cheie <strong>break</strong> sau cuvântul cheie <strong>continue</strong> pentru a sări peste un pas al buclei
+- structura <strong>switch</strong> este similară celei <em>if-else-if</em> însă ne permite să o descriem într-un format mai ușor de citit dar are dezavantajul că poate fi folosită doar ca să testăm contra unor expresii constante (deja știute în momentul scrierii programului)
+</div>

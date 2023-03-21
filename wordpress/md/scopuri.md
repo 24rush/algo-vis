@@ -1,39 +1,47 @@
-Am invatat in lectiile trecute cum sa declaram variabile si functii noi iar in aceasta lectie vom discuta despre ciclul de viata (engl. _lifetime_) si domeniul unei variabile (engl. _scope_). 
+<div class="tip-box">
+<strong>Ce vom afla din acest articol:</strong>
+ - ce sunt variabilele locale si cele globale
+ - ce reprezinta domeniul (scopul) unei variabile
+</div>
+
+Am învățat în lecțiile trecute cum să declarăm variabile și funcții noi iar în această lecție vom discuta despre ciclul de viață (engl. _lifetime_) și domeniul unei variabile (engl. _scope_). 
 
 # Domeniul variabilelor #
-Domeniul unei variabile se poate defini ca fiind sectiunea din programul nostru in care aceasta variabila este vizibila si utilizabila in instructiuni.
+Domeniul unei variabile se poate defini ca fiind secțiunea din programul nostru în care această variabilă este vizibilă și utilizabilă în instrucțiuni.
 
-Exista definite urmatoarele categorii de domenii pentru variabile:
-- global in care o variabila este vizibila in toate instructiunile programului
-- al functiei in care este declarata ceea ce inseamna ca acea variabila poate fi folosita doar in corpul functiei respective
-- bloc adica variabila este declarata in cadrul unei secvente de instructiuni delimitate prin acolade (**{ }**)
+Există definite următoarele categorii de domenii pentru variabile:
+- global în care o variabilă este vizibilă în toate instrucțiunile programului
+- al funcției în care este declarată ceea ce înseamnă că acea variabilă poate fi folosită doar în corpul funcției respective
+- bloc adică variabila este declarată în cadrul unei secvențe de instrucțiuni delimitate prin acolade (**{ }**)
 
 <p class="tip-box">
-In functie de aceste domenii, variabilele se pot imparti in doua categorii: <strong>variabile locale</strong> (ce au fost declarate in corpul unei functii sau al unui bloc) si <strong>variabile globale</strong> (declarate in afara oricarei functii sau bloc).
+În funcție de aceste domenii, variabilele se pot împărți în două categorii: <strong>variabile locale</strong> (ce au fost declarate în corpul unei funcții sau al unui bloc) și <strong>variabile globale</strong> (declarate în afara oricărei funcții sau bloc).
 </p>
 
 ## Variabile locale ##
-In exemplul de mai jos observam cum domeniul unei variabile afecteaza programul nostru. Variabila <code>x</code> declarata in functia <code>boo</code> este o variabila locala, facand parte din domeniul functiei ceea ce inseamna ca orice instructiune din afara functiei <code>boo</code> nu va avea acces la aceasta variabila. Daca incercam sa rulam acest exemplu, vom obtine o eroare (<code>x is not defined</code>) ce ne spune ca variabila <code>x</code> nu este definita.
+În exemplul de mai jos observăm cum domeniul unei variabile afectează programul nostru. Variabila <code>x</code> declarată în funcția <code>boo</code> este o variabilă locală, făcând parte din domeniul funcției ceea ce înseamnă că orice instrucțiune din afara funcției <code>boo</code> nu va avea acces la această variabilă. Dacă încercăm să rulam acest exemplu, vom obține o eroare (<code>x is not defined</code>) ce ne spune că variabila <code>x</code> nu este definită.
 
 <div class="algovis" config-id="scopuri-basics.json" av-selected="0"></div>
 
 ## Variabile globale ##
-Daca modificam exemplul si definim variabila <code>x</code> in afara functiei <code>boo</code> atunci o vom si transforma dintr-o variabila locala intr-una globala iar exemplul nostru va functiona.
+Dacă modificăm exemplul și definim variabila ```x``` în afara funcției ```boo``` atunci o vom și transforma dintr-o variabilă locală într-una globală iar exemplul nostru va funcționa.
 
 <div class="algovis" config-id="scopuri-basics.json" av-selected="1"></div>
 
 ## Domenii suprapuse ##
-In exemplu urmator observam comportamentul variabilelor definite in cadrul unui bloc. Orice secventa de instructiuni ce incepe prin deschiderea cu o acolada (**{**}) va crea un bloc nou iar toate variabile definite in cadrul blocului vor fi vizibile doar instructiunilor din acel bloc. In exemplu nostru, variabila <code>y</code> din functia <code>boo</code> este definita in interiorul blocului aferent instructiuni <code>if</code> ceea ce o face sa fie o **variabila locala** vizibila doar in blocul **if** iar incercarea de o accesa dupa terminarea blocului (imediat dupa acolada (**}**)) va determina eroarea <code>y is not defined</code>. Mai putem observa si ca in acest bloc accesam cu succes variabila <code>x</code> care este locala functiei <code>boo</code>. Acest lucru este posibil intrucat orice domeniu va avea acces la variabilele definite intr-un domeniul mai mare ce il contine si pe el - in cazul nostru domeniul local determinat de <code>if</code> este un domeniu continut de cel al functiei <code>boo</code> (exterior). In acelasi mod puteam accesa variabile globale (definite in afara functiilor) intrucat domeniul global contine toate domeniile functiilor.
+În exemplul următor observăm comportamentul variabilelor definite în cadrul unui bloc. Orice secvență de instrucțiuni ce începe prin deschidere cu o acolada (**{**}) va crea un bloc nou iar toate variabile definite în cadrul blocului vor fi vizibile doar instrucțiunilor din acel bloc. În exemplu nostru, variabila <code>y</code> din funcția <code>boo</code> este definită în interiorul blocului aferent instrucțiunii <code>if</code> ceea ce o face să fie o **variabila locală** vizibilă doar în blocul **if** iar încercarea de o accesa după terminarea blocului (imediat după acolada (**}**)) va determina eroarea <code>y is not defined</code>. Mai putem observa și că în acest bloc accesăm cu succes variabila <code>x</code> care este locală funcției <code>boo</code>. Acest lucru este posibil întrucât orice domeniu va avea acces la variabilele definite într-un domeniul mai mare ce îl conține și pe el - în cazul nostru domeniul local determinat de <code>if</code> este un domeniu conținut de cel al funcției <code>boo</code> (exterior). În același mod putem accesa variabile globale (definite în afara funcțiilor) întrucât domeniul global conține toate domeniile funcțiilor.
 
 <div class="algovis" config-id="scopuri-basics.json" av-selected="2"></div>
 
-<p class="attention-box">Domeniile variabilelor functioneaza pe principiul <strong>mai mic/mai mare</strong> adica un domeniu mai mic (interior) va avea access la toate variabilele definite in domeniile mai mari care il contin si pe el pe cand un domeniu mai mare va avea acees doar la variabilele din domeniul sau nu si la cele din domeniile pe care le contine.
+<p class="attention-box">Domeniile variabilelor funcționează pe principiul <strong>mai mic/mai mare</strong> adică un domeniu mai mic (interior) va avea access la toate variabilele definite în domeniile mai mari care îl conțin și pe el pe când un domeniu mai mare va avea acees doar la variabilele din domeniul său nu și la cele din domeniile pe care le conține.
 </p>
 
 <img src="../wp-content/uploads/2023/img/scopuri0.png" class="img-box">
 
-# Rezumat #
-- In functie de locul in care declaram o variabila aceasta poate fi: <strong>globala</strong> sau <strong>locala</strong>
-- Variabilele globale sunt declarate in afara oricarei functii sau bloc si pot fi accesate de oriunde din programul nostru
-- Variabilele locale sunt declarate in corpul functiilor sau in sub-blocuri din corpul lor si pot fi accesate doar din blocurile in care au fost declarate
-- Durata de viata a unei variabile este data de blocul in care a fost declarata, cele locale vor fi distruse (neutilizabile) dupa sfarsitul executiei blocului in care erau declarate insa cele globale vor fi distruse abia dupa terminarea completa a programului
+<div class="attention-box">
+<strong>Rezumat:</strong>
+- În funcție de locul în care declarăm o variabilă aceasta poate fi: <strong>globală</strong> sau <strong>locală</strong>
+- Variabilele globale sunt declarate în afara oricărei funcții sau bloc și pot fi accesate de oriunde din programul nostru
+- Variabilele locale sunt declarate în corpul funcțiilor sau în sub-blocuri din corpul lor și pot fi accesate doar din blocurile în care au fost declarate
+- Durata de viață a unei variabile este dată de blocul în care a fost declarată, cele locale vor fi distruse (neutilizabile) după sfârșitul execuției blocului în care erau declarate însă cele globale vor fi distruse abia după terminarea completă a programului
+</div>
