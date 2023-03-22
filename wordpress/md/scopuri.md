@@ -1,4 +1,4 @@
-<div class="tip-box">
+<div class="know-box">
 <strong>Ce vom afla din acest articol:</strong>
  - ce sunt variabilele locale si cele globale
  - ce reprezinta domeniul (scopul) unei variabile
@@ -24,12 +24,16 @@ Există definite următoarele categorii de domenii pentru variabile:
 <div class="algovis" config-id="scopuri-basics.json" av-selected="0"></div>
 
 ## Variabile globale ##
-Dacă modificăm exemplul și definim variabila ```x``` în afara funcției ```boo``` atunci o vom și transforma dintr-o variabilă locală într-una globală iar exemplul nostru va funcționa.
+Dacă modificăm exemplul și definim variabila <code>x</code> în afara funcției <code>boo</code> atunci o vom și transforma dintr-o variabilă locală într-una globală iar exemplul nostru va funcționa.
 
 <div class="algovis" config-id="scopuri-basics.json" av-selected="1"></div>
 
 ## Domenii suprapuse ##
-În exemplul următor observăm comportamentul variabilelor definite în cadrul unui bloc. Orice secvență de instrucțiuni ce începe prin deschidere cu o acolada (**{**}) va crea un bloc nou iar toate variabile definite în cadrul blocului vor fi vizibile doar instrucțiunilor din acel bloc. În exemplu nostru, variabila <code>y</code> din funcția <code>boo</code> este definită în interiorul blocului aferent instrucțiunii <code>if</code> ceea ce o face să fie o **variabila locală** vizibilă doar în blocul **if** iar încercarea de o accesa după terminarea blocului (imediat după acolada (**}**)) va determina eroarea <code>y is not defined</code>. Mai putem observa și că în acest bloc accesăm cu succes variabila <code>x</code> care este locală funcției <code>boo</code>. Acest lucru este posibil întrucât orice domeniu va avea acces la variabilele definite într-un domeniul mai mare ce îl conține și pe el - în cazul nostru domeniul local determinat de <code>if</code> este un domeniu conținut de cel al funcției <code>boo</code> (exterior). În același mod putem accesa variabile globale (definite în afara funcțiilor) întrucât domeniul global conține toate domeniile funcțiilor.
+În exemplul următor observăm comportamentul variabilelor definite în cadrul unui bloc. Orice secvență de instrucțiuni ce începe prin deschidere cu o acolada (**{**}) va crea un bloc nou iar toate variabile definite în cadrul blocului vor fi vizibile doar instrucțiunilor din acel bloc. În exemplu nostru, variabila <code>y</code> din funcția <code>boo</code> este definită în interiorul blocului aferent instrucțiunii <code>if</code> ceea ce o face să fie o **variabila locală** vizibilă doar în blocul **if** iar încercarea de o accesa după terminarea blocului (imediat după acolada (**}**)) va determina eroarea <code>y is not defined</code>. 
+
+Mai putem observa și că în acest bloc accesăm cu succes variabila <code>x</code> care este locală funcției <code>boo</code>. Acest lucru este posibil întrucât orice domeniu va avea acces la variabilele definite într-un domeniul mai mare ce îl conține și pe el - în cazul nostru domeniul local determinat de <code>if</code> este un domeniu conținut de cel al funcției <code>boo</code> (exterior). 
+
+În același mod putem accesa variabile globale (definite în afara funcțiilor) întrucât domeniul global conține toate domeniile funcțiilor.
 
 <div class="algovis" config-id="scopuri-basics.json" av-selected="2"></div>
 
@@ -44,4 +48,9 @@ Dacă modificăm exemplul și definim variabila ```x``` în afara funcției ```b
 - Variabilele globale sunt declarate în afara oricărei funcții sau bloc și pot fi accesate de oriunde din programul nostru
 - Variabilele locale sunt declarate în corpul funcțiilor sau în sub-blocuri din corpul lor și pot fi accesate doar din blocurile în care au fost declarate
 - Durata de viață a unei variabile este dată de blocul în care a fost declarată, cele locale vor fi distruse (neutilizabile) după sfârșitul execuției blocului în care erau declarate însă cele globale vor fi distruse abia după terminarea completă a programului
+</div>
+
+<div class="has-text-align-center">
+<p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
+<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/scopuri.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
 </div>

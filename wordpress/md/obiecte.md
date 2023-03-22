@@ -1,4 +1,4 @@
-<div class="tip-box">
+<div class="know-box">
 <strong>Ce vom afla din acest articol:</strong>
  - ce sunt obiectele
  - ce este o referință
@@ -22,13 +22,13 @@ O altă metodă prin care putem crea un obiect este folosind o <strong>funcție 
 
 <div class="algovis" config-id="obiecte-basics.json" av-selected="1"></div>
 
-Funcția <code>SticlaApa</code> este funcția constructor ce ne vă crea un obiect nou de tip SticlaApa. Acesta funcție primește 2 parametri, <code>v</code> și <code>g</code> aferenți proprietăților <code>volum</code> și <code>greutate</code>. În interiorul funcției observăm cum acești parametrii sunt atribuiți proprietăților <code>volum</code> și <code>greutate</code> ale obiectului nou creat reprezentat prin variabila <code>this</code>. Variabila <code>this</code> este o variabila specială a limbajului Javascript care stochează obiectul curent în funcție de contextul în care o folosim. În cazul nostru,  <code>this</code> se vă referi la noul obiect pe care îl creăm în interiorul funcției constructor <code>SticlaApa</code>. 
+Funcția <code>SticlaApa</code> este funcția constructor ce ne va crea un obiect nou de tip SticlaApa (a se observa cuvântul cheie <code>new</code>). Acesta funcție primește 2 parametri, <code>v</code> și <code>g</code> aferenți proprietăților <code>volum</code> și <code>greutate</code>. În interiorul funcției observăm cum acești parametrii sunt atribuiți proprietăților <code>volum</code> și <code>greutate</code> ale obiectului nou creat reprezentat prin variabila <code>this</code>. Variabila <code>this</code> este o variabila specială a limbajului Javascript care stochează obiectul curent în funcție de contextul în care o folosim. În cazul nostru,  <code>this</code> se vă referi la noul obiect pe care îl creăm în interiorul funcției constructor <code>SticlaApa</code>. 
 
 Avantajul folosirii unei funcții constructor este că putem specifica pe lângă valorile proprietăților și anumite critierii de validare ale acestora (cum ar fi să nu stocăm un volum negativ) sau executa orice alte instrucțiuni (cum ar fi afișarea unui mesaj). Folosind prima metodă, acest lucru nu este posibil, sintaxa ne permite doar să atribuim valori proprietăților.
 
 <div class="algovis" config-id="obiecte-basics.json" av-selected="2"></div>
 
-<p class="tip-box">Nu există restricții legate de tipurile de date pe care le putem stoca în valorile proprietăților. Putem crea proprietăți care sunt tot de tip obiect având astfel un obiect imbricat în alt obiect. Există însă o restricție ca tipul proprietății în sine (numele său) să fie de tip text.</p>
+<p class="tip-box">Nu există restricții legate de tipurile de date pe care le putem stoca în valorile proprietăților. Putem crea proprietăți care sunt tot de tip obiect având astfel un obiect imbricat în alt obiect. Există însă o restricție ca tipul proprietății în sine (numele său) să fie de <strong>tip text</strong>.</p>
 
 # Copierea obiectelor #
 Operația de copiere (sau atribuire) a unei variabile altei variabile, se faci folosind operatorul <code>=</code> iar dacă în cazul tipurilor primitive știm că efectul său este să copieze valoarea variabilei sursă în cea destinație, în cazul copierilor între obiecte situația este diferită.
@@ -63,7 +63,12 @@ Chiar daca putem modifica proprietățile unui parametru de tip obiect, nu putem
 
 <div class="attention-box">
 <strong>Rezumat:</strong>
-- un obiect este o colecție de proprietăți asociată unei entități
-- atribuirea unui obiect altui obiect va duce la crearea unei referințe și nu a unei copii
-- obiectele transmise ca parametri funcțiilor pot fi modificați în interiorul acestora iar modificările vor fi vizibile după sfârșitul apelului funcției
+- Un obiect este o colecție de proprietăți asociată unei entități
+- Atribuirea unui obiect altui obiect va duce la crearea unei referințe și nu a unei copii
+- Obiectele transmise ca parametri funcțiilor pot fi modificați în interiorul acestora iar modificările vor fi vizibile după sfârșitul apelului funcției
+</div>
+
+<div class="has-text-align-center">
+<p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
+<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/obiecte.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
 </div>

@@ -1,8 +1,8 @@
-<div class="tip-box">
+<div class="know-box">
 <strong>Ce vom afla din acest articol:</strong>
 - cu ce ne ajută structurile de control
 - structura decizionala și operatorul ternar
-- ce sunt structurile repetitive și care sunt ele
+- ce sunt structurile repetitive
 - cuvintele cheie speciale break și continue
 - structura switch
 </div>
@@ -74,9 +74,7 @@ Ordinea în care se execută operațiile unei structuri for este următoarea:
 <div class="algovis" config-id="structuri-control-basics.json"  av-selected="1"></div>
 
 <code>let i = 1</code> este expresia inițială care ne declară o variabilă <code>i</code> pe care o și initializam cu 1.
-
 <code>i <= 100</code> este expresia care ne indică cât timp se vă executa bucla, în acest caz vă fi executată cât timp ```i``` este mai mic decât 100
-
 <code>i++</code> este expresia ce se vă executa după fiecare iterație, în cazul nostru vă aduna 1 de fiecare dată la valoarea lui i, făcându-l după fiecare iterație să se apropie de 100 până când vă ajunge la 101 iar condiția <code>i <= 100</code> va deveni falsă și întrerupe bucla.
 
 # while #
@@ -129,11 +127,11 @@ Un cuvânt cheie similar lui <em>break</em> este <strong>continue</strong> care 
 Ultima structură pe care o vom prezenta nu este una repetitiva ci una decizională similară celei _if-else_. Aceasta se cheamă **switch** și arată astfel:
 ```
 switch (<expresie de evaluat>) {
-   case <expresie constanta 1>:
+   case <expresie 1>:
       <set de instructiuni 1>
       break;
    ...
-   case <expresie constanta 10>:
+   case <expresie 10>:
       <set de instructiuni 10>
       break;
 
@@ -142,8 +140,8 @@ switch (<expresie de evaluat>) {
 }
 ```
 Observăm că are o multitudine de parametri:
-- expresie de evaluat este expresia pe care o testăm
-- rezultat evaluare este o valoare constantă de care suntem interesați iar în cazul în care expresia de evaluat este egală cu ea, să rulăm setul de instructuni x
+- <code>expresie de evaluat</code> este expresia pe care o testăm
+- <code>expresie N</code> este o valoare de care suntem interesați iar în cazul în care expresia de evaluat este egală cu ea, să rulăm <code>setul de instructuni X</code>
 - default este o ramură opțională ce ne permite să specificăm setul de instrucțiuni de rulat în cazul în care nicio ramură de mai sus nu a obținut egalitate
 
 Pașii ce se efectuează în cazul unui block switch sunt următorii:
@@ -176,8 +174,13 @@ Vom folosi structura **switch** atunci când dorim să testam egalitatea dintre 
 
 <div class="attention-box">
 <strong>Rezumat:</strong>
-- structurile decizionale <strong>if-else-if</strong> ne ajută să executăm secvențe de cod doar dacă anumite condiții sunt adevărate sau false
-- structurile repetitive <strong>for, while, do-while</strong> ne permit să executăm secvențe de cod de un număr predefinit de ori sau cât timp o condiție este adevărată sau falsă
-- pentru întreruperea unei bucle putem folosi cuvântul cheie <strong>break</strong> sau cuvântul cheie <strong>continue</strong> pentru a sări peste un pas al buclei
-- structura <strong>switch</strong> este similară celei <em>if-else-if</em> însă ne permite să o descriem într-un format mai ușor de citit dar are dezavantajul că poate fi folosită doar ca să testăm contra unor expresii constante (deja știute în momentul scrierii programului)
+- Structurile decizionale <strong>if-else-if</strong> ne ajută să executăm secvențe de cod doar dacă anumite condiții sunt adevărate sau false
+- Structurile repetitive <strong>for, while, do-while</strong> ne permit să executăm secvențe de cod de un număr predefinit de ori sau cât timp o condiție este adevărată sau falsă
+- Pentru întreruperea unei bucle putem folosi cuvântul cheie <strong>break</strong> sau cuvântul cheie <strong>continue</strong> pentru a sări peste un pas al buclei
+- Structura <strong>switch</strong> este similară celei <em>if-else-if</em> însă ne permite să o descriem într-un format mai ușor de citit dar are dezavantajul că poate fi folosită doar ca să testăm contra unor expresii constante (deja știute în momentul scrierii programului)
+
+</div>
+<div class="has-text-align-center">
+<p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
+<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/structuri-control.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
 </div>

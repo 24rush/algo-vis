@@ -1,4 +1,4 @@
-<div class="tip-box">
+<div class="know-box">
 <strong>Ce vom afla din acest articol:</strong>
 - ce este o funcție
 - cum folosirea funcțiilor ne simplifică programele
@@ -56,7 +56,7 @@ Observăm cât de multe instrucțiuni se repetă și cât de similare par instru
 
 <div class="algovis" config-id="functii-basics.json" av-selected="3"></div>
 
-Am refăcut astfel programul încât secvențele duplicate de instrucțiuni sunt eliminate, fiind înlocuite cu funcțiile <em>numar_la_patrat</em> și <em>solicita_numar</em> ce primesc ca parametru tipul de număr pe care îl solicitam. În liniile ulterioare observăm cum este folosit numele funcției pentru a executa instrucțiunile aferente ei. Textele din paranteze reprezintă valoarea parametrului tip_numar. La prima apelare a funcției parametrul va avea valoarea 'pozitiv’ iar la cea de-a doua 'negativ’. Acest parametru este transmis mai departe funcției <em>solicita_numar</em> care validează că utilizatorul într-adevăr introduce un număr ce respectă criteriul de pozitiv/negativ. Parametrul tip_numar al funcției <em>solicita_numar</em> devine astfel o variabilă în interiorul funcției și este folosit ca atare.
+Am refăcut astfel programul încât secvențele duplicate de instrucțiuni sunt eliminate, fiind înlocuite cu funcțiile <code>numar_la_patrat</code> și <code>solicita_numar</code> ce primesc ca parametru tipul de număr pe care îl solicitam. În liniile ulterioare observăm cum este folosit numele funcției pentru a executa instrucțiunile aferente ei. Textele din paranteze reprezintă valoarea parametrului tip_numar. La prima apelare a funcției parametrul va avea valoarea 'pozitiv’ iar la cea de-a doua 'negativ’. Acest parametru este transmis mai departe funcției <code>solicita_numar</code> care validează că utilizatorul într-adevăr introduce un număr ce respectă criteriul de pozitiv/negativ. Parametrul tip_numar al funcției <code>solicita_numar</code> devine astfel o variabilă în interiorul funcției și este folosit ca atare.
 
 Reușim astfel să structurăm programul nostru în secvențe de instrucțiuni cu un scop precis și reutilizabil. Putem privi aceste funcții că pe niște cutii negre care pe baza unor **parametri de intrare** ne oferă un **rezultat** iar modalitatea prin care aceste funcții ajung la rezultat este strict sarcina lor și mai mult, această modalitate putând fi ulterior modificată fără a afecta corectitudinea programul nostru. Atât timp cât funcția respecta cerințele inițiale pentru care a fost creată, mecanismul de implementare al funcției poate fi reimplementat ori de câte ori este necesar.
 
@@ -71,8 +71,6 @@ Am folosit în acest caz funcția _Math.pow_ care nu este definită de noi ci ch
 
 Pe lângă funcțiile definite de noi, există o multitudine de alte funcții predefinite ale limbajul Javascript pe care noi le putea utiliza. Acest lucru ne scutește de efortul de a mai reimplementa cerințele acelor funcții de la 0 – putem accesa acele funcționalități doar prin simplul lor apel (ex. _Math.cos(), Math.round(), parseInt(), isNan(), etc._)
 
-<div class="algovis" config-id="functii-basics.json" av-selected="0"></div>
-
 # Parametri unei funcții #
 Parametri funcțiilor (denumiți și parametri formali) pot fi priviți că fiind datele prin care putem comunica cu funcția și cu ajutorul cărora putem executa anumite instrucțiuni în corpul funcției. Acești parametrii se transformă de altfel în variabile în corpul funcției putând fi folosiți că orice altă variabilă declarată în corpul funcției. Un aspect foarte important de menționat este că orice modificare adusă acestor parametrii nu se vă reflecta după terminarea apelului funcției dacă variabila modificată este de tip primitiv (număr, text). Cu alte cuvinte, clienții funcției (cei care o apelează folosind anumiți parametrii) nu vor vedea nicio modificare adusă parametrilor de intrare dacă noi încercăm să le modificam valoarea în corpul funcției. Acest lucru se întâmplă deoarece acesta listă de parametrii este de fapt o listă de copii a parametrilor folosiți atunci când se efectuează apelul funcției iar orice modificare adusă lor va fi făcută efectiv asupra copilor și nu asupra parametrilor menționați în apelul funcției.
 
@@ -82,8 +80,13 @@ Funcția <code>dubleaza</code> primește că parametru un <code>numar</code> pe 
 
 <div class="attention-box">
 <strong>Rezumat:</strong>
-- o funcție este formată din antet plus corp adică numele său și lista de parametri urmată de declarații de variabile și instrucțiuni
-- opțional o funcție poate întoarce un rezultat prin folosirea cuvântului cheie return
-- beneficiul principal al folosirii funcțiilor este de a reduce duplicarea instrucțiunilor însă vom învăța și de alte avantaje în articolele următoare
-- mecanismul de transmitere a parametrilor de tip primitiv se face prin copierea variabilei specificate la apelul funcției așa că orice modificare adusă parametrului în interiorul funcției se face efectiv asupra acestei copii și nu asupra variabilei folosite în apel
+- O funcție este formată din antet plus corp adică numele său și lista de parametri urmată de declarații de variabile și instrucțiuni
+- Opțional o funcție poate întoarce un rezultat prin folosirea cuvântului cheie <strong>return</strong>
+- Beneficiul principal al folosirii funcțiilor este de a reduce duplicarea instrucțiunilor însă vom învăța și de alte avantaje în articolele următoare
+- Mecanismul de transmitere a parametrilor de tip primitiv se face prin copierea variabilei specificate la apelul funcției așa că orice modificare adusă parametrului în interiorul funcției se face efectiv asupra acestei copii și <strong>nu asupra variabilei folosite în apel</strong>
+</div>
+
+<div class="has-text-align-center">
+<p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
+<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/functii.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
 </div>
