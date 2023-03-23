@@ -1,0 +1,67 @@
+§0
+§    statement: Care din următoarele comenzi declară o variabilă ce conține șirul de caractere 'Snickers'?
+§    correct: [0,2]
+§    answers: [
+§        id: 0
+§        answer: <pre><code>let x = 'Snickers';</pre></code>
+§        id: 1
+§        answer: <pre><code>x = "Snickers";</pre></code>
+§        id: 2
+§        answer: <pre><code>let x = "Snickers";</pre></code>
+§        id: 3
+§        answer: <pre><code>let x : 'Snickers';</pre></code>
+§    answers: ]
+§1
+§    statement: Care este diferența dintre 0 și '0'?
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: 0 este un literal numeric iar '0' este un literal text
+§        id: 1
+§        answer: sunt identice
+§        id: 2
+§        answer: 0 se poate atribui doar variabilelor de tip numeric iar '0' numai celor de tip text
+§    answers: ]
+§    explanation: 0 este un literal numeric iar '0' este unul text având în vedere prezența apostrofului.
+§2
+§    statement: Care este efectul următoarei secvențe de cod?
+<pre><code>
+let scor = 100;
+let Scor = 1000;
+</pre></code>
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Secvența este corectă însă nu este recomandată creând confuzie
+§        id: 1
+§        answer: Variabila ```scor``` va stoca valoarea 1000
+§        id: 2
+§        answer: Vom primi eroare la execuție întrucât variabila a fost deja declarată
+§    answers: ]
+§    explanation: Limbajul Javascript interpretează diferit literele mici de cele mari așadar variabila scor este o variabilă diferită de variabila Scor.
+§3
+§    statement: Ce sunt tipurile de date obiect?
+§    correct: [0,1,2]
+§    answers: [
+§        id: 0
+§        answer: Tipuri compuse din proprietăți și valorile aferente lor
+§        id: 1
+§        answer: Tipuri cu ajutorul cărora putem agrega mai multă informație într-o singură variabilă
+§        id: 2
+§        answer: Un tip de dată ce agrega variabile sub forma de proprietăți
+§    answers: ]
+§    explanation: Tipul obiect reprezintă o **colecție de proprietăți și valorile aferente lor**. Ne putem imagina că în loc să avem mai multe variabile, putem avea una singură ce conține ca proprietăți valorile variabilelor pe care le înlocuiește. Chiar dacă acest lucru este tehnic posibil mereu, este recomandat să îl facem numai dacă aceste variabile pe care le agregăm într-un obiect au legătură între ele și are sens să fie împreună.
+§4
+§    statement: Care din afirmațiile următoare sunt adevărate:
+§    correct: [1,2]
+§    answers: [
+§        id: 0
+§        answer: Tipul unei varibile în Javascript este specificat la declarare
+§        id: 1
+§        answer: Tipurile primitive sunt toate tipurile de date ce nu sunt de tip obiect
+§        id: 2
+§        answer: Valorile proprietăților unui obiect pot fi de orice tip
+§        id: 3
+§        answer: Proprietățile obiectelor pot fi de orice tip
+§    answers: ]
+§    explanation: Javascript este un limbaj în care putem oricând să schimbăm tipul de conținut al unei variabile iar din acest motiv la declarare nu are sens să specificăm niciun tip. Proprietățile obiectelor trebuie să fie de tip text iar valorile asociate lor pot fi de orice tip (inclusiv obiect)

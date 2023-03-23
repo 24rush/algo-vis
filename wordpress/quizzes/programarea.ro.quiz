@@ -1,0 +1,51 @@
+§0
+§    statement: Ce este un limbaj de programare?
+§    correct: [2]
+§    answers: [
+§        id: 0
+§        answer: Ceva ce numai oamenii pot înțelege
+§        id: 1
+§        answer: Ceva ce numai calculatoarele pot înțelege
+§        id: 2
+§        answer: Ceva ce atât calculatoarele cât și oamenii pot înțelege și pot comunica între ei
+§    answers: ]
+§    explanation: Limbajul de programare este mediul prin care oamenii comunică cu calculatoarele iar din acest motiv trebuie să fie ceva ce este înțeles de ambele părți.
+§1
+§    statement: Care din următoarele afirmații sunt adevărate despre codul mașină?
+§    correct: [0, 1, 2]
+§    answers: [
+§        id: 0
+§        answer:  Un nivel low-level (apropiat de nivelul hardware-ului) de 1 și 0-uri prin intermediul căruia procesorul calculatorului poate executa comenzile pe care i le cerem
+§        id: 1
+§        answer: Cod generat de interpretoarele limbajelor de programare
+§        id: 2
+§        answer: Un nivel ascuns programatorului întrucât i-ar fi greu să îl înțeleagă având în vedere natura să criptică
+§        id: 3
+§        answer: Este un limbaj de programare prin care putem comunica direct cu procesorul 
+§    answers: ]
+§    explanation: Codul mașină este efectiv reprezentarea programului nostru în instrucțiuni pe care procesoarele calculatoarelor le pot executa. Acest cod este generat de interpretoarele limbajelor de programare și nu este ceva ce trebuie să ne preocupe. Cel mai apropiat limbaj de programare de acest cod mașină este cel de asamblare care oferă programatorului posibilitatea de a interacționa la un nivel intim cu procesorul pe care are nevoie ca programul său să ruleze însă acest lucru este util doar dacă avem cunoștinte și cerințe specifice unui anumit tip de procesor.
+§2
+§    statement: Ce reprezintă programarea?
+§    correct: [0,1,2]
+§    answers: [
+§        id: 0
+§        answer: O activitate de scriere de comenzi prin care instruim un calculator să facă o sarcină pentru noi
+§        id: 1
+§        answer: Folosirea unui limbaj de programare pentru a scrie un program
+§        id: 2
+§        answer: Metoda prin care putem interacționa cu un calculator
+§    answers: ]
+§3
+§    statement: De ce există o multitudine de limbaje de programare?
+§    correct: [0,1,2,3]
+§    answers: [
+§        id: 0
+§        answer: Întrucât fiecare limbaj nou a fost creat pentru a rezolva un anumit tip de sarcină
+§        id: 1
+§        answer: Pentru a satisface noile tendințe din domeniul tehnologiei
+§        id: 2
+§        answer: Pentru a rezolva mai ușor sau într-un mod diferit o sarcină existentă
+§        id: 3
+§        answer: Pentru a aduce un nivel de perfomanță mai ridicat pentru un anumit tip de sarcină
+§    answers: ]
+§    explanation: Limbajele de programare au evoluat de-a lungul timpului și pe măsură ce am înțeles mai bine cum ele funcționează ne-am permis să venim cu îmbunătățiri asupra lor dar și cu moduri noi de abordare a problemelor pe care încercam să le rezolvăm cu ajutorul lor. Deasemenea, evoluțiile din domeniul tehnologiei au necesitat limbaje de programare noi care să satisfacă aceste tendințe într-un mod cât mai eficient. Au existat cazuri în care prin greșelile învățată dintr-un limbaj de programare am decis să scriem unul nou prin care să eliminăm aceste greșeli. 

@@ -1,0 +1,122 @@
+§0
+§    statement: Structurile de control sunt:
+§    correct: [0,1,2]
+§    answers: [
+§        id: 0
+§        answer: Cuvinte cheie rezervate limbajului de programare care ne permit să efectuăm operații decizionale și repetitive în cod
+§        id: 1
+§        answer: De două tipuri: decizionale și repetitive
+§        id: 2
+§        answer: Mecanisme prin care putem controla execuția programului nostru
+§        id: 3
+§        answer: Sistem de verificare a corectitudinii programelor
+§    answers: ]
+§    explanation: Structurile de control ne permit să construim secvențe complexe de instrucțiuni. Aceste construcții pot fi executate în funcție de anumite condiții (**decizionale**) sau de un număr de ori (**repetitive**) și totodată le putem combina pe ambele.
+§1
+§    statement: Secvență **if-else** de mai jos poate fi modificată folosind operatorul ternar astfel:
+<pre><code>
+let numar  = prompt('Introdu un număr')
+if (numar >= 0) 
+    return "Număr pozitiv"
+else 
+    return "Număr negativ"
+</pre></code>
+§    correct: [0,1,3]
+§    answers: [
+§        id: 0
+§        answer: <pre><code>return numar >= 0 ? "Număr pozitiv" : "Număr negativ"</pre></code>
+§        id: 1
+§        answer: <pre><code>return "Număr" + (numar >= 0 ? "pozitiv" : "negativ")</pre></code>
+§        id: 2
+§        answer: <pre><code>return "Număr pozitiv" if numar >= 0 else "Număr negativ"</pre></code>
+§        id: 3
+§        answer: <pre><code>numar >= 0 ? return "Număr pozitiv" : return "Număr negativ"</pre></code>
+§    answers: ]
+§2
+§    statement: Operatorul ternar este singurul operator care necesită trei operanzi.
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Adevărat
+§        id: 1
+§        answer: Fals
+§    answers: ]
+§3
+§    statement: Folosim structura **for**:
+§    correct: [0,2]
+§    answers: [
+§        id: 0
+§        answer: Când vrei să repetăm o instrucțiune de un număr de ori
+§        id: 1
+§        answer: Când vrem să sărim peste anumite instrucțiuni
+§        id: 2
+§        answer: Când vrem să parcurgem un vector
+§        id: 3
+§        answer: Când vrem să executăm înapoi instrucțiuni din programul nostru.
+§    answers: ]
+§4
+§    statement: Ce putem afirma despre structurile **for** și **while**:
+§    correct: [0, 1]
+§    answers: [
+§        id: 0
+§        answer: Sunt echivalente ca funcționalitate
+§        id: 1
+§        answer: In general folosim _for_ când știm exact numărul de pași de repetat iar _while_ când nu îi știm dar îi vom determina în timpul rulării programului
+§        id: 2
+§        answer: _for_ necesită inițializarea contorului de repetiții iar while nu
+§        id: 3
+§        answer: Cu _for_ putem doar incrementa contorul de repetiție însă cu _while_ putem aduna orice valoare
+§    answers: ]
+§    explanation: Atât _for_ cât și _while_ sunt structuri repetitive ce se bazează pe o condiție pentru a finaliza repetiția. În general, structura _for_ este folosită când numărul de pași de executat este cunoscut iar _while_ în caz contrar. Cu alte cuvinte, vom folosi o structură _for_ când numărul de iterații este cunoscut din momentul scrierii codului iar _while_ când numărul de iterații se va determina dinamic în timpul rulării programului în funcție de alte condiții.
+§5
+§    statement: Instrucțiunea **break**:
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: Întrerupe complet programul
+§        id: 1
+§        answer: Întrerupe bucla for, while, do-while sau switch în care a fost specificat
+§        id: 2
+§        answer: Întoarce execuția programului la începutul buclei pe care a întrerupt-o
+§        id: 3
+§        answer: Este folosită doar în structurile switch
+§    answers: ]
+§6
+§    statement: Instrucțiunea **continue**:
+§    correct: [1,2,3]
+§    answers: [
+§        id: 0
+§        answer: Trece la următorul program
+§        id: 1
+§        answer: Sare peste restul instrucțiunilor aflate după el într-o structură repetitiva trecând la o nouă iterație
+§        id: 2
+§        answer: Permite evitarea executării corpului unui bloc repetitiv în funcție de anumite criterii
+§        id: 3
+§        answer: Poate fi înlocuit cu o structură if
+§    answers: ]
+§    explanation: Instrucțiunea _continue_ indică unei structuri repetitive că poate renunța la a mai executa instrucțiunile aflate după instrucțiunea continue și trece la următorul pas din iterație. Este util atunci când în funcție de o anumită condiție decidem că restul instrucțiunilor dintr-o structură repetitiva nu mai sunt necesar de executat. Ne putem imagina cum acest mecanism poate fi înlocuit ușor și de o structura _if_.
+§7
+§    statement: Structura **switch**:
+§    correct: [0,1,2]
+§    answers: [
+§        id: 0
+§        answer: Este o structură similară celei **if-else-if**
+§        id: 1
+§        answer: Folosește instrucțiunea **break** în ramurile pentru care s-a găsit egalitatea pentru a evita executare restului ramurilor sale
+§        id: 2
+§        answer: Poate agrega mai multe clauze **case** unui singur set de instrucțiuni 
+§        id: 3
+§        answer: Necesită doar expresii constante în clauzele **case**
+§    answers: ]
+§7
+§    statement: Nefolosirea cuvântului cheie **break** într-o ramură a structurii **switch**:
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Determină executarea tuturor ramurilor ce urmează după ea
+§        id: 1
+§        answer: Nu are niciun efect
+§        id: 2
+§        answer: Determina și executarea ramurii **default**
+§    answers: ]
+§    explanation: Un comportament oarecum ciudat al structurii _switch_ este că după intrarea într-o clauză _case_ dacă nu întâlnește instrucțiunea _break_ atunci vă executa toate clauzele _case_ următoare. Din aceasta cauză este important ca fiecare clauză _case_ să conțină instrucțiunea _break_.

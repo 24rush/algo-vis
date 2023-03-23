@@ -22,11 +22,16 @@ Pe lângă proprietatea <code>length</code>, variabilele de tip vector ne pun la
 - ```pop``` - similar funcției push doar că această metodă va elimina ultimul element al colecției
 - ```shift``` - similar funcției pop doar că această funcție va elimina primul element al colecției
 - ```concat``` - ne permite să alăturam două colecții într-una nouă (ce le va conține pe ambele)
-- <code>slice(startIndex, endIndex)</code> - ne permite să extragem porțiunea din vector delimitată de pozițiile <code>startIndex</code> și <code>endIndex</code>
+- <code>slice(startIndex, endIndex)</code> - ne permite să extragem din vector porțiunea delimitată de pozițiile <code>startIndex</code> și <code>endIndex</code>
+- <code>splice(startIndex, numarStergeri)</code> - ne permite să stergem din vector începând cu poziția <code>startIndex</code> un numar de elemente egal cu <code>numarStergeri</code>
 - ```reverse``` - după cum numele indică, această metodă va ordona elementele dintr-o colecție în ordinea inversă celei curente
 - ```indexOf(element)``` - ne ajută să căutam un element într-o colecție întorcând prima poziție la care a fost întâlnit
 
 <div class="algovis" config-id="vectori-basics.json" av-selected="2"></div>
+
+Pentru a șterge un element dintr-un vector, va trebui să folosim funcțiile <code>indexOf</code> pentru a identifica poziția pe care se află elementul apoi <code>splice</code> pentru a șterge efectiv elementul din vector.
+
+<div class="algovis" config-id="vectori-basics.json" av-selected="3"></div>
 
 <div class="attention-box"><strong>Rezumat:</strong>
 - Tipul de date vector ne permite să stocăm o <strong>colecție de valori</strong>

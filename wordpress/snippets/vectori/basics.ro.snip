@@ -21,10 +21,10 @@ let vectorB = [11, 12, 13, 14, 15];
 
 console.log('Lungimea vectorului A este: ' + vectorA.length);
 
-vectorA.push(5); /*** Adaugam o valoare noua la sfarsitul colectiei ***/
+vectorA.push(5); /*** Adaugăm o valoare nouă la sfârșitul colecției ***/
 console.log('Lungimea vectorului A este acum: ' + vectorA.length);
 
-vectorA[0] = 7; /*** Modificam o valoare existenta ***/
+vectorA[0] = 7; /*** Modificăm o valoare existentă ***/
 console.log(vectorA);
 
 let vectorC = vectorA.concat(vectorB);
@@ -39,4 +39,15 @@ console.log(sectiune);
 let reverse = vectorC.reverse();
 console.log(reverse);
 
-console.log('Pozitia elementului 2 este: ' + reverse.indexOf(2));
+console.log('Poziția elementului 2 este: ' + reverse.indexOf(2));
+
+§desc: stergere din vector
+§id: 3
+§code:
+let x = [1, -12, 3, 5, 2]
+
+let poz = x.indexOf(2); /*** Căutam poziția elementului cu valoarea 2 ***/
+
+if (poz != -1) { /*** Dacă am găsit cu element cu valoarea 2 ***/
+    x.splice(poz, 1); /*** Ștergem un element începând cu poziția pe care l-am găsit ***/
+}

@@ -1,0 +1,120 @@
+§0
+§    statement: Elementele ce definesc o funcție sunt:
+§    correct: [0, 1, 4]
+§    answers: [
+§        id: 0
+§        answer: numele
+§        id: 1
+§        answer: lista de parametri
+§        id: 2
+§        answer: corpul funcției
+§        id: 3
+§        answer: apelul funcției
+§        id: 4
+§        answer: valoarea de retur
+§        id: 5
+§        answer: clienții funcției
+§    answers: ]
+§    explanation: O funcție este definită de **numele ei, lista de parametri și valoarea de retur**. Cu alte cuvinte, aceste elemente sunt necesare pentru un client al unei funcții pentru a știi cum să interacționeze cu aceasta. Corpul funcției este un detaliu de implementare ce nu este necesar a fi știut de cineva interesat doar de funcționalitatea ei.
+§1
+§    statement: Pentru a defini o funcție folosim cuvântul cheie:
+§    correct: [2]
+§    answers: [
+§        id: 0
+§        answer: func
+§        id: 1
+§        answer: function
+§        id: 2
+§        answer: def
+§        id: 3
+§        answer: funct
+§    answers: ]
+§2
+§    statement: O funcție:
+§    correct: [2, 3, 4]
+§    answers: [
+§        id: 0
+§        answer: Trebuie să conțină mereu cuvântul cheie return
+§        id: 1
+§        answer: Trebuie să conțină doar maxim un cuvânt cheie return
+§        id: 2
+§        answer: Poate conține câte cuvinte cheie return dorim
+§        id: 3
+§        answer: Poate să nu conțină niciun cuvânt cheie return
+§        id: 4
+§        answer: Poate fi privită ca o cutie neagră în care conținutul nu ne interesează ci doar funcționalitatea pe care o declară a o avea
+§    answers: ]
+§    explanation: Nu există nicio limitare legată de câte instrucțiuni _return_ poate avea o funcție însă în general, este o practică recomandată să folosim **o singură** astfel de instrucțiune pentru a face clar în ce situații și cu ce valoare de retur se termină o funcție.
+§3
+§    statement: Pentru a executa instrucțiunile din corpul unei funcții trebuie să:
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: o definim
+§        id: 1
+§        answer: o apelăm
+§        id: 2
+§        answer: Folosim definiția funcției oriunde avem nevoie să executăm corpul său
+§        id: 3
+§        answer: să scriem return ()
+§    answers: ]
+§    explanation: Trebuie să reținem că definirea unei funcții este separată de utilizarea ei. Pentru a putea executa instrucțiunile din corpul funcției (specificate la declarare), trebuie să **o apelam** oriunde avem nevoie de acele instrucțiuni.
+§4
+§    statement: Mecanismul prin care funcțiile comunică cu clienții lor este:
+§    correct: [0, 2]
+§    answers: [
+§        id: 0
+§        answer: Prin lista de parametri
+§        id: 1
+§        answer: Prin date solicitate de la utilizator
+§        id: 2
+§        answer: Prin valoarea de retur
+§        id: 3
+§        answer: Nu comunică, doar execută o funcționalitate
+§    answers: ]
+§5
+§    statement: Pentru un client al unei funcții, informațiile relevante sunt:
+§    correct: [0, 1, 2]
+§    answers: [
+§        id: 0
+§        answer: Funcționalitatea pe care o are (adună doua numere, solicită date de la utilizator, etc.)
+§        id: 1
+§        answer: parametri de intrare
+§        id: 2
+§        answer: valoare de retur
+§        id: 3
+§        answer: numărul de clienți pe care îi are
+§        id: 4
+§        answer: modul de implementare a funcționalității
+§    answers: ]
+§    explanation: Cel mai important în definirea unei funcții este specificarea problemei pe care o rezolvă pe baza unor posibili parametri de intrare. Cu alte cuvinte, fiecare funcție 'spune' că pe baza parametrilor va efectua pentru clienții săi o anumită funcționalitate însă nu va specifica și cum întrucât aceast detaliu de implementare nu este relevant pentru clienții funcției doar pentru cel care implementează efectiv funcția. Acest comportament ne permite ca ulterior să schimbăm cum funcționalitatea funcției este realizată fară a necesita informarea clienților - pentru ei funcționalitatea va rămâne la fel.
+§6
+§    statement: Autorul unui program poate:
+§    correct: [1, 2]
+§    answers: [
+§        id: 0
+§        answer: Folosi doar funcțiile pe care el le-a definit
+§        id: 1
+§        answer: Folosi orice funcție pusă la dispoziție de limbajul javascript plus toate funcțiile definite de el
+§        id: 2
+§        answer: Folosi orice alte funcții din pachete provenite de la alți autori
+§    answers: ]
+§7
+§    statement: Parametri transmiși unei funcții sunt: 
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: Exact variabilele transmise de clienții funcției (cei care o apelează)
+§        id: 1
+§        answer: Copii ale variabilelor transmise de clienți
+§    answers: ]
+§8
+§    statement: Parametri de tip primitiv transmiși că parametri funcțiilor pot fi modificați în corpul funcției și folosiți astfel ca date de ieșire ale funcției.
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Fals
+§        id: 1
+§        answer: Adevărat
+§    answers: ]
+§    explanation: Funcțiile care primesc variabile de tip primitiv ca parametri de intrare vor primi de fapt niște copii ale acestora iar modificările pe care le vor face în interiorul funcției vor fi vizibile doar asupra acestor copii și nu și a variabilelor pe care le copiază astfel nicio modificare nu poate fi transmisă înapoi către cliențîi funcției folosind acest mecanism.

@@ -1,5 +1,5 @@
 §desc: An bisect
-§id: 4
+§id: 0
 §code:
 function esteAnBisect(an) {
 	if (an % 400 == 0) 
@@ -14,34 +14,6 @@ function esteAnBisect(an) {
 
 let an = prompt('An:');
 console.log(esteAnBisect(an));
-
-§desc:
-§id: 0
-§code:
-function solicita_numar(tip_numar) {
-    let numar = 0;
-	let este_valid = false;
-
-	while (!este_valid) {		
-		numar = prompt(tip_numar);
-
-		if (tip_numar == 'negativ') {
-			este_valid = (numar <= 0);
-		} else {
-			este_valid = (numar >= 0);
-		}		
-	}
-
-    return numar;
-}
-
-function numar_la_patrat(tip_numar) {
-	let numar = solicita_numar(tip_numar)
-	console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + numar * numar);
-}
-
-numar_la_patrat('pozitiv');
-numar_la_patrat('negativ');
 
 §desc:
 §id: 1

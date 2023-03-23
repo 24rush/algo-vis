@@ -1,0 +1,52 @@
+§0
+§    statement: Un vector este un tip de obiect ce ne ajută să:
+§    correct: [1,2,3]
+§    answers: [
+§        id: 0
+§        answer: Definim direcții de deplasare
+§        id: 1
+§        answer: Stocăm colecții de date prin intermediul unei variabile
+§        id: 2
+§        answer: Utilizăm liste de obiecte în programele noastre
+§        id: 3
+§        answer: Definim colecții de tipuri primitive și obiect
+§    answers: ]
+§    explanation: Tipul vector ne permite să definim o colecție (listă) de valori de orice tip pe care să o putem accesa prin intermediul unei variabile. De ținut minte că valorile liste nu trebuie să fie de același tip, putem introduce în listă tipuri diferite de date.
+§1
+§    statement: Pentru a afla lungimea unei liste:
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Folosim proprietatea _length_ disponibilă în orice obiect de tip listă
+§        id: 1
+§        answer: Stocăm lungimea în variabila separată și o modificăm de fiecare dată când introducem/ștergem elemente în listă
+§        id: 2
+§        answer: Întrebăm utilizatorul
+§    answers: ]
+§2
+§    statement: Pentru a accesa un element dintr-o listă, vom folosi operatorul:
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: ()
+§        id: 1
+§        answer: \[\]
+§        id: 2
+§        answer: indexOf
+§        id: 3
+§        answer: .
+§    answers: ]
+§3
+§    statement: Pentru a accesa primul element din lista v, folosim sintaxa:
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: v[1]
+§        id: 1
+§        answer:  v[0]
+§        id: 2
+§        answer: v.push()
+§        id: 3
+§        answer: v.indexOf(1)
+§    answers: ]
+§    explanation: Pozițiile elementelor din liste încep de la 0 așa că primul element este v[0]. v.push() este incorect pentru că are rolul de a introduce un element într-o listă iar v.indexOf(1) este o funcție ce ne întoarce poziția primului element cu valoare 1.

@@ -1,0 +1,104 @@
+§order: [7,0,1,2,3,4,5,6]
+§7
+§    statement: Un limbaj de programare este format din:
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: instructiuni
+§        id: 1
+§        answer: cuvinte cheie rezervate si identificatori plus regulile lor de folosire 
+§        id: 2
+§        answer: comentarii si cod
+§        id: 3
+§        answer: variabile
+§    answers: ]
+§0
+§    statement: Cea mai mică construcție formată din cuvinte cheie și identificatori se numește:
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: instrucțiune sau comandă
+§        id: 1
+§        answer: program
+§        id: 2
+§        answer: modul
+§        id: 3
+§        answer: bloc
+§    answers: ]
+§    explanation: Comenzile sau instrucțiunile sunt cele mai mici unități pe care le putem crea folosind elementele de limbaj iar agregarea mai multor comenzi vor forma un program.
+§1
+§    statement: Sfârșitul unei instrucțiuni se marchează folosind caracterul:
+§    correct: [2]
+§    answers: [
+§        id: 0
+§        answer: /
+§        id: 1
+§        answer: .
+§        id: 2
+§        answer: ;
+§        id: 3
+§        answer: :
+§    answers: ]
+§2
+§    statement: Identificatorii limbajului Javascript sunt formați din:
+§    correct: [0,1,3]
+§    answers: [
+§        id: 0
+§        answer: variabile
+§        id: 1
+§        answer: nume de funcții
+§        id: 2
+§        answer: caractere speciale
+§        id: 3
+§        answer: literale
+§    answers: ]
+§3
+§    statement: Efectul următoarei secvențe de cod este:
+<pre><code>
+let scor = 1000;
+Scor = 500;
+</code></pre>
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: Variabilei ```scor``` i se va modifica valoarea din 1000 în 500
+§        id: 1
+§        answer: Vom avea eroare la execuție întrucât variabila ```Scor``` nu este definită
+§        id: 2
+§        answer: Se va crea o variabilă nouă ```Scor```
+§    answers: ]
+§    explanation: Identificatorii dar și cuvintele cheie rezervate ale limbajului sunt case-sensitive ceea ce înseamnă că literele mici sunt diferite de literele mari (A nu este asociat și lui a sau invers) așa că în exemplul nostru variabila ```Scor``` este considerată a fi variabila nouă ce nu este definită (lipsește cuvântul cheie ```let```).
+§4
+§    statement: Tipul de conținut al unei variabile (text, număr, etc) este specificat la declararea variabilei.
+§    correct: [1]
+§    answers: [
+§        id: 0
+§        answer: Adevărat
+§        id: 1
+§        answer: Fals
+§    answers: ]
+§    explanation: **Fals**. Limbajul Javascript este un limbaj cu tipuri de date dinamice ceea ce însemnă că putem modifica tipul de conținut al unei variabile oricând dorim pe parcursul execuției programului nostru.
+§5
+§    statement: Principalele beneficii ale utilizării funcțiilor sunt
+§    correct: [0,1,2]
+§    answers: [
+§        id: 0
+§        answer: Reutilizarea codului
+§        id: 1
+§        answer: Simplificarea codului
+§        id: 2
+§        answer: Modularizarea codului
+§    answers: ]
+§6
+§    statement: Delimitatorii zonelor de comentarii în cod sunt:
+§    correct: [1,2]
+§    answers: [
+§        id: 0
+§        answer: *
+§        id: 1
+§        answer: //
+§        id: 2
+§        answer: /* */
+§        id: 3
+§        answer: || 
+§    answers: ]

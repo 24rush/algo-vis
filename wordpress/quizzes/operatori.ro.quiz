@@ -1,0 +1,87 @@
+§0
+§    statement: Operatorii sunt mijloace prin care putem defini operații asupra operanzilor:
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Adevărat
+§        id: 1
+§        answer: Fals
+§    answers: ]
+§1
+§    statement: O expresie este:
+§    correct: [0, 1]
+§    answers: [
+§        id: 0
+§        answer: O combinație de operatori și operanzi ce se evaluează la un rezultat
+§        id: 1
+§        answer: Un apel de funcție
+§        id: 2
+§        answer: Orice variabilă urmată de operator =
+§    answers: ]
+§    explanation: O expresie poate fi orice construcție ce se poate evalua sub forma unui rezultat. Aceste construcții se întâlnesc frecvent ori la dreapta operatorului = ori sub forma unor parametri ai funcțiilor. Trebuie reținut că variabilele nu sunt expresii, ele doar stochează valorile unor expresii.
+§2
+§    statement: Procesul de evaluare a unei expresii presupune:
+§    correct: [0, 1]
+§    answers: [
+§        id: 0
+§        answer: Determinarea valorilor operanzilor prezenți în expresie
+§        id: 1
+§        answer: Aplicarea operatorilor asupra valorilor operanzilor
+§        id: 2
+§        answer: Ignoră regulile de precedență și asociativitate ale operatorilor
+§    answers: ]
+§3
+§    statement: Nivelul de precedență al operatorilor:
+§    correct: [1, 2,3]
+§    answers: [
+§        id: 0
+§        answer: Indică de câte ori poate fi folosit într-o expresie
+§        id: 1
+§        answer: Definește ordinea în care aceștia se aplică într-o expresie în relație față de alți operatori
+§        id: 2
+§        answer: Este suprascris prin folosirea parantezelor
+§        id: 3
+§        answer: Indică faptul că un operator se va aplica înaintea altui operator dacă are un nivel mai mare de predență decât acesta
+§    answers: ]
+§    explanation: Precedența operatorilor este folosită atunci când o expresie conține operatori diferiți și trebuie să decidem care din ei se vor aplica primii.
+§4
+§    statement: Un operator:
+§    correct: [0, 1]
+§    answers: [
+§        id: 0
+§        answer: Este caracterizat de operanzii pe care îi necesită
+§        id: 1
+§        answer: Este definit de nivelul de precedență și asociativitate
+§        id: 2
+§        answer: Trebuie aplicat doar unui operand
+§        id: 3
+§        answer: Se evaluează la fals dacă este aplicat incorect
+§    answers: ]
+§    explanation: Un operator poate fi unar, binar sau ternar în funcție de numărul de operanzi pe care îi solicită (1,2 sau 3). Fiecare operator are definit un nivel de precedenta și asociativitate pentru a putea fi folosit în expresii complexe în care și alți operatori sunt prezenți.
+§5
+§    statement: Asociativitatea operatorilor se referă:
+§    correct: [1, 2, 3]
+§    answers: [
+§        id: 0
+§        answer: La modul în care anumit operatori se pot combina doar cu alți operatori
+§        id: 1
+§        answer: Ordinea lor de aplicare în contextul unei expresii în care alți operatori cu același nivel de precedență sunt prezenți
+§        id: 2
+§        answer: Poate fi de stânga sau de dreapta
+§        id: 3
+§        answer: Poate fi suprascrisă prin folosirea parantezelor
+§    answers: ]
+§    explanation: Asociativitatea operatorilor se aplică doar atunci când o expresie conține operatori cu același nivel de precedență și astfel nu se poate folosi pentru a determina care operator se va aplica primul, în aceste situații recurgându-se la folosirea asociativității. Asociativitatea poate fi ori de **stânga ori de dreapta** si totodată poate fi suprascrisă de paranteze.
+§6
+§    statement: Folosirea parantezelor în expresii:
+§    correct: [1, 2, 3]
+§    answers: [
+§        id: 0
+§        answer: Este obligatorie
+§        id: 1
+§        answer: Este opțională și ne ajută să indicăm clar ordinea în care vrem să se aplice operatorii
+§        id: 2
+§        answer: Suprascrie nivelul de precedență al operatorilor
+§        id: 3
+§        answer: Suprascrie asociativitatea operatorilor
+§    answers: ]

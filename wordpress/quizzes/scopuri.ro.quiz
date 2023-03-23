@@ -1,0 +1,63 @@
+§0
+§    statement: Ce este domeniul unei variabile:
+§    correct: [0]
+§    answers: [
+§        id: 0
+§        answer: Spațiul dintr-un program în care o variabilă este utilizabilă
+§        id: 1
+§        answer: Tipurile de date pe care aceasta le poate stoca
+§        id: 2
+§        answer: Colecția de proprietăți a unei variabile de tip obiect
+§    answers: ]
+§    explanation: Domeniul unei variabile (engl. _scope_) este reprezentat de secțiunea instrucțiunilor din programe în care o variabilă este vizibilă, adică o putem utiliza.
+§1
+§    statement: Variabilele locale sunt:
+§    correct: [0, 3]
+§    answers: [
+§        id: 0
+§        answer: Definite exclusiv la nivelul unui bloc
+§        id: 1
+§        answer: Definite doar în corpul funcțiilor
+§        id: 2
+§        answer: Nu pot fi trimise ca parametri funcțiilor
+§        id: 3
+§        answer: Distruse după terminarea blocului în care au fost declarate
+§    answers: ]
+§    explanation: Variabilele locale sunt variabile definite în **sub-blocuri de instrucțiuni sau în corpul funcțiilor**. Ele au de regulă un domeniu restrâns de vizibilitate de aceea și numele local. Durata lor de viață este direct legată de blocul în care au fost declarate ceea ce înseamnă că la terminarea executării blocului, ele vor fi distruse și nu le vom mai putea accesa.
+§2
+§    statement: Variabilele globale sunt:
+§    correct: [0, 1]
+§    answers: [
+§        id: 0
+§        answer: Definite în afara oricărei funcții
+§        id: 1
+§        answer: Definite în afara oricărui bloc de instrucțiuni
+§        id: 2
+§        answer: Definite folosind cuvântul cheie **global**
+§    answers: ]
+§    explanation: Variabilele globale sunt definite în restul blocurilor în care definim variabilele locale, adică în afara funcțiilor sau a oricărui sub-bloc. Ne rămâne astfel doar spațiul global, adică în afara oricărei funcții.
+§3
+§    statement: Variabilele globale față de cele locale:
+§    correct: [0, 3]
+§    answers: [
+§        id: 0
+§        answer: Pot fi folosite în toate blocurile programului
+§        id: 1
+§        answer: Rămân în memoria programului și după terminarea acestuia
+§        id: 2
+§        answer: Pot fi modificate în funcții iar modificările sunt vizibile la nivelul clienților
+§        id: 3
+§        answer: Nu vor declanșa niciodată o eroare de tipul 'variable is not defined'
+§    answers: ]
+§    explanation: Având în vedere că variabilele globale sunt definite în spațiul global ce conține spațiul tuturor funcțiilor, reiese că o variabilă globală poate fi folosită din orice funcție.
+§4
+§    statement: Domeniile suprapuse:
+§    correct: [0, 1, 2]
+§    answers: [
+§        id: 0
+§        answer: Funcționează pe principiul mai mic/mai are adică un domeniu mai mic are acces la toate variabilele domeniului mai mare care îl conține și pe el
+§        id: 1
+§        answer: Ne permit să accesăm variabile din alte domenii decât cele în care au fost declarate
+§        id: 2
+§        answer: Ne împiedică să folosim variabile din domenii la care nu avem acces
+§    answers: ]
