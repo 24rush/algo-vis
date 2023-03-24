@@ -43,11 +43,11 @@ class SnippetsConfig {
             Object.keys(jsonData).forEach((snippetLang: any) => {
                 if (!(snippetLang in this.snippetsForLang))
                     this.snippetsForLang[snippetLang] = {};
-                                    
-                Object.values(jsonData[snippetLang]).forEach((snippetObj: any) => {                    
+
+                Object.values(jsonData[snippetLang]).forEach((snippetObj: any) => {
                     if (snippetLang.indexOf("src-") != -1)
                         return;
-                        
+
                     let snippet = new Snippet(snippetObj, counterSnippets++);
 
                     if (!(snippet.level in this.snippetsForLang[snippetLang]))
@@ -140,10 +140,13 @@ export class Snippets {
                 });
 
                 // Don't create the Splitter if we have explicit verticalView or we are in portrait
-                let splitWidget : any = undefined;
+                let splitWidget: any = undefined;
+                let splitSizes = {
+                    sizes: [60, 40],
+                };
 
                 if (!SnippetsUI.orientationWatcher.matches && !childWidget.classList.contains('verticalView'))
-                    splitWidget = Split([childWidget.children[0], childWidget.children[1]]);
+                    splitWidget = Split([childWidget.children[0], childWidget.children[1]], splitSizes);
 
                 SnippetsUI.orientationWatcher.addEventListener("change", function (e) {
                     if (e.matches) {
@@ -151,7 +154,7 @@ export class Snippets {
                             splitWidget.destroy();
                     } else {
                         if (!childWidget.classList.contains('verticalView'))
-                            splitWidget = Split([childWidget.children[0], childWidget.children[1]]);
+                            splitWidget = Split([childWidget.children[0], childWidget.children[1]], splitSizes);
                     }
                 });
             };

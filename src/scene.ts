@@ -116,6 +116,8 @@ export class Scene {
         let isVisualisationDisabled = app.hasAttribute('av-novis');
         let selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
 
+        if (isVisualisationDisabled) isWriteable = true;
+        
         this.operationRecorder = new OperationRecorder(!isVisualisationDisabled);
         this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable, !isVisualisationDisabled);
         let layout = new Layout(variablesPanel);

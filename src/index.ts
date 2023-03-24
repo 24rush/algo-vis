@@ -1,3 +1,4 @@
+import { UIHooks } from "./ui-hooks";
 import { LangEnum, Localize } from "./localization";
 import { Quizzes } from "./quizzes";
 import { Snippets } from "./snippets";
@@ -8,6 +9,7 @@ let cssStyle = require('../assets/styles.css').default;
 
 Localize.setLang(LangEnum.Ro);
 
+new UIHooks();
 new Snippets();
 new Quizzes();
 

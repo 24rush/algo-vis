@@ -28,6 +28,8 @@ export class CodeRenderer {
         let newCode = "";
         if (code !== "") {
             [this.lineComments, newCode] = this.extractComments(code);
+        } else {
+            newCode = "\n\n\n\n\n\n\n\n"; // Fill empty editor with 5 lines
         }
 
         var convert = function (convert: string) {
@@ -38,12 +40,12 @@ export class CodeRenderer {
         this.editor.setFontSize(14);
         this.editor.setShowPrintMargin(false);
         this.editor.setAutoScrollEditorIntoView(true);
-        this.editor.setReadOnly(isReadonly);
+        this.editor.setReadOnly(isReadonly);        
         this.editor.setOption('maxLines', Math.max(this.MaxCodeLines, codeLines.length))
 
         this.editor.session.setMode("ace/mode/javascript");
         this.editor.session.setValue(convert(newCode));        
-
+        
         this.editor.setOptions({
             useWorker: false,
             wrap: true

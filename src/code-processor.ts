@@ -84,7 +84,7 @@ export class CodeProcessor {
         this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];        
     }
 
-    private debugEnabled: boolean = true;
+    private debugEnabled: boolean = false;
 
     dumpDebugInfo() {
         if (this.debugEnabled) {

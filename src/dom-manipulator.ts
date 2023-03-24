@@ -134,6 +134,14 @@ export class DOMmanipulator
         return templateElement.firstChild as HTMLElement;
     }
 
+    static elemsFromTemplate(templateStr: string) : HTMLCollection
+    {
+        let templateElement = document.createElement('div');
+        templateElement.innerHTML = templateStr.trim();
+
+        return templateElement.children;
+    }
+
     static generatedElement_Index: number = 0;
 
     static extractElementFromTemplateStr(template: string, id: string) : string
