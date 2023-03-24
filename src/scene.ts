@@ -102,6 +102,7 @@ export class Scene {
     private lineNoToBeExecuted = -1;
 
     constructor(app: HTMLElement, snippets: Snippet[], fullscreenCbk: RequestFullScreenCbk) {
+        let leftPane = app.querySelector("[class*=leftPane]");
         let rightPane = app.querySelector("[class*=rightPane]");
         let variablesPanel = app.querySelector("[class*=panelVariables]") as HTMLElement;
         let codeEditor = app.querySelector("[class*=codeEditor]") as HTMLElement;
@@ -369,22 +370,22 @@ export class Scene {
 
             if (self.commentsPopover) self.commentsPopover.dispose();
             let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
-
-            commentsElement.style['left'] = aceCursor.style['left'];
-            commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
+           
+            commentsElement.style['top'] = parseInt(aceCursor.style['top']) + 0.5 * parseInt(aceCursor.style['height']) + "px";
 
             self.commentsPopover = new bootstrap.Popover(commentsElement, options);
             self.commentsPopover.show();
+            console.log(self.commentsPopover)
         };
 
         var observer = new MutationObserver(function (mutations) {
             mutations.forEach(function (mutationRecord) {
                 let aceCursor = getAceCursorElem();
 
-                if (mutationRecord.target != aceCursor)
+                if (mutationRecord.target != aceCursor && mutationRecord.target != leftPane)
                     return;
 
-                displayCommentsPopover(aceCursor);
+                displayCommentsPopover(mutationRecord.target);
             });
         });
 
@@ -400,6 +401,8 @@ export class Scene {
 
                     if (aceCursor) {
                         observer.observe(aceCursor, { attributes: true, attributeFilter: ['style'] });
+                        observer.observe(leftPane, { attributes: true, attributeFilter: ['style'] });
+                        
                         // Sometimes the event is lost so trigger it manually
                         displayCommentsPopover(aceCursor);
                     } else {
