@@ -286,8 +286,9 @@ export class UIBinder {
                     case BindingType.STYLE:
                     case BindingType.VALUE:
                         {
+                            let propEval = this.getViewModeProperty(this.viewModel, property);
+
                             if (bindingContext.propNeedsEvaluation()) {
-                                let propEval = this.getViewModeProperty(this.viewModel, property);
                                 let propValueAfterEval = bindingContext.getValueOnEvaluation(this.viewModel, propEval);
 
                                 if (bindingContext.getBindingType() == BindingType.STYLE) {
@@ -346,7 +347,7 @@ export class UIBinder {
                                             break;
                                         }
                                     default:
-                                        bindingContext.htmlElement.textContent = newValue;
+                                        bindingContext.htmlElement.textContent = newValue ?? propEval;
                                 }
                             }
                         }

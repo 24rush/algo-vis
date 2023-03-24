@@ -2,12 +2,11 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <div class="progress" style="width: 0%; margin:auto;" role="progressbar" aria-label="Basic example"
+                <div class="progress" style="width: 50%; height: 5px; margin:auto;" role="progressbar" aria-label="Basic example"
                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                     <div class="progress-bar" av-bind-style-width="quizProgress"></div>
                 </div>
-                <button type="button" class="btn-close" style="margin-left: -30px;" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+                <button type="button" class="btn-close" style="position: absolute; right: 15px;" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <div class="quizContainer">
@@ -26,7 +25,7 @@
 
                         <button av-bind-onclick="onShowExplanation" type="button"
                             class="p-2 popover-dismiss rounded-right btn btn-outline-secondary"
-                            av-bind-style-display="{hasExplanation: inline-block, !hasExplanation: none}">
+                            av-bind-style-display="{hasExplanation: inline-block, !hasExplanation: none, !isQuizVerified: none}">
                             <i class="bi bi-question-lg"></i>
                             <span av-bind-text="LangStrId.23" style="padding-right: 3px;">Show explanation</span>
                         </button>
@@ -50,12 +49,14 @@
                     <div class="modal-body" id="quizModalBodyBack">
                     </div>
 
-                    <button av-bind-onclick="onShowStatement" type="button"
-                        class="popover-dismiss rounded-right btn btn-outline-secondary"
-                        av-bind-style-display="{hasExplanation: inline-block, !hasExplanation: none}">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                        <span av-bind-text="LangStrId.24" style="padding-right: 3px;">Back to statement</span>
-                    </button>
+                    <div class="d-flex mb-3" style="padding: 1rem;">
+                        <button av-bind-onclick="onShowStatement" type="button"
+                            class="popover-dismiss rounded-right btn btn-outline-secondary"
+                            av-bind-style-display="{hasExplanation: inline-block, !hasExplanation: none}">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <span av-bind-text="LangStrId.24" style="padding-right: 3px;">Back to statement</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

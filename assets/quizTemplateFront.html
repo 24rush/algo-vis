@@ -1,9 +1,11 @@
 <div>
-    {{{statement}}}
+    <div class="quizStatement">
+        {{{statement}}}
+    </div>
 
     <div class="d-grid gap-2">
         {{#answers}}
-        <button type="button" data-bs-toggle="button" av-id="{{id}}" av-bind-onclick="onSelectedAnswer" class="btn btn-light btn-overrides" style="flex-grow: 0 !important;">
+        <button type="button" data-bs-toggle="button" av-id="{{id}}" av-bind-onclick="onSelectedAnswer" class="btn btn-light quiz-btn" style="flex-grow: 0 !important;">
             {{{answer}}}
         </button>
         {{/answers}}

@@ -18,7 +18,7 @@
     max-width: 100% !important;
     resize: both;
     overflow: auto;
-    display: inline-block;
+    display: block;
     justify-content: center;
     margin: 1em 0 1em;    
   }
@@ -30,7 +30,7 @@
 }
 
 .quizContainer {
-  width: 70%;
+  width: 50%;
   margin: auto;
 }
 
@@ -61,6 +61,7 @@
 
 .btn-overrides {
   padding: 3px !important;
+  letter-spacing: 0.03em!important;
 }
 
 .av-btn {
@@ -75,8 +76,14 @@
   opacity: 0.6;
 }
 
-.halfScreen {
-  
+.av-btn-sm {
+  background-color: var(--bs-blue) !important;
+  color: var(--bs-white) !important;
+  font-size: 1em;
+}
+
+.quiz-btn {
+  letter-spacing: normal;
 }
 
 .list-group-mine {
@@ -158,6 +165,10 @@
   opacity: 100;
 }
 
+.quizStatement {
+  margin-bottom: 1rem;
+}
+
 /*
 * {
   border-radius: 1px !important;
@@ -237,10 +248,13 @@ highlight {
 }
 
 /* WORD PRESS */
-
 .img-box {
   display: block;
   margin: auto;
+}
+
+.img-inline {
+  display: inline;
 }
 
 .attention-box {
@@ -248,7 +262,7 @@ highlight {
   border-color: #ff9d00 !important;
   padding: 20px 15px;
   margin-top: 1rem;
-  border-left: 9px solid;
+  border-left: 5px solid;
   border-radius: 4px;
 }
 
@@ -256,7 +270,15 @@ highlight {
   background: #eaf8ffa3;
   border-color: #1eb4ff !important;
   padding: 20px 15px;
-  border-left: 9px solid;
+  border-left: 5px solid;
+  border-radius: 4px;
+}
+
+.know-box {
+  background: #f8f8f8a3;
+  border-color: #65b5dd !important;
+  padding: 20px 15px;
+  border-left: 5px solid;
   border-radius: 4px;
 }
 
