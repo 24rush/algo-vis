@@ -87,14 +87,16 @@ class QuizzesConfig {
 
                 let quizzes: Record<string, Quiz> = {};
 
-                Object.keys(json[quizLang]).filter((key => key != "order")).forEach((quizId: string) => {
+                Object.keys(json[quizLang][0]).filter((key => key != "order")).forEach((quizId: string) => {
                     if (!(quizLang in this.quizzesForLang))
                         this.quizzesForLang[quizLang] = [];
 
-                    quizzes[quizId] = new Quiz(quizId, json[quizLang][quizId]);
+                    quizzes[quizId] = new Quiz(quizId, json[quizLang][0][quizId]);
                 });
 
-                json[quizLang]["order"].forEach((qID: string) => {
+                let quizOrder = "order" in json[quizLang][0] ? json[quizLang][0]["order"] : [...Array(Object.keys(quizzes).length).keys()];
+                console.log(quizzes)
+                quizOrder.forEach((qID: string) => {
                     this.quizzesForLang[quizLang].push(quizzes[qID]);
                 });
             });
@@ -111,14 +113,15 @@ class QuizzesConfig {
 
 class QuizViewModel {
     private quizViewModel: QuizViewModel;
+    private uiBinder : UIBinder;
 
     private quizzes: Quiz[] = [];
-    private currQuizIdx: number = 0;
+    private currQuizIdx: number = 0;    
 
     // UI bindings
     private isMultipleChoiceQuiz = false;
     private quizProgress: string = "0%";
-    private hasSelectedAnswers = false;    
+    private hasSelectedAnswers = false;
     private isQuizVerified = false;
     private hasMoreQuizzes = false;
     private hasExplanation = false;
@@ -134,16 +137,20 @@ class QuizViewModel {
         this.hasExplanation = false;
     }
 
-    constructor(quizModalHtml: HTMLElement) {        
+    constructor(quizModalHtml: HTMLElement) {
         let viewModelObs = new ObservableViewModel(this);
         this.quizViewModel = clientViewModel<typeof this>(viewModelObs);
         this.quizViewModel.setDefaults();
 
-        new UIBinder(viewModelObs).bindTo(quizModalHtml);
+        this.uiBinder = new UIBinder(viewModelObs).bindTo(quizModalHtml);
     }
 
     startQuizzes() {
         QuizUI.fullscreenModal.show();
+        this.onShowStatement();
+
+        //@ts-ignore
+        Prism.highlightAll();
     }
 
     onNextQuiz(): any {
@@ -153,11 +160,16 @@ class QuizViewModel {
             this.currQuizIdx = newIdx;
             this.quizViewModel.isQuizVerified = false;
             this.updateStateOnNewQuiz();
+
+            //@ts-ignore
+            Prism.highlightAll();
         }
     };
 
     onFinishQuiz(): any {
         QuizUI.fullscreenModal.hide();
+        this.uiBinder.unbind();
+
     }
 
     onCheckQuiz(): any {
@@ -169,12 +181,12 @@ class QuizViewModel {
 
             if (isCorrectAnswer) {
                 answer.classList.add("btn-success");
-            } else 
+            } else
                 if (answer.classList.contains('active')) {
                     answer.classList.add("btn-danger");
-                }            
+                }
 
-            answer.classList.remove('btn-light');            
+            answer.classList.remove('btn-light');
             answer.classList.remove('active');
             answer.classList.add('disabled');
         });
@@ -229,7 +241,7 @@ class QuizViewModel {
         this.updateStateOnNewQuiz();
     }
 
-    private updateStateOnNewQuiz() {    
+    private updateStateOnNewQuiz() {
         this.quizViewModel.hasMoreQuizzes = this.currQuizIdx < (this.quizzes.length - 1);
         this.quizViewModel.hasExplanation = 'explanation' in this.getCurrentQuizData();
         this.quizViewModel.quizProgress = 100 * (this.quizzes.length ? (1 + this.currQuizIdx) / this.quizzes.length : 0) + "%";

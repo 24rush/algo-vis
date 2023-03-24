@@ -18,8 +18,13 @@ def processKeyValue(key, value):
     if (len(value) > 1 and value[0] == '[' and value[len(value) - 1] == ']'):
         value = json.loads(value)
 
-    if (key == "statement"):
-        value = markdown.markdown(value)
+    if (key == "statement" or key == "explanation" or key == "answer"):                
+        if ("<pre><code>" in value):
+            value = value.replace("<pre><code>\n", "<pre><code>").replace("\n</pre></code>", "</pre></code>")        
+        else:            
+            value = markdown.markdown(value)
+
+        value = value.replace('<p>', '').replace('</p>', '')
 
     return value
 
@@ -139,12 +144,18 @@ def generateJsons(inputFolder):
     return jsonData
 
 def writeJson(jsonData):
-    for jsonObj in jsonData:    
-        print('Writing file ' + jsonObj)
+    for jsonObj in jsonData:            
+        fileToWrite = "build" + os.path.sep + jsonObj
+        print('Writing file ' + fileToWrite)
 
-        with open(jsonObj, "w") as f:
-            content = json.dumps(jsonData[jsonObj])        
-            f.write(content)
+        if not os.path.exists(os.path.dirname(fileToWrite)):
+            os.makedirs(os.path.dirname(fileToWrite))
+
+        #with open(jsonObj, "w") as f:
+        #    content = json.dump(jsonData[jsonObj], f, ensure_ascii=False)            
+
+        with open(fileToWrite, "w") as f:
+            content = json.dump(jsonData[jsonObj], f, ensure_ascii=False)            
 
 if __name__ == "__main__":    
     parser = argparse.ArgumentParser()
