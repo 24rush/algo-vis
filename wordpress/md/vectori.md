@@ -37,7 +37,6 @@ Pentru a șterge un element dintr-un vector, va trebui să folosim funcțiile <c
 - Tipul de date vector ne permite să stocăm o <strong>colecție de valori</strong>
 - Accesarea (scrierea sau citirea) elementelor se face folosind poziția lor în vector
 - <strong>Pozițiile în vectori încep de la 0</strong>
-- Un vector este definit de lungimea sa (câte elemente conține)
 - Sunt disponibile numeroase funcții de prelucrare a vectorilor
 </div>
 

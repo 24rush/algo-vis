@@ -499,7 +499,7 @@ export class CodeProcessor {
             let injectedCode = `funcWrap( {f: () => { pushParams(${JSON.stringify(pushParams.varToParams)}); startScope('` + pushParams.funcScopeName + `'); let ret = `;
             addCodeInjection(pushParams.startOfDefinitionIndex, injectedCode);
 
-            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `'); return ret;}} );`;
+            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `'); return ret;}} )`;
             addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);
         }
 
