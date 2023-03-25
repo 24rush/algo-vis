@@ -48,8 +48,10 @@
 Output json will be in folder pointed by ```-i```
 
 ### HTML ###
-- use ```av-quiz``` class on button to launch the quiz
-- use ```config-id``` attribute to specify the json file for the quiz data
+- use ```av-quiz``` class on button to launch the quiz and ```config-id``` attribute to specify the json file for the quiz data
+- use ```<av-elem type="ieditor"></av-elem>``` to open an inline code editor
+- use ```<span class="av-tippie" title="Tip">*</span>```
+- use ```<span class="list-arrow"></span>``` for arrows before text
 
 # Snippet files and standalone editor deployment#
 - .json snippet files to ``` public_html/wp-content/uploads/2023/snips ```

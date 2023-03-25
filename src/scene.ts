@@ -34,7 +34,7 @@ class AVViewModel {
     hasException: boolean = false;
     exceptionMessage: string = "";
 
-    onAdvance(evt: Event): any { console.log('ff'); }
+    onAdvance(evt: Event): any { }
     onRestart(): any { }
     onFullscreen(): any { }
 
@@ -371,11 +371,10 @@ export class Scene {
             if (self.commentsPopover) self.commentsPopover.dispose();
             let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
            
-            commentsElement.style['top'] = parseInt(aceCursor.style['top']) + 0.5 * parseInt(aceCursor.style['height']) + "px";
+            commentsElement.style['top'] = parseInt(aceCursor.style['top']) + parseInt(aceCursor.style['height']) + "px";
 
             self.commentsPopover = new bootstrap.Popover(commentsElement, options);
-            self.commentsPopover.show();
-            console.log(self.commentsPopover)
+            self.commentsPopover.show();            
         };
 
         var observer = new MutationObserver(function (mutations) {
