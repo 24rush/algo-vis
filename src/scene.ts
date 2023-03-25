@@ -35,8 +35,11 @@ class AVViewModel {
     exceptionMessage: string = "";
 
     onAdvance(evt: Event): any { }
-    onRestart(): any { }
+    onRestart(): any { }    
     onFullscreen(): any { }
+
+    isSolution: boolean = false;
+    onShowSolution() : any {}
 
     onSnippetSelected(_event: any): any { };
     onNextSnippet() { }
@@ -49,6 +52,7 @@ class AVViewModel {
     promptDefaultValue: string = "";
     hasCancelBtn: boolean = true;
     hasInputBox: boolean = true;
+    hasSkeleton: boolean = false;
     onPromptOk(): any { };
     onPromptCancel(): any { };
 
@@ -60,8 +64,9 @@ class AVViewModel {
 
         this.isPaused = true;
         this.isExecutionCompleted = false;
-        this.isVisualisationDisabled = false;
+        this.isVisualisationDisabled = false;        
 
+        this.isSolution = false;
         this.isSnippetSet = false;
         this.hasLevelSpecified = false;
         this.selectedSnippetDesc = "";
@@ -79,6 +84,7 @@ class AVViewModel {
         this.promptDefaultValue = "";
         this.hasCancelBtn = true;
         this.hasInputBox = true;
+        this.hasSkeleton = false;
 
         this.isFunctionalityDisabled = false;
         this.userInteraction = UserInteractionType.Alert;
@@ -100,6 +106,7 @@ export class Scene {
 
     private operationRecorder: OperationRecorder;
     private lineNoToBeExecuted = -1;
+    private userCodeBeforeShowSolution : string = "";
 
     constructor(app: HTMLElement, snippets: Snippet[], fullscreenCbk: RequestFullScreenCbk) {
         let leftPane = app.querySelector("[class*=leftPane]");
@@ -139,14 +146,21 @@ export class Scene {
 
                 avViewModel.selectedSnippetDesc = selectedSnippet.desc;
                 avViewModel.hasMoreSnippets = idxSnippet < (snippets.length - 1);
-                avViewModel.hasLevelSpecified = selectedSnippet.level != "";
+                avViewModel.hasLevelSpecified = selectedSnippet.level != "";                
+                avViewModel.hasSkeleton = selectedSnippet.skeleton != "";
+
                 avViewModel.selectedSnippetIdx = idxSnippet;
 
-                this.codeRenderer.setSourceCode(selectedSnippet.code);
+                this.userCodeBeforeShowSolution = "";
+                this.codeRenderer.setSourceCode(avViewModel.hasSkeleton ? selectedSnippet.skeleton : selectedSnippet.code);
             }
         };
 
-        avViewModel.onNextSnippet = () => {
+        let getCurrentSnippet = () : Snippet => {
+            return avViewModel.selectedSnippetIdx < snippets.length ? snippets[avViewModel.selectedSnippetIdx] : undefined;
+        }
+
+        this.viewModel.onNextSnippet = () => {
             avViewModel.selectedSnippetIdx++;
 
             if (avViewModel.selectedSnippetIdx < snippets.length) {
@@ -154,7 +168,7 @@ export class Scene {
             }
         }
 
-        avViewModel.onSnippetSelected = (event: any) => {
+        this.viewModel.onSnippetSelected = (event: any) => {
             let snippetId = Number.parseInt(event.getAttribute('av-id'));
             onSnippetSelected(snippetId);
         }
@@ -278,6 +292,16 @@ export class Scene {
         this.viewModel.onPromptCancel = () => {
             this.operationRecorder.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Cancel, null));
             avViewModel.isFunctionalityDisabled = false;
+        }
+
+        this.viewModel.onShowSolution = () => {
+            avViewModel.isSolution = !avViewModel.isSolution;
+
+            if (avViewModel.isSolution) {
+                this.userCodeBeforeShowSolution = this.codeRenderer.getSourceCode();
+            }
+            
+            this.codeRenderer.setSourceCode(avViewModel.isSolution ? getCurrentSnippet().code : this.userCodeBeforeShowSolution);
         }
 
         new UIBinder(viewModelObs).bindTo(buttonsBar).bindTo(snippetsList).bindTo(rightPane).bindTo(this.promptWidget);

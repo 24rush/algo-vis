@@ -7,6 +7,8 @@ export interface CodeRendererEventNotifier {
 
 export class CodeRenderer {
     private readonly MaxCodeLines = 20;
+    private readonly MinCodeLines = 5; // Fill with empty lines 
+
     private editor: any;
     private marker: any;
     private Range = ace.require('ace/range').Range;
@@ -25,12 +27,8 @@ export class CodeRenderer {
             code = codeLines.join('\n');
         }
 
-        let newCode = "";
-        if (code !== "") {
-            [this.lineComments, newCode] = this.extractComments(code);
-        } else {
-            newCode = "\n\n\n\n\n\n\n\n"; // Fill empty editor with 5 lines
-        }
+        let [lineComments, sanitizedCode] = this.processNewCode(code);
+        this.lineComments = lineComments;
 
         var convert = function (convert: string) {
             return convert.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
@@ -40,12 +38,12 @@ export class CodeRenderer {
         this.editor.setFontSize(14);
         this.editor.setShowPrintMargin(false);
         this.editor.setAutoScrollEditorIntoView(true);
-        this.editor.setReadOnly(isReadonly);        
+        this.editor.setReadOnly(isReadonly);
         this.editor.setOption('maxLines', Math.max(this.MaxCodeLines, codeLines.length))
 
         this.editor.session.setMode("ace/mode/javascript");
-        this.editor.session.setValue(convert(newCode));        
-        
+        this.editor.session.setValue(convert(sanitizedCode));
+
         this.editor.setOptions({
             useWorker: false,
             wrap: true
@@ -60,7 +58,7 @@ export class CodeRenderer {
                     return;
                 }
 
-                let [, newCode, lineNo] = this.extractComments(this.editor.getSession().getValue());
+                let [, newCode, lineNo] = this.extractCommentsSanitizeCode(this.editor.getSession().getValue());
                 let sanitizedCode = convert(newCode);
 
                 if (sanitizedCode != newCode) {
@@ -117,38 +115,52 @@ export class CodeRenderer {
         return this.lineComments[lineNo] ?? "";
     }
 
+    private processNewCode(sourceCode: string) {
+        if (!sourceCode || sourceCode == "")
+            return [[], "\n".repeat(this.MinCodeLines - 1), this.MinCodeLines];
+
+        let [lineComments, newCode, noOfLines] = this.extractCommentsSanitizeCode(sourceCode);
+
+        if (noOfLines < this.MinCodeLines) {
+            newCode += "\n".repeat(this.MinCodeLines - noOfLines + 1);
+            noOfLines = this.MinCodeLines;
+        }
+
+        return [lineComments, newCode, noOfLines];
+    }
+
     public setSourceCode(sourceCode: string): void {
-        let newCode = "";
-        let lineNo = 0;
-        [this.lineComments, newCode, lineNo] = this.extractComments(sourceCode);
+        let [lineComments, sanitizedCode, noOfLines] = this.processNewCode(sourceCode);
+        this.lineComments = lineComments;
 
         // Updating code triggers remove + insert events
         this.skipEventsCount = 2;
-        this.editor.setOption('maxLines', lineNo > 20 ? 20 : lineNo)
-        this.editor.setValue(newCode);
+        this.editor.setOption('maxLines', noOfLines > this.MaxCodeLines ? this.MaxCodeLines : noOfLines)
+        this.editor.setValue(sanitizedCode);
+        this.highlightLine(1);
         this.notifySourceCodeObservers();
     }
 
-    private extractComments(sourceCode: string): [any, string, number] {
+    private extractCommentsSanitizeCode(sourceCode: string): [any, string, number] {
         let lineComments: string[] = [];
-        let lineNo = 1;
+        let noOfLines = 1;
         let regexp = new RegExp("/\\*\\*\\*([\\s\\S]*?)\\*\\*\\*/"); /*** Comment ***/
         let lineByLine = sourceCode.split('\n');
 
-        let newCode = "";
+        let sanitizedCode = "";
         for (let line of lineByLine) {
             let matches = regexp.exec(line);
             if (matches) {
-                lineComments[lineNo] = matches[1].trim();
-                newCode += line.replace(matches[0], '');
+                lineComments[noOfLines] = matches[1].trim();
+                sanitizedCode += line.replace(matches[0], '');
             } else {
-                newCode += line;
+                sanitizedCode += line;
             }
 
-            newCode += "\n";
-            lineNo++;
+            sanitizedCode += "\n";
+            noOfLines++;
         }
 
-        return [lineComments, newCode.substring(0, newCode.length - 1), lineNo];
+        return [lineComments, sanitizedCode.substring(0, sanitizedCode.length - 1), noOfLines];
     }
 }

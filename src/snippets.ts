@@ -9,19 +9,21 @@ var bootstrap = require('bootstrap')
 const appTemplate = require('../assets/main.html').default;
 const fullScreenModalTemplate = require('../assets/fullscreen.html').default;
 
-let GITHUB_SNIPPETS_URL = "../wp-content/uploads/2023/snips/";
+let GITHUB_SNIPPETS_URL = "";//"../wp-content/uploads/2023/snips/";
 
 export class Snippet {
     public id: number = -1;
     public code: string = "";
     public desc: string = "";
     public level: string = "";
+    public skeleton: string = "";
 
     constructor(jsonObj: any, id: number) {
         this.id = id;
         this.code = jsonObj.code;
         this.desc = jsonObj.desc;
         this.level = jsonObj.level ?? "";
+        this.skeleton = jsonObj.skeleton ?? "";
     }
 }
 

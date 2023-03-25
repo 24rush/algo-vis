@@ -37,11 +37,18 @@
                     av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
                 <span av-bind-text='{isPaused: LangStrId.1, !isPaused: LangStrId.2}'>Execute all</span>
             </button>
+
             <button av-bind-onclick="onRestart" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
                 class="btn btn-light btn-overrides"
                 av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
                 <i class="bi bi-arrow-clockwise"></i>
                 <span av-bind-text="LangStrId.6">Restart</span>
+            </button>
+
+            <button av-bind-onclick="onShowSolution" av-bind-style-display="{!hasSkeleton: none}" type="button"
+                class="btn btn-light btn-overrides">
+                <i class="bi bi-eyeglasses"></i>
+                <span av-bind-text='{!isSolution: LangStrId.26, isSolution: LangStrId.27}'>Show solution</span>
             </button>
 
             <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides"
