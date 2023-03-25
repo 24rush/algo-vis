@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
 - ce este o funcție
 - cum folosirea funcțiilor ne simplifică programele
@@ -13,30 +13,30 @@ Pentru a putea refolosi aceste secvențe și în alte secțiuni ale programului,
 Structura unei funcții este formată din antetul funcției și corpul ei. Antetul funcției vă conține numele funcției și eventual o listă de parametri, încadrată de paranteze, prin care funcția comunica cu exteriorul ei. Corpul funcției vă conține între acolade declarațiile de variabile și instrucțiunile ce vor realiza efectiv funcționalitatea sa.
 
 ```
-function nume_functie ( lista opțională de parametri )
+function nume_funcție ( lista opțională de parametri )
 {
     < declarații + instrucțiuni funcție >
 }
 ```
 
-Că sintaxa observăm următoarele elemente:
-- cuvântul cheie **function** care indică faptul că urmează să definim o funcție nouă
-- numele funcției este identificatorul prin care vom putea executa instrucțiunile ce o formează
-- lista de parametri ne ajută să specificăm datele de care are nevoie funcția
-- corpul funcției este format din declarațiile de variabile și din setul de instrucțiuni pe care vrem să-l conțină
+Că sintaxă observăm următoarele elemente:
+- cuvântul cheie <code>function</code> care indică faptul că urmează să definim o funcție nouă
+- <code>nume funcție</code> este identificatorul prin care vom putea executa instrucțiunile ce o formează
+- <code>lista de parametri</code> ne ajută să specificăm datele de care are nevoie funcția
+- corpul funcției este format din <code>declarațiile de variabile</code> și din <code>setul de instrucțiuni</code> pe care vrem să-l conțină
 
 Declarația unei funcții poate fi extinsă și pe lângă definierea parametrilor și a instrucțiunilor de executat, se poate indica și o valoare rezultat a funcției. Spunem în acest caz că funcția 'întoarce' o valoare. Pentru a indica ce rezultat dorim să întoarcă funcția, vom folosi cuvântul rezervat **return** urmat de această valoare.
 
 ```
-function nume_functie ( lista opțională de parametri )
+function nume_funcție ( listă opțională de parametri )
 {
     < declarații + instrucțiuni funcție >
-    
+	
     return < valoare rezultat >
 }
 ```
 
-O funcție poate conține mai multe cuvinte cheie <code>return</code> iar aceste cuvinte pot să apară oriunde în corpul funcției. Că și în cazul unui singur cuvânt cheie <code>return</code> acesta nu e obligatoriu să apară la sfârșit doar că dacă acesta apare mai devreme trebuie să avem în vedere ce orice instrucțiuni aflate după el nu se vor mai executa - acest cuvânt indică sfârșitul funcției și întoarcerea execuției programului înapoi la locația de la care s-a făcut apelul funcției.
+O funcție poate conține mai multe cuvinte cheie <code>return</code> iar aceste cuvinte pot să apară oriunde în corpul funcției. Ca și în cazul unui singur cuvânt cheie <code>return</code> acesta nu e obligatoriu să apară la sfârșit doar că dacă acesta apare mai devreme trebuie să avem în vedere ce orice instrucțiuni aflate după el nu se vor mai executa - acest cuvânt indică sfârșitul funcției și întoarcerea execuției programului înapoi la locația de la care s-a făcut apelul funcției.
 
 # Apelul unei funcții #
 Pentru a executa instrucțiunile aferente corpului funcției, va trebui să apelăm funcția ce le conține pentru că doar simpla definire a funcției nu va executa instrucțiunile. Luând exemplul de mai sus, pentru a executa corpul funcției va trebui să scriem:
@@ -45,7 +45,7 @@ Pentru a executa instrucțiunile aferente corpului funcției, va trebui să apel
 
 ``` parametru1, parametru2 ``` sunt datele de intrare de care funcție are nevoie. Pot exista funcții însă care nu au nevoie de niciun parametru caz în care nu vom specifica nimic între paranteze.
 
-<p class="tip-box">O funcție extrem de utilă în dezvoltarea programelor Javascript este <code>console.log()</code> care ne ajută să afișăm conținutul variabilelor în <em>Consola de iesire</em> și totodată în consola de depanare a browserului (apasă tasta F12 în browserul Chrome și apoi selectează Console)</p>
+<div class="info-box">O funcție extrem de utilă în dezvoltarea programelor Javascript este <code>console.log()</code> care ne ajută să afișăm conținutul variabilelor în <em>Consola de iesire</em> și totodată în consola de depanare a browserului (apasă tasta F12 în browserul Chrome și apoi selectează Console)</div>
 
 # Exemple #
 Să vedem cum ne ajută o funcție. Luăm exemplul de mai jos în care vrem să afișăm valoarea a două numere introduse de utilizator ridicate la puterea a doua. Prima oară vom solicita un număr pozitiv iar ulterior unul negativ.
@@ -88,5 +88,7 @@ Funcția <code>dubleaza</code> primește că parametru un <code>numar</code> pe 
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/functii.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/functii.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
+<a class="av-btn-sm" href="/exercitii-functii/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

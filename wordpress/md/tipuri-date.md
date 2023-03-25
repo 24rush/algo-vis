@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
 - care sunt tipurile de date predefinite ale limbajului Javascript
 - ce este un tip de dată primitiv
@@ -31,8 +31,8 @@ let info_joc = {
 
 Variabila ***info_joc*** este de tip obiect și conține mai multe informații (proprietăți) decât o simpla variabilă. Avem astfel ***info_joc.scor*** ce stochează informații despre un scor și info_joc.jucator, numele jucătorului. Observăm astfel că obiectele sunt un mecanism prin care putem pune la un loc mai multe valori care au sens să fie împreună decât specificate prin variabile individuale.
 
-<p class="tip-box">Vom denumi toate tipurile de date care nu sunt de tip obiect ca fiind <strong>tipuri primitive</strong>. Caracteristica unui tip primitiv este că nu dispune de proprietăți (precum obiectele) ci conține doar o valoare.
-</p>
+<div class="info-box">Vom denumi toate tipurile de date care nu sunt de tip obiect ca fiind <strong>tipuri primitive</strong>. Caracteristica unui tip primitiv este că nu dispune de proprietăți (precum obiectele) ci conține doar o valoare.
+</div>
 
 Mai există și o categorie de tipuri speciale de date cum ar fi: <code>undefined, null</code> pe care le vom explica ulterior.
 
@@ -49,5 +49,8 @@ Javascript este un limbaj de programare în care tipul unei variabile nu trebuie
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/tipuri-date.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/tipuri-date.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+
+<p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
+<a class="av-btn-sm" href="/exercitii-tipuri-de-date/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

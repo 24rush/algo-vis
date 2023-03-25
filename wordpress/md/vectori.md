@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
 - ce reprezintă tipul vector / array
 - la ce ne ajută acest tip de dată
@@ -9,11 +9,11 @@ Un tip de obiect foarte des utilizat în programele Javascript este **array** (_
 
 <img src="../wp-content/uploads/2023/img/vectori0.png" class="img-box">
 
-<p class="attention-box">Ca în multe alte limbaje de programare, pozițiile într-un vector încep de la <strong>0</strong> și nu de la <strong>1</strong>. Asta înseamnă că primul element se vă găsi la poziția 0 adică <code>v1[0]</code> și nu <code>v1[1]</code>.</p>
+<div class="info-box">Ca în multe alte limbaje de programare, pozițiile într-un vector încep de la <strong>0</strong> și nu de la <strong>1</strong>. Asta înseamnă că primul element se vă găsi la poziția 0 adică <code>v1[0]</code> și nu <code>v1[1]</code>.</div>
 
 <div class="algovis" config-id="vectori-basics.json" av-selected="0"></div>
 
-De foarte multe ori, un program va avea nevoie să știe câte elemente se află într-o variabilă de tip vector iar pentru asta vom folosi proprietatea _length_. Cea mai uzuală construcție ce are nevoie să știe lungimea vectorului este cea de parcurgere adică vizitare a fiecărui element.
+De foarte multe ori, un program va avea nevoie să știe câte elemente se află într-o variabilă de tip vector iar pentru asta vom folosi proprietatea <code>length</code>. Cea mai uzuală construcție ce are nevoie să știe lungimea vectorului este cea de parcurgere adică vizitare a fiecărui element.
 
 <div class="algovis" config-id="vectori-basics.json" av-selected="1"></div>
 
@@ -37,10 +37,13 @@ Pentru a șterge un element dintr-un vector, va trebui să folosim funcțiile <c
 - Tipul de date vector ne permite să stocăm o <strong>colecție de valori</strong>
 - Accesarea (scrierea sau citirea) elementelor se face folosind poziția lor în vector
 - <strong>Pozițiile în vectori încep de la 0</strong>
+- Un vector este definit de lungimea sa (câte elemente conține)
 - Sunt disponibile numeroase funcții de prelucrare a vectorilor
 </div>
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/vectori.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/vectori.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
+<a class="av-btn-sm" href="/exercitii-vectori/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

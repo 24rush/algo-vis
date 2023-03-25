@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
  - ce sunt obiectele
  - ce este o referință
@@ -15,8 +15,8 @@ Pentru a defini o variabilă de tip obiect vom folosi sintaxa normală declarăr
 <div class="algovis" config-id="obiecte-basics.json" av-selected="0"></div>
 
 În exemplul de mai sus am construit un obiect nou numit <code>sticlaApa</code> ce conține două proprietăți:  <code>volum</code> și <code>greutate</code> având valorile 500, respectiv 700. Pentru a citi sau modifica aceste proprietăți putem folosi oricare din următoarele construcții:
-- <code>nume_obiect[nume_proprietate]</code>, în cazul nostru sticlaApa['volum']
-- <code>nume_obiect.nume_proprietate</code>, în cazul nostru sticlaApa.volum
+- <code>nume_obiect[nume_proprietate]</code>, în cazul nostru <code>sticlaApa['volum']</code>
+- <code>nume_obiect.nume_proprietate</code>, în cazul nostru <code>sticlaApa.volum</code>
 
 O altă metodă prin care putem crea un obiect este folosind o <strong>funcție constructor</strong>. Această funcție va primi ca parametri valorile proprietăților obiectului și le va atribui apoi fiecărei proprietăți în parte.
 
@@ -28,7 +28,7 @@ Avantajul folosirii unei funcții constructor este că putem specifica pe lâng�
 
 <div class="algovis" config-id="obiecte-basics.json" av-selected="2"></div>
 
-<p class="tip-box">Nu există restricții legate de tipurile de date pe care le putem stoca în valorile proprietăților. Putem crea proprietăți care sunt tot de tip obiect având astfel un obiect imbricat în alt obiect. Există însă o restricție ca tipul proprietății în sine (numele său) să fie de <strong>tip text</strong>.</p>
+<div class="info-box">Nu există restricții legate de tipurile de date pe care le putem stoca în valorile proprietăților. Putem crea proprietăți care sunt tot de tip obiect având astfel un obiect imbricat în alt obiect. Există însă o restricție ca tipul proprietății în sine (numele său) să fie de <strong>tip text</strong>.</div>
 
 # Copierea obiectelor #
 Operația de copiere (sau atribuire) a unei variabile altei variabile, se faci folosind operatorul <code>=</code> iar dacă în cazul tipurilor primitive știm că efectul său este să copieze valoarea variabilei sursă în cea destinație, în cazul copierilor între obiecte situația este diferită.
@@ -37,8 +37,8 @@ Atribuirea unei obiect altui obiect va duce la crearea unei referințe și nu la
 
 <img src="../wp-content/uploads/2023/img/referinte0.png" class="img-box">
 
-<p class="attention-box">O <strong>referință</strong> poate fi privită ca un alias către obiectul sursă pe care îl referă. Cu alte cuvinte, referința nu are conținut propriu ci îl referă pe cel al obiectului sursă de aceea orice modificare adusă referinței va fi vizibilă obiectului referit.
-</p>
+<div class="info-box">O <strong>referință</strong> poate fi privită ca un alias către obiectul sursă pe care îl referă. Cu alte cuvinte, referința nu are conținut propriu ci îl referă pe cel al obiectului sursă de aceea orice modificare adusă referinței va fi vizibilă obiectului referit.
+</div>
 
 <div class="algovis" config-id="obiecte-basics.json" av-selected="5"></div>
 
@@ -63,12 +63,14 @@ Chiar daca putem modifica proprietățile unui parametru de tip obiect, nu putem
 
 <div class="attention-box">
 <strong>Rezumat:</strong>
-- Un obiect este o colecție de proprietăți asociată unei entități
-- Atribuirea unui obiect altui obiect va duce la crearea unei referințe și nu a unei copii
+- Un obiect este o <strong>colecție de proprietăți</strong> asociată unei entități
+- Atribuirea unui obiect altui obiect va duce la crearea unei <strong>referințe</strong> și nu a unei copii
 - Obiectele transmise ca parametri funcțiilor pot fi modificați în interiorul acestora iar modificările vor fi vizibile după sfârșitul apelului funcției
 </div>
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/obiecte.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/obiecte.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
+<a class="av-btn-sm" href="/exercitii-obiecte/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

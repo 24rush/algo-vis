@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
  - ce înseamnă să programăm
  - ce trebuie să știm ca să putem programa
@@ -19,19 +19,19 @@ Există limbaje de programare (nu foarte multe) ce sunt utilizate intensiv într
 
 Mai jos sunt prezentate câteva din cele mai uzuale limbaje de programare și tipul de sarcină pentru care sunt folosite cel mai des:
 
-**Python**: aplicații simple utilitare, scripturi, limbaj ușor de învățat de către începători
+<span class="list-arrow"></span>**Python**: aplicații simple utilitare, scripturi, limbaj ușor de învățat de către începători
 
-**Java**: folosit în multe aplicații bancare, burse, aplicații Android
+<span class="list-arrow"></span>**Java**: folosit în multe aplicații bancare, burse, aplicații Android
 
-**Javascript**: limbajul folosit în toate paginile web, adaptat ulterior pentru jocuri, aplicații smartphone. Este cel mai utilizat limbaj de programare din lume și limbajul pe care acest site se axează
+<span class="list-arrow"></span>**Javascript**: limbajul folosit în toate paginile web, adaptat ulterior pentru jocuri, aplicații smartphone. Este cel mai utilizat limbaj de programare din lume și limbajul pe care acest site se axează
 
-**C++**: cel mai greu de învățat limbaj de programare, fiind folosit în aplicații nișate ce au nevoie de performanță.
+<span class="list-arrow"></span>**C++**: cel mai greu de învățat limbaj de programare, fiind folosit în aplicații nișate ce au nevoie de performanță.
 
-**HTML/CSS**: toate paginile web folosesc limbajul HTML care nu este chiar un limbaj de programare și un limbaj prin care putem specifica structura unei pagini web. CSS este similar un limbaj prin specificăm stilurile unei pagini web (culori, animații, font-uri, etc.)
+<span class="list-arrow"></span>**HTML/CSS**: toate paginile web folosesc limbajul HTML care nu este chiar un limbaj de programare și un limbaj prin care putem specifica structura unei pagini web. CSS este similar un limbaj prin specificăm stilurile unei pagini web (culori, animații, font-uri, etc.)
 
-**SQL**: limbajul folosit pentru a interacționa cu bazele de date
+<span class="list-arrow"></span>**SQL**: limbajul folosit pentru a interacționa cu bazele de date
 
-**Kotlin/Swift**: limbajele folosite pentru a realiza aplicații Android respectiv iOS.
+<span class="list-arrow"></span>**Kotlin/Swift**: limbajele folosite pentru a realiza aplicații Android respectiv iOS.
 
 Am menționat mai sus că materiale prezentate pe acest site vor folosi **Javascript** motiv pentru care ar trebui evidențiat ce putem realiza cu Javascript dacă decidem să învățam acest limbaj:
 
@@ -46,12 +46,12 @@ Probabil că unele aplicații enunțate mai sus sună foarte promițător și cr
 
 <div class="attention-box">
 <strong>Rezumat:</strong>
-- Oamenii interacționează cu calculatoarele prin intermediul limbajelor de programare care sunt asemănătoare limbajelor naturale ale vorbirii
-- Calculatoarele interpretează aceste limbaje de programare și le transforma în cod mașină necesar executării lui la nivelul procesorului
-- Există o multitudine de limbaje de programare ce se diferențiază prin tipul de sarcină pentru care au fost create însă multe din ele pot rezolva sarcini multiple
+- oamenii interacționează cu calculatoarele prin intermediul <strong>limbajelor de programare</strong> care sunt asemănătoare limbajelor naturale ale vorbirii
+- calculatoarele interpretează aceste limbaje de programare și le transformă în <strong>cod mașină</strong> necesar executării lui la nivelul procesorului
+- există o multitudine de limbaje de programare ce se diferențiază prin tipul de sarcină pentru care au fost create însă multe din ele pot rezolva sarcini multiple
 </div>
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/programarea.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/programarea.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 </div>

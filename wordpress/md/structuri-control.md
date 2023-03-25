@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
 - cu ce ne ajută structurile de control
 - structura decizionala și operatorul ternar
@@ -93,7 +93,7 @@ Parametri acestei structuri sunt:
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="3"></div>
 
-<p class="tip-box">
+<p class="info-box">
 Structurile <strong>for</strong> și <strong>while</strong> sunt echivalente însă vom folosi cu precădere structura <em>for</em> atunci când știm exact de câte ori urmează să executăm corpul blocului iar pe cea <em>while</em> în caz contrar (numărul de pași ne este necunoscut și va fi determinat doar de câte ori condiția de testat a blocului while se va evalua la adevărat).
 </p>
 
@@ -113,7 +113,7 @@ Un cuvânt cheie des utilizat în contextul structurilor repetitive este **break
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="4"></div>
 
-<p class="tip-box">Cuvânt cheie <code>break</code> va determina ieșirea din blocurile <code>switch, while, for, do-while</code>
+<p class="info-box">Cuvânt cheie <code>break</code> va determina ieșirea din blocurile <code>switch, while, for, do-while</code>
 </p>
 
 # continue #

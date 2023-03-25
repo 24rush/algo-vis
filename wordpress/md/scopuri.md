@@ -1,4 +1,4 @@
-<div class="know-box">
+<div class="knowledge-box">
 <strong>Ce vom afla din acest articol:</strong>
  - ce sunt variabilele locale si cele globale
  - ce reprezinta domeniul (scopul) unei variabile
@@ -10,9 +10,9 @@ Am învățat în lecțiile trecute cum să declarăm variabile și funcții noi
 Domeniul unei variabile se poate defini ca fiind secțiunea din programul nostru în care această variabilă este vizibilă și utilizabilă în instrucțiuni.
 
 Există definite următoarele categorii de domenii pentru variabile:
-- global în care o variabilă este vizibilă în toate instrucțiunile programului
-- al funcției în care este declarată ceea ce înseamnă că acea variabilă poate fi folosită doar în corpul funcției respective
-- bloc adică variabila este declarată în cadrul unei secvențe de instrucțiuni delimitate prin acolade (**{ }**)
+<span class="list-arrow"></span>global în care o variabilă este vizibilă în toate instrucțiunile programului
+<span class="list-arrow"></span>al funcției în care este declarată ceea ce înseamnă că acea variabilă poate fi folosită doar în corpul funcției respective
+<span class="list-arrow"></span>bloc adică variabila este declarată în cadrul unei secvențe de instrucțiuni delimitate prin acolade (**{ }**)
 
 <p class="tip-box">
 În funcție de aceste domenii, variabilele se pot împărți în două categorii: <strong>variabile locale</strong> (ce au fost declarate în corpul unei funcții sau al unui bloc) și <strong>variabile globale</strong> (declarate în afara oricărei funcții sau bloc).
@@ -37,8 +37,8 @@ Mai putem observa și că în acest bloc accesăm cu succes variabila <code>x</c
 
 <div class="algovis" config-id="scopuri-basics.json" av-selected="2"></div>
 
-<p class="attention-box">Domeniile variabilelor funcționează pe principiul <strong>mai mic/mai mare</strong> adică un domeniu mai mic (interior) va avea access la toate variabilele definite în domeniile mai mari care îl conțin și pe el pe când un domeniu mai mare va avea acees doar la variabilele din domeniul său nu și la cele din domeniile pe care le conține.
-</p>
+<div class="info-box">Domeniile variabilelor funcționează pe principiul <strong>mai mic/mai mare</strong> adică un domeniu mai mic (interior) va avea access la toate variabilele definite în domeniile mai mari care îl conțin și pe el pe când un domeniu mai mare va avea acees doar la variabilele din domeniul său nu și la cele din domeniile pe care le conține.
+</div>
 
 <img src="../wp-content/uploads/2023/img/scopuri0.png" class="img-box">
 
@@ -52,5 +52,5 @@ Mai putem observa și că în acest bloc accesăm cu succes variabila <code>x</c
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/scopuri.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/scopuri.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 </div>
