@@ -1,4 +1,4 @@
-Tipuri de date
+=== Tipuri de date
 1. Să se declare variabila <code>numarJucatori</code> ce conține valoarea 0.<av-elem type="ieditor"></av-elem>
 2. Să se declare constanta <code>MAX_JUCATORI</code> ce conține valoarea 10.<av-elem type="ieditor"></av-elem>
 3. Să se declare variabila obiect cu numele <code>stareJoc</code> ce conține următoarele proprietăți și valori:<av-elem type="ieditor"></av-elem>
@@ -8,8 +8,10 @@ Tipuri de date
 4. În obiectul <code>stareJoc</code> creat, să se schimbe valoarea proprietății <code>areSuperPower</code> în false.<av-elem type="ieditor"></av-elem>
 5. Să se declare o variabila booleană <code>X</code> a cărei valoare să fie false iar apoi să se declare una nouă <code>Y</code> care conține valoarea celei inițial create (<code>X</code>).<av-elem type="ieditor"></av-elem>
 6. Să se declare o variabilă <code>numeJucator</code> care să conțină numele tău.<av-elem type="ieditor"></av-elem>
+7. Să se genereze numărul reprezentat printr-un șir de caractere ce conține doar cifre.<av-elem type="ieditor"></av-elem>
+    > Exemplu: textul "1573" este convertit la numărul 1573
 
-Vectori
+=== Vectori
 1. Să se declare un vector ce conține toate numerele naturale de la 1 la 5 iar apoi să se afișeze al treilea element.<av-elem type="ieditor"></av-elem>
 2. Să se parcurgă vectorul creat mai sus și de fiecare dată când se vizitează un element să se afișeze acest element ridicat la puterea a doua.<av-elem type="ieditor"></av-elem>
 3. Să se introducă în vectorul creat valoarea 6.<av-elem type="ieditor"></av-elem>
@@ -18,7 +20,7 @@ Vectori
 6. Să se creeze un vector nou ce conține elementele primului vector în ordine inversă.<av-elem type="ieditor"></av-elem>
 7. Să se afișeze dacă vectorul conține o valoare introdusă de la tastatură iar dacă nu există să se introducă în vector la început.<av-elem type="ieditor"></av-elem>
 
-Operatori
+=== Operatori
 1. Să se solicite un număr real <code>x</code> de la utilizator apoi să se calculeze funcția:<av-elem type="ieditor"></av-elem>
     ![](../wp-content/uploads/2023/img/operatori_1.png)
 2. Să se citească un număr de la tastatură și să se afișeze dacă este divizibil cu 3 sau 5.<av-elem type="ieditor"></av-elem>
@@ -29,7 +31,7 @@ Operatori
 6. Să se citească 3 numere naturale și să se afișeze dacă pot forma laturile unui triunghi iar în caz afirmativ să se afișeze și aria triunghiului.<av-elem type="ieditor"></av-elem>
 7. Să se citească 3 litere iar apoi să se afișeze câte litere distincte s-au citit.<av-elem type="ieditor"></av-elem>
 	
-Structuri control
+==== Structuri control
 1. Să se declare un vector cu 5 elemente iar apoi să se calculeze media sa aritmetică.<av-elem type="ieditor"></av-elem>
 2. Să se citească două numere n și x de la tastatură iar apoi să se calculeze funcția:<av-elem type="ieditor"></av-elem>
     ![](../wp-content/uploads/2023/img/structuri_1.png)
@@ -46,7 +48,13 @@ Un șir Fibonacci este definit astfel:
 
 6. Să se citească un vector cu <code>n</code> elemente unde <code>n</code> este și el citit de la tastatură iar apoi să se afișeze lungimea celui mai mare șir crescător de numere.<av-elem type="ieditor"></av-elem>
 
-Funcții
+7. Să se afișeze caracterele duplicate dintr-un șir de caractere citit de la utilizator.<av-elem type="ieditor"></av-elem>
+   > Exemplu: textul "Soarele apune" va afișa 'a', 'e'
+
+8. Să se genereze toate numerele de 3 cifre ce au toate cifrele în ordine crescătoare.<av-elem type="ieditor"></av-elem>
+   > Exemplu: 123, 124, 456, 367, etc.
+
+=== Funcții
 1. Să se citească trei valori <code>a</code>, <code>b</code> și <code>c</code> de la tastatură iar apoi să se calculeze rezultatul ecuației:<av-elem type="ieditor"></av-elem>
 	![](../wp-content/uploads/2023/img/gradul-doi.png)
     > Indiciu: se pot utiliza funcțiile Math.sqrt() și Math.pow()
@@ -60,9 +68,9 @@ Funcții
 6. Să se genereze toate perechile de numere naturale <code>(a, b)</code> ce satisfac cerința <code>a + b = S</code> iar <code>a</code> și <code>b</code> nu au nicio cifră în comun. <code>S</code> se va citi de la tastatură.<av-elem type="ieditor"></av-elem>
 > Indiciu: putem folosi funcția scrisă la exercițiul 5 pentru a crea vectorii ce conțin cifrele numerelor iar apoi vom putea parcuge cei doi vector și determina dacă există elemente comune între ei.
 	
-Domenii
+=== Domenii
 
-Obiecte
+=== Obiecte
 1. Să se creeze două obiecte <code>A</code> și <code>B</code> ce conțin proprietățile <code>x</code> și <code>y</code> cu valori la alegere (se pot citi de la tastatură sau crea direct în cod). Considerând că cele două obiecte reprezintă două puncte într-un spațiu cartezian, să se calculeze distanța dintre ele folosind formula:<av-elem type="ieditor"></av-elem>
 	![](../wp-content/uploads/2023/img/distance.png)
 

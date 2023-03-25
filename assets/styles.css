@@ -89,6 +89,13 @@
   letter-spacing: normal;
 }
 
+.quiz-btn:hover {
+  background-color: #DEF94E!important;
+  border-color: #DEF94E!important;
+  transform: scale(1.02);
+  transition: transform .1s;
+}
+
 .list-group-mine {
   margin-bottom: 5px !important;
   border: 2px solid #0d6efd;
