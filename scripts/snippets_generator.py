@@ -64,6 +64,10 @@ def extractData(quizFile):
         if isObject:     
             # Starting new object, push current one and mark its level
             objRefs.insert(0, currObj); levels.insert(0, currObjLevel)
+            
+            if key in currObj: # Check if key already introduced in object
+                raise Exception('Key {0} already exists in object'.format(key))
+
             currObj[key] = {}
             currObj = currObj[key]
             currObjLevel = currObjLevel + 1
@@ -98,6 +102,14 @@ def extractData(quizFile):
             else:
                 topObject.append(currObj)
 
+        if key == 'id': # Check that ids are unique by iterating the parent array            
+            for sibling in objRefs[0] if len(objRefs) else topObject:
+                if type(sibling) is str:
+                    continue
+
+                if 'id' in sibling and sibling['id'] == value:
+                    raise Exception('Key {0} already exists in array in {1}'.format(value, sibling))
+
         currObj[key] = value        
     
     return topObject
@@ -117,7 +129,7 @@ def process(inputFolder, pathFileName, dir, jsonData):
         jsonData[jsonFile] = {}
 
     with open(os.getcwd() + os.path.sep + pathFileName, 'r') as jsFile:    
-        dataObjs = extractData(jsFile.read())                
+        dataObjs = extractData(jsFile.read())
         jsonData[jsonFile][lang] = dataObjs
         jsonData[jsonFile]['src-' + lang] = pathFileName.replace(inputFolder, '')        
 

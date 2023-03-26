@@ -108,7 +108,7 @@ else
 §        id: 3
 §        answer: Necesită doar expresii constante în clauzele **case**
 §    answers: ]
-§7
+§8
 §    statement: Nefolosirea cuvântului cheie **break** într-o ramură a structurii **switch**:
 §    correct: [0]
 §    answers: [
