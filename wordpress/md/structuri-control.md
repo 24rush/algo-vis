@@ -7,19 +7,19 @@
 - structura switch
 </div>
 
-Un program nu vă putea efectua nimic important doar prin declararea de variabile. Vor exista situații în care vom avea nevoie să executam anumite secvențe de cod numai când anumite condiții sunt adevărate (sau false) sau vom dori să executăm o secvență de cod de un anumit număr de ori. Pentru acest gen de situații au fost create structurile de control care nu sunt altceva decât niște cuvinte cheie cu un anumit set de reguli care ne permit să descriem situațiile enunțate mai sus.
+Un program nu va putea efectua nimic important doar prin declararea de variabile. Vor exista situații în care vom avea nevoie să executam anumite secvențe de cod numai când anumite condiții sunt adevărate (sau false) sau vom dori să executăm o secvență de cod de un anumit număr de ori. Pentru acest gen de situații au fost create structurile de control care nu sunt altceva decât niște cuvinte cheie cu un anumit set de reguli care ne permit să descriem situațiile enunțate mai sus.
 
 # if-else #
 Cea mai utilizată structură de control este structura **if** care s-ar traduce prin *dacă [..] atunci [..]*. 
 ```
-if () {
-    
+if (expresie) {
+    <setul de instrucțiuni de executat>
 }
 ```
 
 Aceasta structură folosește doi parametri: 
-- expresia pe care să o evalueze
-- secvența de cod de executat dacă expresia este adevărată. 
+- <code>expresia</code> pe care să o evalueze
+- <code>secvența de cod</code> de executat dacă expresia este adevărată. 
 
 O alta variantă a acestei structuri este cea **if-else** în care putem specifica pe lângă secvență de cod ce ar trebui executată în cazul în care expresia este adevărată și o secvență ce ar trebui executată în cazul contrar (când condiția se evaluează la fals). De reținut că mereu într-o structură if-else vom executa o singură ramură: ori cea de pe ramura adevărat ori invers.
 
@@ -35,14 +35,20 @@ Structura operatorului este următoarea:
 - <code>expresie1</code>: expresia ce urmează a fi evaluată și returnată în cazul în care condiția este adevărată
 - <code>expresie2</code>: expresia ce urmează a fi evaluată și returnată în cazul în care condiția este falsă
 
-Putem astfel folosi o singură linie de cod pentru a exprima secvență de mai jos:
+Putem astfel exprima secvența de mai jos folosind o singură linie de cod:
 ```
-leț rezultat = 0;
-if (condiție) {
+let rezultat = 0;
+if (conditie) {
     rezultat = expresie1;
 } else {
     rezultat = expresie2;
 }
+```
+
+se transformă in 
+
+```
+let rezultat = conditie ? expresie1 : expresie2;
 ```
 
 Singura limitare a acestui operator este că expresiile folosite nu pot fi formate decât dintr-o singură instrucțiune;
@@ -51,25 +57,25 @@ Singura limitare a acestui operator este că expresiile folosite nu pot fi forma
 Am aflat cum putem executa secvențe de cod în funcție de o anumită condiție iar acum vom vedea cum să executăm aceeași secvență de mai multe ori. Structura care ne vă ajută se cheamă **for** (sau for-loop) care s-ar traduce prin buclă. 
 
 ```
-for (; ; ) {
-    
+for (expresia inițială; expresia continuare; expresia actualizare) {
+    <setul de instrucțiuni de executat>
 }
 ```
 
-Observăm că are nevoie de patru parametri (din care doi sunt opționali): 
-- expresie inițială (opțională)
-- expresie care să indice cât timp să executăm secvență
-- expresie de executat după fiecare iterație (opțională) care să ne indice pasul la care ne aflăm
-- setul de instrucțiuni de executat la fiecare iterație (mai poartă numele și de corpul blocului for)
+Observăm că are nevoie de patru parametri (dintre care doi sunt opționali): 
+- <code>expresia inițială</code> (opțională) ce ne ajută să declaram și inițializăm anumiți parametri de care o să avem nevoie ulterior
+- <code>expresia continuare</code> care să indice cât timp să se execute secvența
+- <code>expresia actualizare</code> care să se execute după fiecare iterație (opțională)
+- <code>setul de instrucțiuni de executat</code> la fiecare iterație (mai poartă numele și de corpul blocului for)
 
 Ordinea în care se execută operațiile unei structuri for este următoarea:
 1. ```expresia inițială``` este executată
-2. ```condiția de testat``` este evaluată iar dacă este falsă se vă termina în întregime execuția blocului for, altfel vă trece la pasul 3
-3. ```instrucțiuni de executat``` se vor executa în întregime
-4. ```expresie de actualizare``` se va executa dacă există
+2. ```expresia continuare``` este evaluată iar dacă este falsă se va termina în întregime execuția blocului for, altfel va trece la pasul 3
+3. ```setul de instrucțiuni de executat``` se vor executa în întregime
+4. ```expresia de actualizare``` se va executa doar dacă există
 5. se va sări înapoi la pasul 2
 
-În exemplul următor se vor afișă toate numerele de la 1 până la 100.
+În exemplul următor se vor afișa toate numerele de la 1 până la 100.
 
 <div class="algovis" config-id="structuri-control-basics.json"  av-selected="1"></div>
 
@@ -80,14 +86,14 @@ Ordinea în care se execută operațiile unei structuri for este următoarea:
 # while #
 O structură repetitiva similară celei anterioare este blocul **while** (trad. cât-timp). Scopul acestei structuri este același că și în cazul buclei for, de a executa o secvență de cod de mai multe ori.
 ```
-while () {
-      
+while (expresia continuare) {
+    <setul de instrucțiuni de executat>
 }
 ```
 
 Parametri acestei structuri sunt:
-- expresia de testat care atât timp cât se va evalua la adevărat va determina executarea corpului blocului.
-- instrucțiunile de executat sau corpul blocului while
+- <code>expresia continuare</code> care atât timp cât se va evalua la adevărat va determina executarea corpului blocului.
+- <code>setul de instrucțiuni de executat</code> sau corpul blocului while
 
 În secvență de mai jos, solicităm numere de la utilizator atât timp cât ultimul număr introdus a fost par. Bucla se va termina după introducerea primului numai impar.
 
@@ -98,12 +104,12 @@ Structurile <strong>for</strong> și <strong>while</strong> sunt echivalente în
 </p>
 
 # do-while #
-O structură similară celei **while** este **do-while** care funcționează aproape identic, singura diferență este că instrucțiunile din corpul blocului vor fi executate cel puțin o dată deoarece evaluarea expresiei de testat se face după această primă execuție. Dacă expresia se va evalua la fals atunci se va ieși din bloc altfel se va relua executarea corpului blocului.
+O structură similară celei **while** este **do-while** care funcționează aproape identic, singura diferență este că instrucțiunile din corpul blocului vor fi executate cel puțin o dată deoarece evaluarea expresiei de continuare se face după această primă execuție. Dacă expresia se va evalua la fals atunci se va ieși din bloc altfel se va relua executarea corpului blocului.
 
 ```
 do {
-      
-} while ();
+    <setul de instrucțiuni de executat>
+} while (expresia continuare);
 ```
 
 # break #
@@ -113,8 +119,8 @@ Un cuvânt cheie des utilizat în contextul structurilor repetitive este **break
 
 <div class="algovis" config-id="structuri-control-basics.json" av-selected="4"></div>
 
-<p class="info-box">Cuvânt cheie <code>break</code> va determina ieșirea din blocurile <code>switch, while, for, do-while</code>
-</p>
+<div class="info-box">Cuvânt cheie <code>break</code> va determina ieșirea din blocurile <code>switch, while, for, do-while</code>
+</div>
 
 # continue #
 Un cuvânt cheie similar lui <em>break</em> este <strong>continue</strong> care însă în loc să întrerupă complet bucla în care este folosit, va întrerupe doar pasul curent și va forța execuția să treacă la următorul pas din iterație. Putem considera acest cuvânt cheie ca un mecanism de a sări (<em>skip</em>) peste un anumit pas dintr-o interatie în funcție de o condiție.
@@ -182,5 +188,7 @@ Vom folosi structura **switch** atunci când dorim să testam egalitatea dintre 
 </div>
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<div class="wp-block-button"><a config-id="../wp-content/uploads/2023/quizzes/structuri-control.json" class="wp-block-button__link wp-element-button av-quiz av-btn-sm">Deschide quiz</a></div>
+<a config-id="../wp-content/uploads/2023/quizzes/structuri-control.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
+<a class="av-btn-sm" href="/exercitii-structuri-de-control/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

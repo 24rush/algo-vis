@@ -17,17 +17,31 @@ De foarte multe ori, un program va avea nevoie să știe câte elemente se află
 
 <div class="algovis" config-id="vectori-basics.json" av-selected="1"></div>
 
+## for-of / for-in ##
+O variantă alternativă la structura for clasică în care iterăm folosind un contor este **for-of**. Această construcție ne permite să extragem direct valorile colecției într-o variabilă pe care apoi să o utilizăm în corpul blocului for. 
+
+Exemplul de mai sus rescris folosind for-of:
+<div class="algovis" config-id="vectori-basics.json"  av-selected="4"></div>
+
+Varianta **for-in** este similară celei for-of, diferența fiind că aceasta ne va întoarce în variabila indexul elementului și nu valoarea sa.
+<div class="algovis" config-id="vectori-basics.json"  av-selected="5"></div>
+
+# Manipulare vectori #
 Pe lângă proprietatea <code>length</code>, variabilele de tip vector ne pun la dispoziție o multitudine de funcții (metode) prin care putem să manipulăm mai ușor conținutul lor. Vom evidenția doar câteva din ele mai jos:
 - ```push``` - cea mai utilizată metodă a vectorilor prin care putem adăuga un element nou colecției, la sfârșitul acesteia
 - ```pop``` - similar funcției push doar că această metodă va elimina ultimul element al colecției
 - ```shift``` - similar funcției pop doar că această funcție va elimina primul element al colecției
+- ```unshift(element1, element2, ...)``` - similar funcției push doar că această funcție va adăuga elementele primite ca parametrii la începutul colecției
 - ```concat``` - ne permite să alăturam două colecții într-una nouă (ce le va conține pe ambele)
 - <code>slice(startIndex, endIndex)</code> - ne permite să extragem din vector porțiunea delimitată de pozițiile <code>startIndex</code> și <code>endIndex</code>
-- <code>splice(startIndex, numarStergeri)</code> - ne permite să stergem din vector începând cu poziția <code>startIndex</code> un numar de elemente egal cu <code>numarStergeri</code>
+- <code>splice(startIndex, numarStergeri)</code> - ne permite să stergem din vector începând cu poziția <code>startIndex</code> un numar de elemente egal cu <code>numarStergeri</code> iar dacă nu menționăm acest parametru va șterge până la sfârșitul vectorului
 - ```reverse``` - după cum numele indică, această metodă va ordona elementele dintr-o colecție în ordinea inversă celei curente
 - ```indexOf(element)``` - ne ajută să căutam un element într-o colecție întorcând prima poziție la care a fost întâlnit
 
 <div class="algovis" config-id="vectori-basics.json" av-selected="2"></div>
+
+<div class="attention-box">Când utilizăm funcțiile de manipulare a vectorilor trebuie să avem în vedere dacă funcția <strong>modifică</strong> sau nu continutul vectorului pe care este aplicată. Anumite funcții sunt implementate de limbajul Javascript să lase nemodificat vectorul pe care sunt aplicate și în schimb să <strong>întoarcă un alt vector</strong> cu modificările prin valoarea de retur a funcției. De ex., funcția <code>reverse</code> modifică vectorul pe care este aplicată în schimb funcția <code>slice</code> va lăsa vectorul nemodificat dar va întoarce conținutul solicitat prin valoare de retur.
+</div>
 
 Pentru a șterge un element dintr-un vector, va trebui să folosim funcțiile <code>indexOf</code> pentru a identifica poziția pe care se află elementul apoi <code>splice</code> pentru a șterge efectiv elementul din vector.
 

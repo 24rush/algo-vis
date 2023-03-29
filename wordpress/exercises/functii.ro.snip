@@ -1,0 +1,92 @@
+§desc: ec gradul 2
+§id: 1
+§solution:
+// citim numerele a, b si c de la utilizator
+let a = parseInt(prompt('a='));
+let b = parseInt(prompt('b='));
+let c = parseInt(prompt('c='));
+
+// calculam ecuatia folosind Math.pow() si Math.sqrt()
+console.log(Math.pow(b, 2) - Math.sqrt(4 * a * c))
+§code:
+// citim numerele a, b si c de la utilizator
+
+// calculam ecuatia folosind Math.pow() si Math.sqrt()
+
+§desc: inaltime triunghi
+§id: 2
+§solution:
+// citim latura triunghiului de la utilizator si o stocam in variabila a
+let a = parseInt(prompt('a='));
+
+// calculam inaltimea si aria folosind formulele date
+console.log("Inaltimea:", Math.sqrt(3) / 2 * a)
+console.log("Aria:", Math.sqrt(3) / 4 * Math.pow(a, 2))
+§code:
+// citim latura triunghiului de la utilizator si o stocam in variabila a
+
+// calculam inaltimea si aria folosind formulele date
+§desc: functie prim 
+§id: 3
+§solution:
+
+// cream o functie care ne va intoarce true daca numarul primit ca parametru este prim sau false in caz contrar
+function estePrim(numar) {
+    // parcurgem toti divizorii posibili de la 2 pana la numar / 2
+    for (let divizor = 2; divizor <= numar / 2; divizor++) {
+        // daca numarul este divizibil atunci nu este prim
+        if (numar % divizor == 0)
+            // intoarcem rezultatul si totodata intrerupem bucla fortat
+            return false;
+    }
+
+    return true;
+}
+
+// citim un numar de la utilizator
+let numar = parseInt(prompt('Numar= '));
+
+// apelam functia si observam rezultatul
+console.log(estePrim(numar));
+
+§code:
+// cream o functie care ne va intoarce true daca numarul primit ca parametru este prim sau false in caz contrar
+
+    // parcurgem toti divizorii posibili de la 2 pana la numar / 2
+
+        // daca numarul este divizibil atunci nu este prim
+
+// citim un numar de la utilizator
+
+// apelam functia si observam rezultatul
+
+§desc: numerele prime de la 1 la n
+§id: 4
+§solution:
+// folosim functia creata la exercitiul precedent
+function estePrim(numar) {
+    // parcurgem toti divizorii posibili de la 2 pana la numar / 2
+    for (let divizor = 2; divizor <= numar / 2; divizor++) {
+        // daca numarul este divizibil atunci nu este prim
+        if (numar % divizor == 0)
+            // intoarcem rezultatul si totodata intrerupem bucla fortat
+            return false;
+    }
+
+    return true;
+}
+
+// citim un numar natural n de la utilizator
+let n = parseInt(prompt('n='));
+
+// parcurgem toate numerele de la 1 la n si testam daca sunt prime prin apel al functiei estePrim
+for (let numar = 1; numar <= n; numar++) {
+    if (estePrim(numar))
+        console.log('Numarul', numar, 'este prim');
+}
+§code:
+// copiem functia creata la exercitiul precedent
+
+// citim un numar natural n de la utilizator
+
+// parcurgem toate numerele de la 1 la n si testam daca sunt prime prin apel al functiei estePrim

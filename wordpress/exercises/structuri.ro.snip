@@ -1,0 +1,166 @@
+§desc: calcul functie
+§id: 1
+§solution:
+// citim numarul x de la utilizator
+let x = parseFloat(prompt('x='));
+
+// se calculeaza rezultatul functiei
+if (x < 10) {
+    console.log((-2*x + 3) / 2);
+} else {
+    console.log(-x/(4-x) + 1);
+}
+§code:
+// citim numarul x de la utilizator
+
+// se calculeaza rezultatul functiei
+
+§desc: e(n, x)
+§id: 2
+§solution:
+// citim numerele n si x de la utilizator
+let n = parseInt(prompt('n='));
+let x = parseInt(prompt('x='));
+
+// calculam rezultatul functiei folosind o bucla for
+let rezultat = 1;
+
+// initializam produsele factoriale cu 1
+let factorialN = 1;
+let factorialX = 1;
+
+// folosim o bucla for pentru a generata toti pasii de la 1 la n
+for (let iteratie = 1; iteratie <= n; iteratie++) {
+    // actualizam factorialele in functie de pasul curent
+    factorialX *= x;
+    factorialN *= iteratie;
+    
+    rezultat += factorialX / factorialN;
+}
+
+console.log(rezultat);
+
+§code:
+// citim numerele n si x de la utilizator
+
+// calculam rezultatul functiei folosind o bucla for
+
+// initializam produsele factoriale cu 1
+
+// folosim o bucla for pentru a generata toti pasii de la 1 la n
+
+    // actualizam factorialele in functie de pasul curent
+
+§desc: fibonacci
+§id: 3
+§solution:
+// citim numarul n de la utilizator
+let n = parseInt(prompt('n='));
+
+// declaram doua variabile ce vor stoca valorile Fib(n-1) si Fib(n-2) de la fiecare pas al iteratiei
+let fibMinus2 = 0, fibMinus1 = 1;
+
+// scriem o bucla for in care vom calcula valorile fiecarui element din sir
+for (let i = 0; i <= n; i++) {
+    // daca pasul curent este mai mic decat 1, atunci valoarea elementului este numarul pasului
+    if (i <= 1) {
+        console.log(i);
+    } else {
+        // afisam valoarea termenului curent F(n-2) + F(n-1)
+        console.log(fibMinus2 + fibMinus1);
+        
+        // salvam valoarea termenului Fib(n-2) intrucat il vom suprascrie in linia urmatoare
+        let tempfibMinus2 = fibMinus2;
+
+        // noul Fib(n-2) este Fib(n-1)
+        fibMinus2 = fibMinus1;
+
+        // noul Fib(n-1) este suma dintre vechiul Fib(n-2) si vechiul Fib(n-1)
+        fibMinus1 = tempfibMinus2 + fibMinus1;
+    }
+}
+§code:
+// citim numarul n de la utilizator
+
+// declaram doua variabile ce vor stoca valorile Fib(n-1) si Fib(n-2) de la fiecare pas al iteratiei
+
+// scriem o bucla for in care vom calcula valorile fiecarui element din sir
+
+    // daca pasul curent este mai mic decat 1, atunci valoarea elementului este numarul pasului
+
+        // afisam valoarea termenului curent F(n-2) + F(n-1)
+
+        // salvam valoarea termenului Fib(n-2) intrucat il vom suprascrie in linia urmatoare
+
+        // noul Fib(n-2) este Fib(n-1)
+
+        // noul Fib(n-1) este suma dintre vechiul Fib(n-2) si vechiul Fib(n-1)
+§desc: doua numere n si p, cate divizibile cu p 
+§id: 4
+§solution:
+// citim numarele intregi n si p de la utilizator
+let n = parseInt(prompt('n='));
+let p = parseInt(prompt('p='));
+
+// declaram o variabila nrDivizibile in care vom stoca numarul de numere divizibile cu p
+let nrDivizibile = 0;
+
+// citim n numere intr-o bucla for
+for (let nr = 1; nr <= n; nr++) {
+    let numar = parseInt(prompt('numar='));
+    
+    if (numar % p == 0)
+        nrDivizibile += 1;   
+}
+
+console.log(nrDivizibile);
+
+§code:
+// citim numarele intregi n si p de la utilizator
+
+// declaram o variabila nrDivizibile in care vom stoca numarul de numere divizibile cu p
+
+// citim n numere intr-o bucla for
+
+§desc: 6 numere cate alternari 
+§id: 5
+§solution:
+// declaram un vector ce va stoca cele 6 numere si ii citim valorile de la utilizator
+let vectorNr = [];
+for (let i = 0; i < 6; i++) {
+    vectorNr[i] = parseInt(prompt('numar='));
+}
+
+// declaram o variabila ce va stoca numarul de alternari
+let alternari = 0;
+
+// parcurgem vectorul incepand cu prima pozitie dar neincluzand-o pe ultima intrucat la fiecare pas curent vom vizita si elementul urmator
+for (let i = 0; i < 6 - 1; i++) {
+    // verificam daca exista alternanta si o numaram in caz afirmativ
+    if (vectorNr[i] * vectorNr[i + 1] < 0)
+        alternari += 1;
+}
+
+console.log(alternari);
+§code:
+// declaram un vector ce va stoca cele 6 numere si ii citim valorile de la utilizator
+
+// declaram o variabila ce va stoca numarul de alternari
+
+// parcurgem vectorul incepand cu prima pozitie dar neincluzand-o pe ultima intrucat la fiecare pas curent vom vizita si elementul urmator
+
+    // verificam daca exista alternanta si o numaram in caz afirmativ
+
+§desc: toate numere de 3 cifre cu cifrele in ordine crescătoare 
+§id: 7
+§solution:
+// folosim 3 bucle for pentru a genera cifrele sutelor, zecilor si unitatilor
+// toate cifrele merg pana la 9 insa trebuie sa inceapa de la valoarea cifrei precedente pentru a respecta conditia de cifre in ordine crescatoare
+for (let sute = 1; sute <= 9; sute++)
+    for (let zeci = sute; zeci <= 9; zeci++)
+        for (let unit = zeci; unit <= 9; unit++) {
+            console.log(sute * 100 + zeci * 10 + unit);
+        }
+§code:
+// folosim 3 bucle for pentru a genera cifrele sutelor, zecilor si unitatilor
+// toate cifrele merg pana la 9 insa trebuie sa inceapa de la valoarea cifrei precedente pentru a respecta conditia de cifre in ordine crescatoare

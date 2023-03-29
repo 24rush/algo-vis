@@ -1,0 +1,108 @@
+§desc: divizivil 3 sau 5
+§id: 1
+§solution:
+// citim numarul x de la utilizator
+let x = parseInt(prompt('x='))
+
+// verificam daca este divizibil cu 3 sau 5 prin testarea restului impartirii
+console.log(x % 3 == 0 && x % 5 == 0)
+§code:
+// citim numarul x de la utilizator
+
+// verificam daca este divizibil cu 3 sau 5 prin testarea restului impartirii
+
+§desc: prima litera 'A'
+§id: 2
+§solution:
+// citim un text de la utilizator
+let text = prompt('Text=')
+
+// verificam prima litera a textului folosind operatorul [] nu inainte de a test si daca utilizatorul a introdus un text
+if (text) {
+    console.log(text[0] == 'A')
+}
+§code:
+// citim un text de la utilizator
+
+// verificam prima litera a textului folosind operatorul [] nu inainte de a test si daca utilizatorul a introdus un text
+
+§desc: doua numere plus afisare ambele pare
+§id: 3
+§solution:
+// citim doua numere de la utilizator
+let a = prompt('a=')
+let b = prompt('b=')
+
+// afisam daca ambele sunt pare
+console.log((a % 2 == 0) && (b % 2 == 0))
+§code:
+// citim doua numere de la utilizator
+
+// afisam daca ambele sunt pare folosind operatorul %
+
+§desc: moto plus masina
+§id: 4
+§solution:
+// citim distanta D si vitezele v1 si v2
+let d = prompt('d=')
+let v1 = prompt('v1=')
+let v2 = prompt('v2=')
+
+// calculam t folosind formula t = d / (v1 + v2)
+let t = d / (v1 + v2)
+
+// afisam t si distanta parcursa de fiecare folosind formulele t = d / (v1 + v2), d1 = t * v1, d2 = t * v2
+console.log('Timpul dupa care se vor intalni:', t)
+console.log('Distanta parcursa de auto:', t * v1)
+console.log('Distanta parcursa de moto:', t * v2)
+§code:
+// citim distanta D si vitezele v1 si v2
+
+// afisam t si distanta parcursa de fiecare folosind formulele t = d / (v1 + v2), d1 = t * v1, d2 = t * v2
+
+§desc: 3 numere sa se afiseze daca pot forma triunghi
+§id: 5
+§solution:
+// citim cele trei numere de la utilizator
+let a = prompt('Latura 1=')
+let b = prompt('Latura 2=')
+let c = prompt('Latura 3=')
+
+// testam daca pot forma un triunghi folosind teorema a + b > c, a + c > b, b + c > a
+if ((a + b > c) && (a + c > b) && (b + c > a)) {
+    console.log('Numere introduse pot forma un triunghi'); 
+} else {
+  console.log('Numere introduse nu pot forma un triunghi'); 
+}
+
+§code:
+// citim cele trei numere de la utilizator
+
+// testam daca pot forma un triunghi folosind teorema a + b > c, a + c > b, b + c > a
+
+§desc: 3 litere cate distincte
+§id: 6
+§solution:
+// citim 3 litere de la utilizator
+let l1 = prompt('Litera 1=')
+let l2 = prompt('Litera 2=')
+let l3 = prompt('Litera 3=')
+
+// declaram o variabila noua in care stocam numarul de litere distince identificate si o initializam cu 1 (prima litera este distincta)
+let litereDistincte = 1;
+
+if (l1 != l2) {
+    litereDistincte++;
+}
+
+if (l2 != l3 && l3 != l1) {
+    litereDistincte++;
+}
+
+console.log('Litere distincte:', litereDistincte)
+§code:
+// citim 3 litere de la utilizator
+
+// declaram o variabila noua in care stocam numarul de litere distince identificate si o initializam cu 1 (prima litera este distincta)
+
+// testam fiecare pereche de litere

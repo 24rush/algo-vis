@@ -28,6 +28,14 @@ Pentru a putea efectua sarcini utile cu conținutul variabilelor avem nevoie să
 Operatorii <code>--</code> și <code>++</code> numiți și operatori <strong>incrementare/decrementare</strong> au fiecare două versiuni, prefix și postfix (<code>--u</code> vs <code>u++</code>) și chiar dacă efectul lor este același, adună sau scad 1 variabilei la care sunt aplicați, se comportă diferit atunci când sunt folosiți în construcții de genul <code>let c = u--</code>. Operatorul prefix vă scădea 1 variabilei și va întoarce noua valoare pe când cel postfix, va scădea 1 variabilei dar va întoarce valoare veche a variabilei nu cea nouă.
 </div>
 
+<div class="info-box">Există câteva utilitare în limbajul Javascript ce ne ușurează mult procesul de dezvoltare a programelor noastre:
+ - <code>console.log(continut)</code> ne ajută să afișăm conținutul variabilelor în <em>Consola de ieșire</em> și totodată în consola de depanare a browserului (apasă tasta F12 în browserul Chrome și apoi selectează Console). Această funcție primește ca parametru conținutul pe care vrem să îl afișăm, fie variabile fie texte. 
+    Ex. <em>console.log('Acesta este primul meu mesaj')</em> sau <em>console.log(x)</em>, unde <em>x</em> este orice variabilă
+
+- <code>prompt(text)</code> ne permite să solicităm date de la utilizator. Această funcție primește ca parametru textul pe care vrem să îl afișăm utilizatorului și ne va întoarce valoarea introdusă de utilizator.
+    Ex.<em>let x = prompt('x=')</em>, va deschide o casetă în care va solicita o valoare iar acea valoare va fi stocată apoi în variabila <em>x</em> pe care o putem folosi în program
+</div>
+
 # Expresii #
 Combinațiile de operatori și operanzi observăm că au mereu un rezultat obținut în urma aplicării operatorului asupra operanzilor (de ex. <code>sum = x + 12</code> are ca rezultat 16, valoare ce va este atribuită apoi variabilei *sum*). Construcțiile în care sunt folosiți operatori și operanzi pentru a obține un rezultat poartă numele de **expresii** iar caracteristica lor principală este că se pot evalua sub forma unui rezultat.
 

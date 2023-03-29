@@ -1,0 +1,274 @@
+§desc: Să se declare un vector ce conține toate numerele naturale de la 1 la 5
+§id: 1
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// folosim console.log si afisam a treia valoare din acest vector (adica elementul de pe pozitia 2)
+console.log(vectorNr[2]);
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// folosim console.log si afisam a treia valoare din acest vector
+
+§desc: parcurgere plus ridicare la putere
+§id: 2
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// parcurgem vectorul folosind o bucla for incepand cu pozitia 0 pana la length
+for (let index = 0; index < vectorNr.length; index++) {
+    console.log(vectorNr[index] * vectorNr[index]);
+}
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// parcurgem vectorul folosind o bucla for
+
+§desc: introducere valoarea 6 la final plus 0 la inceput
+§id: 3
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// folosim functiile push si unshift pentru a realiza operatiile de adaugare
+vectorNr.push(6);
+vectorNr.unshift(-1);
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// folosim functiile push si unshift pentru a realiza operatiile de adaugare
+
+§desc: afisare ultime 3 elemente din vector
+§id: 4
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// folosim functia slice
+console.log(vectorNr.slice(2));
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// folosim functia slice
+
+§desc: șteargă primul element al vectorului
+§id: 5
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// stergem primul element folosind functia shift
+vectorNr.shift();
+console.log(vectorNr);
+
+// stergem primul element folosind functia slice insa trebuie avut in vedere ca aceasta functie nu modifica vectorul pe care este aplicata
+vectorNr = vectorNr.slice(1);
+console.log(vectorNr);
+
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// stergem primul element folosind functia shift
+
+// stergem primul element folosind functia slice
+
+§desc: vector nou cu elementele in ordine inversa
+§id: 6
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// functia reverse modifica continutul vectorului pe care este aplicata de aceea trebuie sa o aplicam unei copii
+let vectorNrReversed = vectorNr.slice().reverse();
+console.log(vectorNrReversed);
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// folosim functia slice + reverse avand in vedere ca reverse modifica continutul vectorului original iar noi nu ne dorim asta
+
+§desc: cautare valoare plus inserare
+§id: 7
+§solution:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+let vectorNr = [1, 2, 3, 4, 5];
+
+// citim valoarea pe care urmeaza sa o cautam
+let searchVal = prompt('Valoare de cautat')
+
+// convertim textul introdus de utilizator la reprezentarea sa numerica
+let searchValNumeric = parseInt(searchVal);
+
+// cautam valoarea specificata de utilizator in vectorNr
+let posSearchVal = vectorNr.indexOf(searchValNumeric);
+
+// daca nu gasim valoarea o introducem la sfarsit
+if (posSearchVal == -1) {
+    vectorNr.push(searchValNumeric)
+}
+
+console.log(vectorNr)
+
+§code:
+// declaram o variabila vectorNr si o initializam cu numerele de la 1 la 5
+
+// citim valoarea pe care urmeaza sa o cautam
+
+// convertim textul introdus de utilizator la reprezentarea sa numerica
+
+// cautam valoarea specificata de utilizator in vectorNr
+
+// daca nu gasim valoarea o introducem la sfarsit
+
+§desc: citim vector n elemente, lungimea celui mai mare sir crescator
+§id: 8
+§solution:
+// citim numarul n si vectorul de elemente
+let n = parseInt(prompt('n='));
+
+let vectorNr = [];
+for (let i = 0; i < n; i++) {
+    vectorNr[i] = parseInt(prompt('numar='));
+}
+
+// declaram variabila ce va stoca lungimea celui mai mare sir dar si variabila ce va stoca maximul
+let lgCurentaSirCrescator = 0;
+let lgMaxima = 0;
+
+// parcurgem vectorul si verificam la fiecare pas daca elementul ce urmeaza este mai mare decat cel curent
+for (let i = 0; i < n - 1; i++) {
+    // verifcam daca elementele adiacente sunt in ordine crescatoare si incrementam lungimea sirului curent
+    if (vectorNr[i] < vectorNr[i + 1]) {
+        lgCurentaSirCrescator += 1;
+        
+        // actualizam lungimea maxima verificand-o contra lungimii curente
+        if (lgCurentaSirCrescator > lgMaxima)
+            lgMaxima = lgCurentaSirCrescator + 1;
+    } else {
+        // daca sirul nu mai este crescator resetam lungime curenta 
+        lgCurentaSirCrescator = 0;
+    }
+}
+
+console.log(lgMaxima)
+
+§code:
+// citim numarul n si vectorul de elemente
+
+// declaram variabila ce va stoca lungimea celui mai mare sir dar si variabila ce va stoca maximul
+
+// parcurgem vectorul si verificam la fiecare pas daca elementul ce urmeaza este mai mare decat cel curent
+
+    // verifcam daca elementele adiacente sunt in ordine crescatoare si incrementam lungimea sirului curent
+
+        // actualizam lungimea maxima verificand-o contra lungimii curente
+
+        // daca sirul nu mai este crescator resetam lungime curenta 
+
+§desc: cifre in vector
+§id: 9
+§solution:
+// cream o functie care primeste numarul ca parametru si intoarce un array continand cifrele sale
+function numarInArray(numar) {
+    // declaram vectorul in care vom pune cifrele alaturi de contorul cu care il vom parcurge
+    let cifre = [];
+    let i = 0;
+
+    // daca numarul este 0 atunci deja umplem vectorul cu valoarea 0
+    if (numar == 0) 
+        cifre[0] = 0;
+
+    while (numar > 0) {
+        cifre[i] = numar % 10;
+        numar = Math.floor(numar / 10);
+        i++;
+    }
+
+    return cifre;
+}
+
+// citim numarul de la utilizator
+let n = parseInt(prompt('n='));
+
+// apelam functia folosind numarul introdus de utilizator
+console.log(numarInArray(n));
+
+§code:
+// cream o functie care primeste numarul ca parametru si intoarce un array continand cifrele sale
+
+    // declaram vectorul in care vom pune cifrele alaturi de contorul cu care il vom parcurge
+
+    // daca numarul este 0 atunci deja umplem vectorul cu valoarea 0
+
+// citim numarul de la utilizator
+
+// apelam functia folosind numarul introdus de utilizator
+
+§desc: perechi a + b = S 
+§id: 10
+§solution:
+// copiem functia creata in exercitiul precedent
+function numarInArray(numar) {
+    // declaram vectorul in care vom pune cifrele alaturi de contorul cu care il vom parcurge
+    let cifre = [];
+    let i = 0;
+
+    // daca numarul este 0 atunci deja umplem vectorul cu valoarea 0
+    if (numar == 0) 
+        cifre[0] = 0;
+
+    while (numar > 0) {
+        cifre[i] = numar % 10;
+        numar = Math.floor(numar / 10);
+        i++;
+    }
+
+    return cifre;
+}
+
+// citim S de la utilizator
+let S = parseInt(prompt('S='));
+
+// scriem bucla for prin care generam fiecare potentiala valoare a
+for (let a = 0; a <= S; a++) {
+    // aflam valoarea lui b prin diferenta din S
+    let b = S - a;
+
+    // generam vectorii de cifre aferenti celor doua numere a si b
+    let cifreA = numarInArray(a);
+    let cifreB = numarInArray(b);
+
+    // parcurgem cei doi vectori si determinam daca existe elemente comune in ei
+    let cifreComune = false;
+    for (let i = 0; i < cifreA.length; i++) {
+        // intrerupem bucla for daca cea interioara a gasit o cifra comuna
+        if (cifreComune)
+            break;
+
+        for (let j = 0; j < cifreB.length; j++) {
+            // atunci cand gasim un element comun intrerupem buclele
+            if (cifreA[i] == cifreB[j]) {
+                cifreComune = true;
+                // aceasta clauza va intrerupe doar o bucla for
+                break;
+            }
+        }
+    }
+
+    if (!cifreComune) {
+        console.log(a, b);
+    }
+}
+§code:
+// copiem functia creata in exercitiul precedent
+
+// citim S de la utilizator
+
+// scriem bucla for prin care generam fiecare potentiala valoare a
+
+    // aflam valoarea lui b prin diferenta din S
+
+    // generam vectorii de cifre aferenti celor doua numere a si b
+
+    // parcurgem cei doi vectori si determinam daca existe elemente comune in ei

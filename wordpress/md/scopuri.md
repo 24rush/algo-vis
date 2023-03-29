@@ -42,6 +42,8 @@ Mai putem observa și că în acest bloc accesăm cu succes variabila <code>x</c
 
 <img src="../wp-content/uploads/2023/img/scopuri0.png" class="img-box">
 
+Trebuie avut în vedere că declararea unei variabile locale cu același nume ca al unei variabile globale va face ca aceasta să aibă prioritate față de cea globală ceea ce înseamnă că în blocul în care a fost declarată ea va 'ascunde' variabila globală. Aceasta nu este o practică recomandată întrucât poate introduce defecte așa că trebuie mereu avut grijă ce nume dăm variabilelor noastre. 
+
 <div class="attention-box">
 <strong>Rezumat:</strong>
 - În funcție de locul în care declarăm o variabilă aceasta poate fi: <strong>globală</strong> sau <strong>locală</strong>

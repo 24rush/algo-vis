@@ -1,0 +1,84 @@
+§desc: distanta dintre 2 obiecte
+§id: 1
+§solution:
+// cream doua obiecte ce contin proprietatile x si Y
+let A = {'x': 102, 'y': -5};
+let B = {'x': 2, 'y': 56};
+
+// calculam componentele ecuatiei
+console.log(Math.sqrt(Math.pow(A.x - B.x ,2) + Math.pow(A.y - B.y ,2)))
+§code:
+// cream doua obiecte ce contin proprietatile x si Y
+
+// calculam componentele ecuatiei folosind Math.pow si Math.sqrt
+
+§desc: cautare
+§id: 2
+§solution:
+// cream cele 5 obiecte in vectorul jucatori
+let jucatori = [{'nume': 'Tony', 'scor': 123},
+                {'nume': 'Silvia', 'scor': 744},
+                {'nume': 'Vincent', 'scor': 6543},
+                {'nume': 'Mary', 'scor': 132},
+                {'nume': 'Johnny', 'scor': 133323},];
+
+// citim numele de la utilizator
+let nume = prompt('Nume=');
+
+// parcurgem vectorul si afisam scorul jucatorului daca il gasim
+let gasit = false;
+for (let i = 0; i < jucatori.length; i++)
+    if (jucatori[i].nume == nume) {
+        console.log('Scorul lui', nume, 'este', jucatori[i].scor)
+        gasit = true;        
+    }
+
+if (!gasit) {
+    console.log('Nu exista acest jucator');
+}
+
+§code:
+// cream cele 5 obiecte in vectorul jucatori
+
+// citim numele de la utilizator
+
+// parcurgem vectorul si afisam scorul jucatorului daca il gasim
+
+§desc: caracter duplicate
+§id: 3
+§solution:
+// citim textul de la utilizator 
+let text = prompt('Text=');
+
+// cream un obiect ce va stoca numarul de aparitii a fiecarei litere
+let aparitii = {}
+
+// parcurgem textul caracter cu caracter
+for (let i = 0; i < text.length; i++) {
+    // cautam litera text[i] in obiectul de aparitii
+    if (!(text[i] in aparitii)) {
+        // daca nu exista atunci o introduce si mentionam ca este prima aparitie
+        aparitii[text[i]] = 1;
+    } else {
+        // daca deja am intalnit litera atunci afisam ca fiind duplicata
+        if (aparitii[text[i]] == 1)
+            console.log('Caracter duplicat', text[i]);
+            
+        // incrementam numarul de aparitii ca urmatoarele intalniri ale literei sa nu mai genereze mesake
+        aparitii[text[i]] += 1;
+    }
+}
+§code:
+// citim textul de la utilizator 
+
+// cream un obiect ce va stoca numarul de aparitii a fiecarei litere folosind caracterul curent pe post de cheie si numarul de aparitii ca valoare
+
+// parcurgem textul caracter cu caracter
+
+    // cautam litera text[i] in obiectul de aparitii
+
+        // daca nu exista atunci o introduce si mentionam ca este prima aparitie
+
+        // daca deja am intalnit litera atunci afisam ca fiind duplicata
+
+        // incrementam numarul de aparitii ca urmatoarele intalniri ale literei sa nu mai genereze mesake
