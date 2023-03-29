@@ -83,7 +83,13 @@ add_action('wp_enqueue_scripts', 'prism_linenumbers');
 wp_enqueue_style( 'style-prism','/wp-content/themes/askella/prism-coy-without-shadows.css' );
 /*wp_enqueue_style( 'style-prism','https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-coy.min.css' );*/
 wp_enqueue_style( 'style-prism-line-numbers','https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/line-numbers/prism-line-numbers.min.css' );
- 
+
+function prefix_add_footer_styles() {
+    wp_enqueue_style( 'av-wp-styles', '/wp-content/themes/askella/av-wp-styles.css');
+    wp_enqueue_style( 'av-styles', '/wp-content/themes/askella/av-styles.css');
+};
+add_action( 'get_footer', 'prefix_add_footer_styles' ); 
+
 add_filter('script_loader_tag', function($tag, $handle){
 	$tag = preg_replace(
 		'/src=[\'|"|]/i',

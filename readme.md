@@ -53,6 +53,11 @@ Output json will be in folder pointed by ```-i```
 - use ```<span class="av-tippie" title="Tip">*</span>```
 - use ```<span class="list-arrow"></span>``` for arrows before text
 
+#### Styles ####
+- ```av-wp-styles.css``` contains all styling done to the wordpress theme
+- ```av-styles.css``` contains all the styling needed by the plugin
+- both style files need to be deployed manually to themes/< current theme >
+
 # Snippet files and standalone editor deployment#
 - .json snippet files to ``` public_html/wp-content/uploads/2023/snips ```
 - standalone/index.html to ``` public_html/wp-content/uploads/2023/standalone/index.html ```
