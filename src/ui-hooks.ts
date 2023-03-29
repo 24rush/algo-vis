@@ -7,8 +7,15 @@ var MustacheIt = require('mustache');
 var bootstrap = require('bootstrap')
 
 export class UIHooks {
+    constructor(private onHookingCompleted: any) {
+        window.addEventListener("DOMContentLoaded", () => {
+            this.loadHooks();
 
-    constructor() {
+            onHookingCompleted();
+        });
+    }
+
+    loadHooks() {
         let boxTemplates = [...DOMmanipulator.elemsFromTemplate(boxTemplate)]
 
         // Search for message boxes
@@ -45,16 +52,16 @@ export class UIHooks {
                         "hookIdx": hookIdx
                     });
 
-                    let template = DOMmanipulator.elemsFromTemplate(renderedTemplate);                    
-                    hookElem.after(template[0].cloneNode(true))                    
+                    let template = DOMmanipulator.elemsFromTemplate(renderedTemplate);
+                    hookElem.after(template[0].cloneNode(true))
 
                     let parentElement = hookElem.parentElement;
-                    if (parentElement.tagName.toLowerCase() != 'li') 
+                    if (parentElement.tagName.toLowerCase() != 'li')
                         parentElement = parentElement.parentElement;
 
-                    parentElement.lastChild.after(template[1].cloneNode(true));                    
+                    parentElement.lastChild.after(template[1].cloneNode(true));
                     hookElem.remove()
-                    
+
                     break;
                 }
             }
@@ -75,9 +82,71 @@ export class UIHooks {
             if (boxClass != "list-arrow")
                 continue;
 
-            for (let hookedElem of document.querySelectorAll("[class*=list-arrow]")) {                                                                                
-                hookedElem.append((boxTemplateElem.cloneNode(true) as HTMLElement).children[0]);                
+            for (let hookedElem of document.querySelectorAll("[class*=list-arrow]")) {
+                hookedElem.append((boxTemplateElem.cloneNode(true) as HTMLElement).children[0]);
             }
+        }
+
+        // Search for counters
+        for (let counter of document.querySelectorAll('[class=counter]')) {
+            counter.textContent = "0";
+
+            let updateCounter = () => {
+                const target = parseInt(counter.getAttribute("data-target"))
+                let count = parseInt(counter.textContent);
+
+                if (count < target) {
+                    counter.textContent = `${Math.ceil(++count)}`;
+                    setTimeout(updateCounter, 5);
+                } else {
+                    counter.textContent = target.toString();
+                }
+            };
+
+            setInterval(updateCounter, 2000);
+        };
+
+        // Move counters below the logo
+        let counters = document.querySelector('[class=counters]');
+        if (counters) {
+            let logo = document.querySelector('[class=flex-container]');
+            logo.after(counters);
+        }
+
+        // Table of contents            
+        let ez_toc_container = document.getElementById('ez-toc-container');
+        if (ez_toc_container) {
+            ez_toc_container.classList.add('av-ez-toc-container');
+        }
+
+        let options = {
+            rootMargin: "0px",
+            threshold: 1.0,
+        };
+
+        let visibilityCache: Record<string, boolean> = {};
+
+        let observer = new IntersectionObserver((entries) => {
+            let updHighlightEntry = (targetId: string, highlight: boolean) => {
+                let tocElement = document.querySelector('a[href="#' + targetId + '"]') as HTMLElement;
+                tocElement.style.fontWeight = highlight ? 'bold' : 'normal';
+            };
+
+            entries.forEach((entry) => {
+                document.getElementById('ez-toc-container').querySelectorAll('a').forEach((elem) => {
+                    elem.style.fontWeight = 'normal';
+                });
+
+                visibilityCache[entry.target.id] = entry.isIntersecting;
+
+                for (let targetId in visibilityCache) {
+                    updHighlightEntry(targetId, visibilityCache[targetId]);
+                }
+            })
+        }, options);
+
+        for (let tocItem of document.querySelectorAll('[class=ez-toc-section]')) {
+            observer.observe(tocItem);
         }
     }
 }

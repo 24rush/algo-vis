@@ -38,6 +38,8 @@
     "build": "webpack",
     "gen-snippets": "python scripts/snippets_generator.py -i wordpress\\snippets",
     "gen-quizzes": "python scripts/snippets_generator.py -i wordpress\\quizzes",
+    "gen-exercises": "python scripts/snippets_generator.py -i wordpress\\exercises",
+    "gen-all": "npm run gen-snippets & npm run gen-quizzes & npm run gen-exercises",
     "chrome-sab": "powershell.exe -command \"& {&'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' --enable-features=SharedArrayBuffer --user-data-dir=D:\\temp}\""
   },
   "repository": {
