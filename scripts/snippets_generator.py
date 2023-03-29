@@ -112,7 +112,7 @@ def extractData(quizFile):
 
         currObj[key] = value        
     
-    return topObject
+    return topObject if len(topObject) > 1 else topObject[0]
 
 def process(inputFolder, pathFileName, dir, jsonData):    
     lang = determineLang(pathFileName)
@@ -123,20 +123,27 @@ def process(inputFolder, pathFileName, dir, jsonData):
     jsonFile = jsonFile.replace('.' + lang, '')
     jsonFile = jsonFile.replace('.snip', '.json').replace('.quiz', '.json')
 
-    print("Processing file (" + lang + ") " + pathFileName + ' to '+ jsonFile)
+    print("Processing file (" + lang + ") " + pathFileName + ' to '+ jsonFile, end='')
 
     if not jsonFile in jsonData:
         jsonData[jsonFile] = {}
 
+    noOfObjects = 0
     with open(os.getcwd() + os.path.sep + pathFileName, 'r') as jsFile:    
         dataObjs = extractData(jsFile.read())
         jsonData[jsonFile][lang] = dataObjs
-        jsonData[jsonFile]['src-' + lang] = pathFileName.replace(inputFolder, '')        
+                        
+        noOfObjects += len(dataObjs)
 
-    return jsonData
+        jsonData[jsonFile]['src-' + lang] = pathFileName.replace(inputFolder, '')        
+    
+    print (" ({})".format(noOfObjects))
+
+    return jsonData, noOfObjects
 
 def generateJsons(inputFolder):
     jsonData = {}  
+    noOfObjects = 0
     
     if not inputFolder.endswith(os.path.sep):
         inputFolder = inputFolder + os.path.sep
@@ -151,7 +158,10 @@ def generateJsons(inputFolder):
             fileName = os.path.join(root, name)
             
             if fileName.endswith('snip') or fileName.endswith('quiz'):
-                jsonData = process(inputFolder, fileName, dir, jsonData)
+                jsonData, noOfObjectsInFile = process(inputFolder, fileName, dir, jsonData)
+                noOfObjects += noOfObjectsInFile
+
+    print ('Processed', noOfObjects, 'objects')
 
     return jsonData
 

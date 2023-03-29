@@ -87,14 +87,14 @@ class QuizzesConfig {
 
                 let quizzes: Record<string, Quiz> = {};
 
-                Object.keys(json[quizLang][0]).filter((key => key != "order")).forEach((quizId: string) => {
+                Object.keys(json[quizLang]).filter((key => key != "order")).forEach((quizId: string) => {
                     if (!(quizLang in this.quizzesForLang))
                         this.quizzesForLang[quizLang] = [];
 
-                    quizzes[quizId] = new Quiz(quizId, json[quizLang][0][quizId]);
+                    quizzes[quizId] = new Quiz(quizId, json[quizLang][quizId]);
                 });
 
-                let quizOrder = "order" in json[quizLang][0] ? json[quizLang][0]["order"] : [...Array(Object.keys(quizzes).length).keys()];
+                let quizOrder = "order" in json[quizLang] ? json[quizLang]["order"] : [...Array(Object.keys(quizzes).length).keys()];
                 console.log(quizzes)
                 quizOrder.forEach((qID: string) => {
                     this.quizzesForLang[quizLang].push(quizzes[qID]);

@@ -45,7 +45,7 @@
                 <span av-bind-text="LangStrId.6">Restart</span>
             </button>
 
-            <button av-bind-onclick="onShowSolution" av-bind-style-display="{!hasSkeleton: none}" type="button"
+            <button av-bind-onclick="onShowSolution" av-bind-style-display="{!hasSolution: none}" type="button"
                 class="btn btn-light btn-overrides">
                 <i class="bi bi-eyeglasses"></i>
                 <span av-bind-text='{!isSolution: LangStrId.26, isSolution: LangStrId.27}'>Show solution</span>
@@ -103,6 +103,22 @@
         </div>
 
         <div class="commentsPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">
+        </div>
+
+        <div id="msgBox-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3" role="alert"
+            style="pointer-events: all; position:relative; width: 100%" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header" style="margin-bottom: 0;">
+                <strong class="me-auto" av-bind-text="LangStrId.28">Mai stai putin</strong>
+            </div>
+
+            <div class="toast-body fade show">
+                <span av-bind-text="LangStrId.29"></span><strong av-bind-text="timeRemainingForSolution"></strong> <span av-bind-text="LangStrId.31"></span>
+                <br><br><i av-bind-text="LangStrId.30"></i>
+                <div class="mt-2 pt-2">                    
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="toast"
+                        av-bind-text="LangStrId.18">OK</button>
+                </div>
+            </div>
         </div>
 
         <div id="toast-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3"

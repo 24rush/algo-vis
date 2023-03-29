@@ -2,7 +2,7 @@ var ace = require('ace-builds/src-min-noconflict/ace')
 require('ace-builds/src-min-noconflict/mode-javascript')
 
 export interface CodeRendererEventNotifier {
-    onSourceCodeUpdated(newCode: string): void;
+    onSourceCodeUpdated(newCode: string, isUserGenerated: boolean): void;
 }
 
 export class CodeRenderer {
@@ -16,16 +16,9 @@ export class CodeRenderer {
     private lineComments: string[] = [];
     private skipEventsCount = 0;
 
-    constructor(codeEditorHtmlElement: HTMLElement, isReadonly: boolean = false, autoRefresh: boolean = true) {
-        let code = codeEditorHtmlElement.textContent;
+    constructor(codeEditorHtmlElement: HTMLElement, isReadonly: boolean = false) {
+        let code = codeEditorHtmlElement.textContent.trim();        
         let codeLines = code.split('\n');
-
-        if (codeLines.length) {
-            if (codeLines[0].trim() == '')
-                codeLines.shift();
-
-            code = codeLines.join('\n');
-        }
 
         let [lineComments, sanitizedCode] = this.processNewCode(code);
         this.lineComments = lineComments;
@@ -49,48 +42,39 @@ export class CodeRenderer {
             wrap: true
         });
 
-        if (autoRefresh) {
-            let timeoutReloadCode: any;
+        this.editor.on('change', () => {
+            if (this.skipEventsCount > 0) {
+                this.skipEventsCount--;
+                return;
+            }
 
-            this.editor.on('change', () => {
-                if (this.skipEventsCount > 0) {
-                    this.skipEventsCount--;
-                    return;
-                }
+            let [, newCode, noOfLines] = this.removeComments(this.editor.getSession().getValue());
+            this.editor.setOption('maxLines', Math.min(this.MaxCodeLines, noOfLines));
 
-                let [, newCode, lineNo] = this.extractCommentsSanitizeCode(this.editor.getSession().getValue());
-                let sanitizedCode = convert(newCode);
+            let codeWithoutComments = convert(newCode);
+            if (codeWithoutComments != newCode) // Triggered when first loading code from html
+            {
+                this.editor.setValue(codeWithoutComments);
+                return;
+            }
 
-                if (sanitizedCode != newCode) {
-                    this.editor.setOption('maxLines', Math.max(this.MaxCodeLines, lineNo))
-                    this.editor.setValue(sanitizedCode);
-                    return;
-                }
+            this.notifySourceCodeObservers(true);
+        });
 
-                if (timeoutReloadCode)
-                    clearInterval(timeoutReloadCode);
-
-                timeoutReloadCode = setTimeout(() => {
-                    for (let notifier of this.eventListeners) {
-                        notifier.onSourceCodeUpdated(sanitizedCode);
-                    };
-                }, 3000);
-            });
-        }
     }
 
     public registerEventNotifier(notifier: CodeRendererEventNotifier) {
         this.eventListeners.push(notifier);
-        notifier.onSourceCodeUpdated(this.editor.getSession().getValue());
+        notifier.onSourceCodeUpdated(this.editor.getSession().getValue(), false);
     }
 
     public unRegisterEventNotifier(notifier: CodeRendererEventNotifier) {
         this.eventListeners = this.eventListeners.slice(this.eventListeners.indexOf(notifier), 1);
     }
 
-    public notifySourceCodeObservers() {
+    public notifySourceCodeObservers(isUserGenerated: boolean) {
         for (let notifier of this.eventListeners) {
-            notifier.onSourceCodeUpdated(this.editor.getSession().getValue());
+            notifier.onSourceCodeUpdated(this.editor.getSession().getValue(), isUserGenerated);
         };
     };
     public highlightLine(lineNo: number) {
@@ -119,7 +103,7 @@ export class CodeRenderer {
         if (!sourceCode || sourceCode == "")
             return [[], "\n".repeat(this.MinCodeLines - 1), this.MinCodeLines];
 
-        let [lineComments, newCode, noOfLines] = this.extractCommentsSanitizeCode(sourceCode);
+        let [lineComments, newCode, noOfLines] = this.removeComments(sourceCode);
 
         if (noOfLines < this.MinCodeLines) {
             newCode += "\n".repeat(this.MinCodeLines - noOfLines + 1);
@@ -135,13 +119,13 @@ export class CodeRenderer {
 
         // Updating code triggers remove + insert events
         this.skipEventsCount = 2;
-        this.editor.setOption('maxLines', noOfLines > this.MaxCodeLines ? this.MaxCodeLines : noOfLines)
+        this.editor.setOption('maxLines', Math.min(this.MaxCodeLines, noOfLines));
         this.editor.setValue(sanitizedCode);
         this.highlightLine(1);
-        this.notifySourceCodeObservers();
+        this.notifySourceCodeObservers(false);
     }
 
-    private extractCommentsSanitizeCode(sourceCode: string): [any, string, number] {
+    private removeComments(sourceCode: string): [any, string, number] {
         let lineComments: string[] = [];
         let noOfLines = 1;
         let regexp = new RegExp("/\\*\\*\\*([\\s\\S]*?)\\*\\*\\*/"); /*** Comment ***/

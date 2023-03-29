@@ -190,6 +190,7 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
         this.codeExecProxy.registerNotificationObserver(this);
     }
 
+    isNotStarted() : boolean { return this.status == OperationRecorderStatus.Idle;}
     isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
 
     isWaiting(): boolean { return this.status == OperationRecorderStatus.Waiting; }
@@ -388,9 +389,13 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
             await this.codeExecProxy.execute();
 
         } catch (e) {
+            this.status = OperationRecorderStatus.Idle;            
+
             console.log(e);
-            let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
+
+            let message = (typeof e == 'object' && 'message' in e) ? e.message : e;            
             this.notificationEmitter.onExceptionMessage(true, message);
+            this.notificationEmitter.onExecutionFinished();
 
             return false;
         }
