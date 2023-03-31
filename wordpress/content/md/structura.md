@@ -39,7 +39,7 @@ Elementele caracteristice ale unei variabile:
 
 <img src="../wp-content/uploads/2023/img/declarare1.png" class="img-box">
 
-<div class="algovis" config-id="limbaj-1.json">
+<div class="algovis" config-id="limbaj-basics.json">
 </div>
 
 <div class="attention-box"><strong>Numele unei variabile</strong> trebuie să înceapă cu o literă (<code>a-z</code> sau <code>A-Z</code>) sau underscore(<code>_</code>). Este important de reținut că literele mici sunt trate diferit de cele mari așa că vom putea defini două variabile <code>nume</code> și <code>Nume</code>, ele find complet separate.
@@ -89,5 +89,5 @@ Exista două posibilități de a adăuga comentarii: pe o singură linie sau pe 
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/structura.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="structura.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 </div>

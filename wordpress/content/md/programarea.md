@@ -53,5 +53,5 @@ Probabil că unele aplicații enunțate mai sus sună foarte promițător și cr
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/programarea.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="programarea.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 </div>

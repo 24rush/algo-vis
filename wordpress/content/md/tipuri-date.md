@@ -38,7 +38,7 @@ Mai există și o categorie de tipuri speciale de date cum ar fi: <code>undefine
 
 Javascript este un limbaj de programare în care tipul unei variabile nu trebuie menționat atunci când declarăm variabila și totodată acest tip îl putem schimba oricând în timpul rulării programului, nu este fixat pentru totodeauna în funcție de valoarea cu care a fost inițializată variabila la declarare. Acest lucru ne-ar permite să stocăm într-o variabilă tipuri diferite de conținut pe parcursul execuției programului însă vom vedea mai tărziu că aceasta nu este o practică recomandată.
 
-<div class="algovis" config-id="tipuri-date-1.json">
+<div class="algovis" config-id="tipuri-date-basics.json" av-selected="1">
 </div>
 
 <div class="attention-box"><strong>Rezumat:</strong>
@@ -49,7 +49,7 @@ Javascript este un limbaj de programare în care tipul unei variabile nu trebuie
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/tipuri-date.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="tipuri-date.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 
 <p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
 <a class="av-btn-sm" href="/exercitii-tipuri-de-date/" target="_blank" rel="noopener">Deschide exerciții</a>

@@ -57,7 +57,7 @@ Pentru a șterge un element dintr-un vector, va trebui să folosim funcțiile <c
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/vectori.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="vectori.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 <p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
 <a class="av-btn-sm" href="/exercitii-vectori/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

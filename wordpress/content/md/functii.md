@@ -89,7 +89,7 @@ Parametri funcțiilor (denumiți și parametri formali) pot fi priviți ca fiind
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/functii.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="functii.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 <p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
 <a class="av-btn-sm" href="/exercitii-functii/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

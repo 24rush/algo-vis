@@ -54,5 +54,5 @@ Trebuie avut în vedere că declararea unei variabile locale cu același nume ca
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/scopuri.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="scopuri.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 </div>

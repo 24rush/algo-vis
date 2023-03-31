@@ -70,7 +70,7 @@ Chiar daca putem modifica proprietățile unui parametru de tip obiect, nu putem
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/obiecte.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="obiecte.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 <p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
 <a class="av-btn-sm" href="/exercitii-obiecte/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

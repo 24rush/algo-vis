@@ -19,7 +19,7 @@ Pentru a putea efectua sarcini utile cu conținutul variabilelor avem nevoie să
 <span class="list-arrow"></span>**logici:** <code>&amp;&amp;</code>, <code>||</code>, <code>!</code>
 
 **Exemplul 1:**
-<div class="algovis" config-id="tipuri-date-2.json">
+<div class="algovis" config-id="tipuri-date-basics.json" av-selected="2">
 </div>
 
 În exemplul de mai sus putem observa și cum diferă comportamentul operatorului <code>+</code> în funcție de operanzii cărora este aplicat. În liniile 3-5 este folosit cu operanzi numerici unde va efectua operația de adunare însă în liniile 18-20 el este folosit cu operanzi text ceea ce va face ca rezultatul expresiei să fie concatenarea (alăturarea) celor doi operanzi.
@@ -42,7 +42,7 @@ Combinațiile de operatori și operanzi observăm că au mereu un rezultat obți
 <img src="../wp-content/uploads/2023/img/expresii1.jpg" class="img-box">
 
 **Exemplul 2:**
-<div class="algovis" config-id="tipuri-date-3.json">
+<div class="algovis" config-id="tipuri-date-basics.json" av-selected="3">
 </div>
 
 <div class="info-box"><strong>Operatorul %</strong> numit și modulo este folosit pentru a determina restul împărțirii a două numere întregi și este foarte util în a determina dacă un număr este par sau impar având în vedere că restul împărțirii la 2 a unui număr par va fi mereu 0.</div>
@@ -94,7 +94,7 @@ Regulile generale de aplicare a operatorilor în cadrul expresiilor:
 
 <div class="has-text-align-center">
 <p>Acum că ai finalizat articolul, verifică-ți cunoștințele cu următorul quiz:</p>
-<a config-id="../wp-content/uploads/2023/quizzes/operatori.json" class="av-quiz av-btn-sm">Deschide quiz</a>
+<a config-id="operatori.json" class="av-quiz av-btn-sm">Deschide quiz</a>
 <p>iar apoi folosește ce ai învățat rezolvând următoarele exerciții:</p>
 <a class="av-btn-sm" href="/exercitii-operatori/" target="_blank" rel="noopener">Deschide exerciții</a>
 </div>

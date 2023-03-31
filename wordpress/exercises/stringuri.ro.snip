@@ -1,0 +1,255 @@
+§desc: caracter $
+§id: 0
+§code:
+// se citeste textul de la utilizator
+
+// se declara o noua variabila text ce va contine textul generat dupa aplicarea regulii
+
+// se parcurge textul initial caracater cu caracater
+
+    // daca caracaterul de la pozitia curenta nu este cel special $ atunci il adaugam in textul generat
+
+        // daca caracterul este cel special atunci stergem din textul generat ultimul caracater folosind substring
+
+// se afiseaza textul rezultat
+§solution:
+// se citeste textul de la utilizator
+let str = "Anc$a are$de fan"
+
+// se declara o noua variabila text ce va contine textul generat dupa aplicarea regulii
+let corect = "";
+
+// se parcurge textul initial caracater cu caracater
+for (let currIndex = 0; currIndex < str.length; currIndex++) {
+    // daca caracaterul de la pozitia curenta nu este cel special $ atunci il adaugam in textul generat
+    if (str.charAt(currIndex) != '$')
+        corect += str.charAt(currIndex);
+    else {
+        // daca caracterul este cel special atunci stergem din textul generat ultimul caracater folosind substring
+        if (corect.length)
+            corect = corect.substring(0, corect.length - 1)
+  }
+}
+
+// se afiseaza textul rezultat
+console.log(corect)
+
+§desc: anagrame
+§id: 1
+§code:
+// se citeste textul de la utilizator
+
+// se declara o variabila text ce contine textul 'target' (apollo)
+
+// daca lungimea celor doua text nu este egala atunci clar nu se poate obtine
+
+    // in caz contrar, parcurgem textul introdus de utilizator, caracater cu caracater
+
+        // cautam caracaterul curent in textul target (apollo)
+
+        // daca acesta exista
+
+            // il stergem din textul target folosind slice(0, index) + slice(index+1)
+            // astfel l-am marcat ca fiind gasit
+
+    // afisam mesajul corespunzator in functie de lungimea ramasa in textul target
+
+§solution:
+// se citeste textul de la utilizator
+let str = prompt('Text=')
+
+// se declara o variabila text ce contine textul 'target' (apollo)
+let targetStr = "apollo"
+
+// daca lungimea celor doua text nu este egala atunci clar nu se poate obtine
+if (str.length != targetStr.length) {
+    console.log('Nu se poate obtine')
+}
+else {
+    // in caz contrar, parcurgem textul introdus de utilizator, caracater cu caracater
+    for (let indexStr = 0; indexStr < str.length; indexStr++) {
+        // cautam caracaterul curent in textul target (apollo)
+        let indexTarget = targetStr.indexOf(str.charAt(indexStr));
+
+        // daca acesta exista
+        if (indexTarget != -1) {
+            // il stergem din textul target folosind slice(0, index) + slice(index+1)
+            // astfel l-am marcat ca fiind gasit
+            targetStr = targetStr.slice(0, indexTarget) + targetStr.slice(indexTarget + 1);
+        }
+    }
+
+    // afisam mesajul corespunzator in functie de lungimea ramasa in textul target
+    if (targetStr.length == 0) {
+        console.log('Se poate obtine')
+    } else console.log('Nu se poate obtine')
+}
+
+§desc: dublare
+§id: 2
+§code:
+// se citeste textul de la utilizator
+
+// se declara o variabila noua ce va contine textul generat
+
+// se 'sparge' textul introdus in cuvinte folosind functia split
+
+// se parcuge lista de cuvinte 
+
+    // se testeaza daca cuvantul curent nu este 'si'
+    
+        // se adauga in textul generat prin concatenarea sa cu el insusi plus un spatiu
+
+// se afiseaza textul generat
+§solution:
+// se citeste textul de la utilizator
+let str = prompt('Text=');
+
+// se declara o variabila noua ce va contine textul generat
+let textNou = "";
+
+// se 'sparge' textul introdus in cuvinte folosind functia split
+let cuvinte = str.split(' ');
+
+// se parcuge lista de cuvinte 
+for (let indexCuv = 0; indexCuv < cuvinte.length; indexCuv++) {
+    // se testeaza daca cuvantul curent nu este 'si'
+    if (cuvinte[indexCuv] != 'si')
+        // se adauga in textul generat prin concatenarea sa cu el insusi plus un spatiu
+        textNou += cuvinte[indexCuv] + ' ' + cuvinte[indexCuv] + ' ';
+}
+
+// se afiseaza textul generat
+console.log(textNou)
+
+§desc: cifre in text
+§id: 4
+§code:
+// se citeste textul de la utilizator
+
+// se declara o variabila noua ce va stoca suma numerelor gasite
+
+// se 'sparge' in cuvinte folosind functia split
+
+// se parcurg cuvintele din text
+
+    // se incearca sa se converteasca la intreg cuvantul curent folosind parseInt
+
+    // daca conversia nu a generat un NaN atunci se aduna la suma
+    // functia isNan(numar) ne indica daca numar-ul este intr-adevar numar sau Nan
+
+// se afiseaza suma determinata
+
+§solution:
+// se citeste textul de la utilizator
+let str = prompt('Text=');
+
+// se declara o variabila noua ce va stoca suma numerelor gasite
+let suma = 0;
+
+// se 'sparge' in cuvinte folosind functia split
+let cuvinte = str.split(' ');
+
+// se parcurg cuvintele din text
+for (let indexCuv = 0; indexCuv < cuvinte.length; indexCuv++) {
+    // se incearca sa se converteasca la intreg cuvantul curent folosind parseInt
+    let nr = parseInt(cuvinte[indexCuv]);
+
+    // daca conversia nu a generat un NaN atunci se aduna la suma
+    // functia isNan(numar) ne indica daca numar-ul este intr-adevar numar sau Nan
+    if (!isNaN(nr)) 
+        suma += nr;
+}
+
+// se afiseaza suma determinata
+console.log(suma)
+
+§desc: aparitii 5
+§id: 5
+§code:
+// se citeste textul de la utilizator
+
+// se declara o variabila ce va contine numarul de aparitii ale caracaterul 5
+
+// se cauta prima aparitie a caracaterului 5 folosind indexOf
+
+// cat timp gasim caracterul '5' adica indexul returna de indexOf nu este -1
+
+    // incrementam variabila numarului de aparitii
+
+    // cautam urmatoarea aparitie folosind tot indexOf insa specificand pozitia de la care sa inceapa cautarea
+    // adica de la ultimul index gasit + 1
+
+// afisam numarul de aparitii
+§solution:
+// se citeste textul de la utilizator
+let str = prompt('Text=');
+
+// se declara o variabila ce va contine numarul de aparitii ale caracaterul 5
+let countFive = 0;
+
+// se cauta prima aparitie a caracaterului 5 folosind indexOf
+let indexOfFive = str.indexOf('5');
+
+// cat timp gasim caracterul '5' adica indexul returna de indexOf nu este -1
+while (indexOfFive != -1) {
+    // incrementam variabila numarului de aparitii
+    countFive += 1;
+
+    // cautam urmatoarea aparitie folosind tot indexOf insa specificand pozitia de la care sa inceapa cautarea
+    // adica de la ultimul index gasit + 1
+    indexOfFive = str.indexOf('5', indexOfFive + 1)    
+}
+
+// afisam numarul de aparitii
+console.log(countFive)
+
+§desc: ecou
+§id: 6
+§code:
+// se citeste textul de la utilizator
+
+// se 'sparge' in cuvinte folosind functia split
+
+// se parcurge fiecare cuvant din lista rezultata
+
+    // se declara o variabila contor pentru indexul literelor din cuvantul curent
+
+    // se parcurge cuvantul curent litera cu litera comparent pozitiile adiacente
+    // asta inseamna ca va trebui sa parcurgem doar pana la penultima pozitie
+
+        // daca doua caractere adiacente sunt diferite atunci parasim bucla pentru ca este clar 
+        // ca nu avem aceeasi litera in cuvantul curent
+
+    // daca am ajuns cu indexul literelor la penultima pozitie inseamna ca am avut egalitate pentru 
+    // toate pozitiile adiacente asa ca putem afisa cuvantul curent
+
+§solution:
+// se citeste textul de la utilizator
+let str = prompt('Text=');
+
+// se 'sparge' in cuvinte folosind functia split
+let cuvinte = str.split(' ');
+
+// se parcurge fiecare cuvant din lista rezultata
+for (let indexCuv = 0; indexCuv < cuvinte.length; indexCuv++) {
+    // se declara o variabila contor pentru indexul literelor din cuvantul curent
+    let indexLitera = 0;
+
+    // se parcurge cuvantul curent litera cu litera comparent pozitiile adiacente
+    // asta inseamna ca va trebui sa parcurgem doar pana la penultima pozitie
+    while (indexLitera < cuvinte[indexCuv].length - 1) {
+        // daca doua caractere adiacente sunt diferite atunci parasim bucla pentru ca este clar 
+        // ca nu avem aceeasi litera in cuvantul curent
+        if (cuvinte[indexCuv].charAt(indexLitera) != cuvinte[indexCuv].charAt(indexLitera + 1)) {
+            break;
+        }
+
+        indexLitera++;
+    }
+
+    // daca am ajuns cu indexul literelor la penultima pozitie inseamna ca am avut egalitate pentru 
+    // toate pozitiile adiacente asa ca putem afisa cuvantul curent
+    if (indexLitera == cuvinte[indexCuv].length - 1) 
+        console.log(cuvinte[indexCuv])
+}

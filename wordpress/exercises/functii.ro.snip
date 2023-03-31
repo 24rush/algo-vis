@@ -90,3 +90,86 @@ for (let numar = 1; numar <= n; numar++) {
 // citim un numar natural n de la utilizator
 
 // parcurgem toate numerele de la 1 la n si testam daca sunt prime prin apel al functiei estePrim
+
+§desc: Să se afișeze toate cuburile perfecte (AxAxA) mai mici decât un număr n citit de la tastatură
+§id: 5
+§code:
+// citim un numar natural n de la utilizator
+
+§solution:
+// citim un numar natural n de la utilizator
+let numar = prompt("n = ");
+
+// folosind un contor de la 1 la cbrt(n) generam toate cuburile perfecte
+for (let a = 1; a <= Math.cbrt(numar); a++) {
+    console.log(Math.pow(a, 3));
+}
+
+§desc: Să se calculeze cel mai mic pătrat perfect, strict mai mare decât un numar natural n
+§id: 6
+§code:
+// citim un numar natural n de la utilizator
+
+// folosim Math.sqrt, Math.ceil si Math.pow pentru a calcula urmatorul patrat perfect
+
+§solution:
+// citim un numar natural n de la utilizator
+let numar = prompt("n = ");
+
+// folosim Math.sqrt, Math.ceil si Math.pow pentru a calcula urmatorul patrat perfect
+console.log(Math.pow(Math.ceil(Math.sqrt(numar)), 2))
+
+§desc: să se verifice dacă există trei numere naturale consecutive, care adunate, dau numărul n.
+§id: 7
+§code:
+// citim un numar natural n de la utilizator
+
+// o asemenea secventa trebuie sa se poata scrie ca n = i + i+1 + i+2 adica i = (n-3) / 3 trebuie sa fie numar natural
+
+§solution:
+// citim un numar natural n de la utilizator
+let numar = prompt("n = ");
+
+// o asemenea secventa trebuie sa se poata scrie ca n = i + i+1 + i+2 adica i = (n-3) / 3 trebuie sa fie numar natural
+// pentru a verifica daca un numar este natural testam daca numarul este egal cu Math.floor(numar)
+let i = (numar - 3) / 3;
+
+if (i == Math.floor(i)) {
+  console.log('Gasit', i, i+1, i+2)
+} else {
+  console.log('Nu exista asemenea secventa')
+}
+
+§desc: n si k să se verifice dacă există k numere naturale consecutive care adunate dau numărul n.
+§id: 8
+§code:
+// citim doua numere naturale n si k de la utilizator
+
+// o asemenea secventa trebuie sa se poata scrie ca n = i + i+1 + i+2 adica i = (n-3) / 3 trebuie sa fie numar natural
+// calculam suma numerelor de la 1 la k-1
+
+// calculam i folosind formula i = (numar - sum) / k
+
+// iar pentru a verifica daca un numar este natural testam daca numarul este egal cu Math.floor(numar)
+
+§solution:
+// citim doua numere naturale n si k de la utilizator
+let numar = prompt("n = ");
+let k = prompt("k = ");
+
+// o asemenea secventa trebuie sa se poata scrie ca n = i + i+1 + i+2 + ... + i+k-1 adica i = (n- sum(1..k-1)) / k trebuie sa fie numar natural
+// calculam suma numerelor de la 1 la k-1
+let sum = ((k-1)*k) / 2;
+
+// calculam i folosind formula i = (numar - sum) / k
+let i = (numar - sum) / k
+
+// iar pentru a verifica daca un numar este natural testam daca numarul este egal cu Math.floor(numar)
+if (i == Math.floor(i)) {
+    console.log('Gasit');
+    for (let it = i; it < i + k; it++) {
+        console.log(it);
+    }
+} else {
+    console.log('Nu exista asemenea secventa')
+}

@@ -164,3 +164,33 @@ for (let sute = 1; sute <= 9; sute++)
 §code:
 // folosim 3 bucle for pentru a genera cifrele sutelor, zecilor si unitatilor
 // toate cifrele merg pana la 9 insa trebuie sa inceapa de la valoarea cifrei precedente pentru a respecta conditia de cifre in ordine crescatoare
+
+§desc: collatz
+§id: 8
+§solution:
+// citim numarul n de la utilizator
+let n = parseInt(prompt('n='));
+
+// folosim o bucla while pentru a repeta formula atat timp cat n nu este 1
+let iteratii = 0;
+while (n != 1) {
+    // testam la fiecare iteratie daca n este par sau impar si aplicam ecuatia specifica
+    if (n % 2 == 0) n /= 2;
+    else n = 3*n + 1;
+  
+    // incrementam numarul de iteratii
+    iteratii++;
+}
+
+// afisam numarul de iteratii
+console.log('Numar iteratii:', iteratii)
+§code:
+// citim numarul n de la utilizator
+
+// folosim o bucla while pentru a repeta formula atat timp cat n nu este 1
+
+    // testam la fiecare iteratie daca n este par sau impar si aplicam ecuatia specifica
+
+    // incrementam numarul de iteratii
+
+// afisam numarul de iteratii
