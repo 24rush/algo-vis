@@ -319,9 +319,9 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
             if (prevFcn == undefined)
                 prevFcn = console.log;
 
-            console.log = (message: any) => {
-                this.onConsoleLog(message);
-                prevFcn.apply(console, [message]);
+            console.log = (...args) => {
+                this.onConsoleLog([...args].join(' '));
+                prevFcn.apply(console, args);
             };
         } else {
             console.log = prevFcn;
@@ -355,7 +355,6 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
                         case UserInteractionType.Alert:
                             return undefined;
                         case UserInteractionType.Confirm:
-                            console.log(Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1))
                             return Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1) == 1;
                         case UserInteractionType.Prompt: {
                             let msgSize: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.MessageSize + 1);

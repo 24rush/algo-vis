@@ -56,7 +56,7 @@ class SnippetData {
 
     private expectedToFailSnippets: SnippetData[] = [
         { "snipFile": "scopuri\\basics.ro.snip", "id": "0" },
-        { "snipFile": "scopuri\\basics.ro.snip", "id": "3" }
+        { "snipFile": "scopuri\\basics.ro.snip", "id": "2" }
     ]
 
     private isExpectedFailure(snipFile: string, id: string) {
@@ -80,7 +80,7 @@ class SnippetData {
             if (this.isExcludedSnippetFile(file))
                 return;
 
-            let jsonObj = JSON.parse(fs.readFileSync(this.SNIPPETS_PATH + file, 'utf8'));            
+            let jsonObj = JSON.parse(fs.readFileSync(this.SNIPPETS_PATH + file, 'utf8'));
             let lang = ('ro' in jsonObj) ? 'ro' : 'en';
 
             jsonObj[lang].forEach(element => {
@@ -110,17 +110,21 @@ class SnippetData {
         when(this.mockedCodeMarkers.funcWrap(anything)).thenCall((arg: any) => (arg as unknown)[0].f());
         when(this.mockedCodeMarkers.promptWrap(anyString())).thenReturn("3");
 
+        let snippetsRun = 0;
         for (let snippet of this.getSnippetSamples()) {
             let [status,] = this.codeProc.setCode(snippet.code)
 
             expect(status).to.be.true;
 
             let funcUnderTest = () => this.runFuncPrintException(snippet, () => eval(this.codeProc.getCode()));
-     
+            snippetsRun++;
+
             if (this.isExpectedFailure(snippet.snipFile, snippet.id))
                 expect(funcUnderTest).to.throw();
             else
                 expect(funcUnderTest).to.not.throw();
-        }     
+        }
+
+        console.log('Ran', snippetsRun);
     }
 }

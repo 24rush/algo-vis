@@ -120,6 +120,8 @@ def process(inputFolder, pathFileName, dir, jsonData):
     if dir != None:
         jsonFile = inputFolder + pathFileName.replace(inputFolder, '').replace('\\', '-')
 
+    isSnipFile = '.snip' in jsonFile
+
     jsonFile = jsonFile.replace('.' + lang, '')
     jsonFile = jsonFile.replace('.snip', '.json').replace('.quiz', '.json')
 
@@ -131,10 +133,13 @@ def process(inputFolder, pathFileName, dir, jsonData):
     noOfObjects = 0
     with open(os.getcwd() + os.path.sep + pathFileName, 'r') as jsFile:    
         dataObjs = extractData(jsFile.read())
-        jsonData[jsonFile][lang] = dataObjs
-                        
         noOfObjects += len(dataObjs)
 
+        # Snippet files that contain only one snippet are seen as objects therefore make them arrays
+        if isSnipFile and len(dataObjs) == 1:
+            dataObjs = [dataObjs]
+
+        jsonData[jsonFile][lang] = dataObjs                                
         jsonData[jsonFile]['src-' + lang] = pathFileName.replace(inputFolder, '')        
     
     print (" ({})".format(noOfObjects))

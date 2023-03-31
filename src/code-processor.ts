@@ -84,8 +84,8 @@ export class CodeProcessor {
         this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];        
     }
 
-    private localhostDebug : boolean = false;
-    private debugEnabled: boolean = window.location.hostname == 'localhost' ? this.localhostDebug : false;
+    private localhostDebug : boolean = true;
+    private debugEnabled: boolean = (typeof window !== 'undefined' && window.location.hostname == 'localhost') ? this.localhostDebug : false;
 
     dumpDebugInfo() {
         if (this.debugEnabled) {

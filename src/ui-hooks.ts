@@ -59,7 +59,12 @@ export class UIHooks {
                     if (parentElement.tagName.toLowerCase() != 'li')
                         parentElement = parentElement.parentElement;
 
-                    parentElement.lastChild.after(template[1].cloneNode(true));
+                    let clonedNode = template[1].cloneNode(true);
+                    for (let attr of hookElem.attributes) {                        
+                        (clonedNode.firstChild.nextSibling as HTMLElement).setAttribute(attr.name, attr.value);
+                    }
+
+                    parentElement.lastChild.after(clonedNode);
                     hookElem.remove()
 
                     break;
