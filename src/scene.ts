@@ -4,9 +4,8 @@ import { OperationRecorder } from "./operation-recorder";
 import { CodeRenderer } from "./code-renderer";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
 import { Localize } from "./localization";
-import { Snippet } from "./snippets";
+import { Snippet, SnippetEvents } from "./snippets";
 import { UserInteractionType } from "./code-executor";
-import { DOMmanipulator } from "./dom-manipulator";
 
 var bootstrap = require('bootstrap')
 
@@ -95,19 +94,17 @@ class AVViewModel {
     }
 }
 
-export type RequestFullScreenCbk = () => void;
-
 export class Scene {
     private codeRenderer: CodeRenderer;
-    private commentsPopover: any = undefined;
+    private commentsPopoverHandle: any = undefined;
 
     private promptWidget: HTMLElement = undefined;
-    private userInteractionMsgBox: any = undefined;
+    private userInteractionMsgBox: bootstrap.Toast = undefined;
 
     private msgBoxWidget: HTMLElement = undefined;
-    private userMsgBox: any = undefined;
+    private userMsgBox: bootstrap.Toast = undefined;
 
-    private autoReplayInterval = 400;
+    private autoReplayInterval = 4400;
     private autoplayTimer: NodeJS.Timer = undefined;
 
     private timeoutExpiredOnce: boolean = false;
@@ -120,7 +117,7 @@ export class Scene {
     private lineNoToBeExecuted = -1;
     private userCodeBeforeShowSolution: string = "";
 
-    constructor(app: HTMLElement, snippets: Snippet[], fullscreenCbk: RequestFullScreenCbk) {
+    constructor(private app: HTMLElement, snippets: Snippet[], private snippetEventsCbks: SnippetEvents) {
         let leftPane = app.querySelector("[class*=leftPane]");
         let rightPane = app.querySelector("[class*=rightPane]");
         let variablesPanel = app.querySelector("[class*=panelVariables]") as HTMLElement;
@@ -137,7 +134,18 @@ export class Scene {
         let isWriteable = app.hasAttribute('av-write');
         let isVisualisationDisabled = app.hasAttribute('av-novis');
 
-        let selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
+        let selectedSnippedId = -1;
+        let isExercise = app.hasAttribute('av-exercise');
+
+        if (isExercise) {
+            isWriteable = true;
+            isAutoPlay = false;
+            isVisualisationDisabled = true;
+
+            selectedSnippedId = parseInt(app.getAttribute('av-exercise').split(':')[1]);
+        } else {
+            selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
+        }
 
         this.operationRecorder = new OperationRecorder(!isVisualisationDisabled);
         this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable);
@@ -198,7 +206,7 @@ export class Scene {
         }
 
         this.viewModel.onFullscreen = () => {
-            if (fullscreenCbk) fullscreenCbk();
+            if (snippetEventsCbks) snippetEventsCbks.onShowFullscreen(this.app);
         };
 
         this.viewModel.onShowComments = () => {
@@ -207,8 +215,7 @@ export class Scene {
             if (avViewModel.showComments) {
                 highlightLine(this.lineNoToBeExecuted);
             } else {
-                this.commentsPopover?.dispose();
-                this.commentsPopover = undefined;
+                this.commentsPopoverHandle = this.snippetEventsCbks.onDisposePopover(this.commentsPopoverHandle);
             }
         };
 
@@ -297,6 +304,13 @@ export class Scene {
             }
         }
 
+        let inputBox = self.promptWidget.querySelector('[class=form-control]') as HTMLInputElement;
+        inputBox.addEventListener("keyup", function (event) {
+            if (event.key === "Enter") {
+                self.viewModel.onPromptOk();
+            }
+        });
+
         this.viewModel.onPromptOk = () => {
             let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;
             this.userInteractionMsgBox.hide();
@@ -323,7 +337,7 @@ export class Scene {
             return minutesS + ":" + secondsS;
         }
 
-        this.msgBoxWidget.addEventListener('hidden.bs.toast', () => {            
+        this.msgBoxWidget.addEventListener('hidden.bs.toast', () => {
             if (this.timerSolution) {
                 clearTimeout(this.timerSolution);
                 this.timerSolution = undefined;
@@ -410,13 +424,6 @@ export class Scene {
             },
             onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
                 self.userInteractionMsgBox.show();
-
-                let inputBox = self.promptWidget.querySelector('[class=form-control]') as HTMLInputElement;
-                inputBox.addEventListener("keyup", function (event) {
-                    if (event.key === "Enter") {
-                        self.viewModel.onPromptOk();
-                    }
-                });
                 inputBox.focus();
 
                 avViewModel.isFunctionalityDisabled = true;
@@ -475,18 +482,14 @@ export class Scene {
             if (!avViewModel.showComments || isVisualisationDisabled || !aceCursor)
                 return;
 
-            if (this.commentsPopover) {
-                this.commentsPopover.dispose();
-                this.commentsPopover = undefined;
-            }
+            this.commentsPopoverHandle = this.snippetEventsCbks.onDisposePopover(this.commentsPopoverHandle);
 
             let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
 
             if ('style' in aceCursor) {
                 commentsElement.style['top'] = parseInt(aceCursor.style['top']) + 0.5 * parseInt(aceCursor.style['height']) + "px";
 
-                this.commentsPopover = new bootstrap.Popover(commentsElement, options);
-                this.commentsPopover.show();
+                this.commentsPopoverHandle = this.snippetEventsCbks.onShowPopover(commentsElement, options);
             }
         };
 

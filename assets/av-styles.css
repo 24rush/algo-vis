@@ -90,8 +90,8 @@
 }
 
 .quiz-btn:hover {
-  background-color: #DEF94E!important;
-  border-color: #DEF94E!important;
+  background-color: #DEF94E !important;
+  border-color: #DEF94E !important;
   transform: scale(1.02);
   transition: transform .1s;
 }
@@ -210,6 +210,12 @@ body#algovis {
 .radiusOverwrite-right {
   border-top-right-radius: 0.375rem !important;
   border-bottom-right-radius: 0.375rem !important;
+}
+
+.noScroll {
+  margin: 0;
+  height: 100%;
+  overflow: hidden
 }
 
 .modal {

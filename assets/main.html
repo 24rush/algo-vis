@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <div class="commentsPopover" data-bs-container="body" data-bs-toggle="popover" data-bs-placement="bottom">
+        <div class="commentsPopover" data-bs-container="body" data-bs-trigger="focus" data-bs-toggle="popover" data-bs-placement="bottom">
         </div>
 
         <div id="msgBox-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3" role="alert"
@@ -121,7 +121,7 @@
             </div>
         </div>
 
-        <div id="toast-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3"
+        <div id="toast-{{codeEditorId}}" data-bs-autohide="false" data-bs-animation="false" class="toast toast-container p-3"
             style="pointer-events: all; position:relative; width: 100%" aria-live="assertive" aria-atomic="true">
             <div class="toast-header" style="margin-bottom: 0;">
                 <strong class="me-auto" av-bind-text="promptTitle"></strong>

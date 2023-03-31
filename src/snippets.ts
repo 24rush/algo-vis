@@ -1,3 +1,5 @@
+import { Popover } from "bootstrap";
+import { FullScreeNotification } from ".";
 import { DOMmanipulator } from "./dom-manipulator";
 import { Localize } from "./localization";
 import { Scene } from "./scene";
@@ -9,8 +11,6 @@ var bootstrap = require('bootstrap')
 const appTemplate = require('../assets/main.html').default;
 const fullScreenModalTemplate = require('../assets/fullscreen.html').default;
 
-let GITHUB_SNIPPETS_URL = window.location.hostname == "localhost" ? "" : "../wp-content/uploads/2023/snips/";
-
 export class Snippet {
     public id: number = -1;
     public code: string = "";
@@ -18,8 +18,8 @@ export class Snippet {
     public level: string = "";
     public solution: string = "";
 
-    constructor(jsonObj: any, id: number) {
-        this.id = id;
+    constructor(jsonObj: any, counterId: number) {
+        this.id = ('id' in jsonObj) ? jsonObj.id : counterId;
         this.code = jsonObj.code;
         this.desc = jsonObj.desc;
         this.level = jsonObj.level ?? "";
@@ -41,16 +41,16 @@ class SnippetsConfig {
 
     public loadFromJson(jsonData: any) {
         if (jsonData) {
-            let counterSnippets = 0;
             Object.keys(jsonData).forEach((snippetLang: any) => {
                 if (!(snippetLang in this.snippetsForLang))
                     this.snippetsForLang[snippetLang] = {};
 
+                let counter = 0;
                 Object.values(jsonData[snippetLang]).forEach((snippetObj: any) => {
                     if (snippetLang.indexOf("src-") != -1)
                         return;
 
-                    let snippet = new Snippet(snippetObj, counterSnippets++);
+                    let snippet = new Snippet(snippetObj, counter++);
 
                     if (!(snippet.level in this.snippetsForLang[snippetLang]))
                         this.snippetsForLang[snippetLang][snippet.level] = [];
@@ -89,34 +89,99 @@ class SnippetsConfig {
     }
 }
 
-class SnippetsUI {
-    public static fullscreenModal: any;
-    public static snippetsModalBody: HTMLElement;
-    public static appContainer: HTMLElement;
-    public static orientationWatcher: MediaQueryList = window.matchMedia("(orientation: portrait)");
+export interface SnippetEvents {
+    onShowFullscreen(appWidget: HTMLElement): void;
+    onShowPopover(widget: HTMLElement, options: any): bootstrap.Popover;
+    onDisposePopover(popover: bootstrap.Popover): any;
 
-    static initialize() {
+    onHideAllPopovers(): any;
+    onShowAllPopovers(): any;
+}
+
+class SnippetsUI implements SnippetEvents {
+    private popoverCache: bootstrap.Popover[] = [];
+
+    public fullscreenModal: any;
+    public snippetsModalBody: HTMLElement;
+    public appContainer: HTMLElement;
+    public orientationWatcher: MediaQueryList = window.matchMedia("(orientation: portrait)");
+
+    initialize() {
         document.body.append(DOMmanipulator.fromTemplate(fullScreenModalTemplate));
 
-        SnippetsUI.snippetsModalBody = document.getElementById('modalBody');
-        SnippetsUI.fullscreenModal = new bootstrap.Modal(document.getElementById('fullscreenModal'), {
+        this.snippetsModalBody = document.getElementById('modalBody');
+        this.fullscreenModal = new bootstrap.Modal(document.getElementById('fullscreenModal'), {
             keyboard: true
         });
-        SnippetsUI.fullscreenModal._element.addEventListener('hidden.bs.modal', (event: any) => {
-            SnippetsUI.appContainer.append(document.getElementById('modalBody').children[0]);
+        this.fullscreenModal._element.addEventListener('hidden.bs.modal', (event: any) => {
+            this.appContainer.append(document.getElementById('modalBody').children[0]);
+            this.onShowAllPopovers();
         });
+    }
+
+    onShowFullscreen(appWidget: HTMLElement): void {
+        this.appContainer = appWidget.parentElement;
+        this.snippetsModalBody.appendChild(appWidget);
+
+        this.onHideAllPopovers();
+        this.fullscreenModal.show();
+    }
+
+    onShowPopover(widget: HTMLElement, options: any): Popover {
+        let popover = new bootstrap.Popover(widget, options);
+        this.popoverCache.push(popover);
+
+        popover.show();
+
+        return popover;
+    }
+
+    onDisposePopover(popover: typeof bootstrap.Popover): void {
+        let idxPopover = this.popoverCache.indexOf(popover);
+
+        if (idxPopover != -1) {
+            popover.dispose();
+            this.popoverCache.splice(idxPopover, 1);
+
+            return undefined;
+        }
+
+        return popover;
+    }
+
+    onHideAllPopovers() {
+        for (let popover of this.popoverCache) {
+            popover.hide();
+        }
+    }
+
+    onShowAllPopovers() {
+        for (let popover of this.popoverCache) {
+            popover.show();
+        }
     }
 }
 
 export class Snippets {
     private snippetsConfig: SnippetsConfig;
+    private static snippetsUI: SnippetsUI = new SnippetsUI();
+
+    private readonly GITHUB_SNIPPETS_URL = window.location.hostname == "localhost" ? "/wordpress/snippets/" : "../wp-content/uploads/2023/snips/";
 
     constructor() {
-        SnippetsUI.initialize();
+        Snippets.snippetsUI.initialize();
 
         let index = 0;
         for (let widget of document.querySelectorAll("[class*=algovis]")) {
-            let configId = widget.getAttribute('config-id');
+            let configId: string = undefined;
+
+            if (widget.hasAttribute('av-exercise')) {
+                let jsonFileAndId = widget.getAttribute('av-exercise').split(':');
+                configId = jsonFileAndId[0];
+            } else {
+                configId = widget.getAttribute('config-id');
+            }
+
             let codeEditorId = "code-editor-" + (index++).toString();
 
             let widgetLoader = (mustacheSnippets: any[] = [], snippets: Snippet[] = []) => {
@@ -134,12 +199,7 @@ export class Snippets {
                     widget.removeAttribute(attr.name);
                 }
 
-                new Scene(childWidget as HTMLElement, snippets, () => {
-                    // Fullscreen callback
-                    SnippetsUI.appContainer = childWidget.parentElement;
-                    SnippetsUI.snippetsModalBody.appendChild(childWidget);
-                    SnippetsUI.fullscreenModal.show();
-                });
+                new Scene(childWidget as HTMLElement, snippets, Snippets.snippetsUI);
 
                 // Don't create the Splitter if we have explicit verticalView or we are in portrait
                 let splitWidget: any = undefined;
@@ -147,10 +207,10 @@ export class Snippets {
                     sizes: [60, 40],
                 };
 
-                if (!SnippetsUI.orientationWatcher.matches && !childWidget.classList.contains('verticalView'))
+                if (!Snippets.snippetsUI.orientationWatcher.matches && !childWidget.classList.contains('verticalView'))
                     splitWidget = Split([childWidget.children[0], childWidget.children[1]], splitSizes);
 
-                SnippetsUI.orientationWatcher.addEventListener("change", function (e) {
+                Snippets.snippetsUI.orientationWatcher.addEventListener("change", function (e) {
                     if (e.matches) {
                         if (splitWidget)
                             splitWidget.destroy();
@@ -162,7 +222,7 @@ export class Snippets {
             };
 
             if (configId) {
-                fetch(GITHUB_SNIPPETS_URL + configId)
+                fetch(this.GITHUB_SNIPPETS_URL + configId)
                     .then((response) => {
                         if (!response.ok)
                             return;
@@ -186,5 +246,9 @@ export class Snippets {
                 widgetLoader();
             }
         }
+    }
+
+    onFullScreenEvent(isFullScreen: boolean): void {
+        isFullScreen ? Snippets.snippetsUI.onHideAllPopovers() : Snippets.snippetsUI.onShowAllPopovers();
     }
 }

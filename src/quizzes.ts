@@ -1,3 +1,4 @@
+import { FullScreeNotification } from ".";
 import { DOMmanipulator } from "./dom-manipulator";
 import { Localize } from "./localization";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
@@ -5,40 +6,84 @@ import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
 var bootstrap = require('bootstrap')
 var MustacheIt = require('mustache')
 
-const fullScreenModalTemplate = require('../assets/quizModal.html').default;
 const quizTemplateFront = require('../assets/quizTemplateFront.html').default;
 const quizTemplateBack = require('../assets/quizTemplateBack.html').default;
 
 class QuizUI {
-    public static fullscreenModal: any;
-    public static quizModalHTML: HTMLElement;
+    private static fullscreenModal: bootstrap.Modal;
 
-    public static quizBodyFront: HTMLElement;
-    public static quizBodyBack: HTMLElement;
-    public static quizFront: HTMLElement;
-    public static quizBack: HTMLElement;
+    private static quizBodyFront: HTMLElement;
+    private static quizBodyBack: HTMLElement;
+    private static quizFront: HTMLElement;
+    private static quizBack: HTMLElement;
+    private static quizModalHTML: HTMLElement;
 
-    static initialize() {
+    private uiBinder: UIBinder = undefined;
+
+    static {
+        const fullScreenModalTemplate = require('../assets/quizModal.html').default;
         document.body.append(DOMmanipulator.fromTemplate(fullScreenModalTemplate));
 
         QuizUI.quizModalHTML = document.getElementById('quizModal');
+        QuizUI.quizBodyFront = document.getElementById('quizModalBodyFront');
+        QuizUI.quizBodyBack = document.getElementById('quizModalBodyBack');
+
         QuizUI.fullscreenModal = new bootstrap.Modal(QuizUI.quizModalHTML, {
             keyboard: false
         });
-
-        QuizUI.quizBodyFront = document.getElementById('quizModalBodyFront');
-        QuizUI.quizBodyBack = document.getElementById('quizModalBodyBack');
 
         let parentElement = QuizUI.quizBodyFront.parentElement.parentElement;
         QuizUI.quizFront = parentElement.children[0] as HTMLElement;
         QuizUI.quizBack = parentElement.children[1] as HTMLElement;
     }
 
-    static retrieveAnswers() {
+    constructor(quizViewModel: ObservableViewModel, private fullscreenNotification: FullScreeNotification) {
+        this.uiBinder = new UIBinder(quizViewModel).bindTo(QuizUI.quizModalHTML)
+    }
+
+    onNewQuiz(quiz: any) {
+        QuizUI.quizBodyFront.replaceChild(DOMmanipulator.fromTemplate(MustacheIt.render(quizTemplateFront, quiz)), QuizUI.quizBodyFront.firstChild);
+
+        if ('explanation' in quiz) {
+            QuizUI.quizBodyBack.replaceChild(DOMmanipulator.fromTemplate(MustacheIt.render(quizTemplateBack, quiz)), QuizUI.quizBodyBack.firstChild);
+        }
+
+        this.uiBinder.bindTo(QuizUI.quizBodyFront);
+    }
+
+    onHighlightAnswers(quiz: any) {
+        this.retrieveAnswers().forEach(answer => {
+            let currAnswId = answer.getAttribute('av-id');
+            let isCorrectAnswer = 'correct' in quiz && (quiz.correct.find((answ: any) => answ == currAnswId) != undefined);
+
+            if (isCorrectAnswer) {
+                answer.classList.add("btn-success");
+            } else
+                if (answer.classList.contains('active')) {
+                    answer.classList.add("btn-danger");
+                }
+
+            answer.classList.remove('btn-light');
+            answer.classList.remove('active');
+            answer.classList.add('disabled');
+        });
+    }
+
+    onUpdateSelectedAnswers(quiz: any) {
+        this.retrieveAnswers().forEach((answer) => {
+            let quizAnswer = quiz.answers.find((ans : any) => ans.id == answer.getAttribute('av-id'));
+
+            if (quizAnswer && quizAnswer.selected == false) {
+                answer.classList.remove('active');
+            }
+        })
+    }
+
+    private retrieveAnswers() {
         return QuizUI.quizBodyFront.querySelectorAll('[av-bind-onclick=onSelectedAnswer]');
     }
 
-    static flipHTMLElement(elementToFlip: HTMLElement) {
+    flipHTMLElement(elementToFlip: HTMLElement) {
         setTimeout(() => {
             elementToFlip.style.display = 'none';
         }, 500);
@@ -49,7 +94,7 @@ class QuizUI {
         elementToFlip.classList.add('quizContainerFlip');
     }
 
-    static showHtmlElement(elementToShow: HTMLElement) {
+    showHtmlElement(elementToShow: HTMLElement) {
         setTimeout(() => {
             elementToShow.style.display = 'block';
         }, 500);
@@ -58,6 +103,42 @@ class QuizUI {
         elementToShow.classList.remove('quizFaceShow');
         elementToShow.classList.remove('quizContainerFlip');
         elementToShow.classList.add('quizFaceShow');
+    }
+
+    removeScrolling() {
+        document.body.classList.add('noScroll');
+        document.documentElement.classList.add('noScroll');
+    }
+
+    addScrolling() {
+        document.body.classList.remove('noScroll');
+        document.documentElement.classList.remove('noScroll');
+    }
+
+    onShowStatement() {
+        this.flipHTMLElement(QuizUI.quizBack);
+        this.showHtmlElement(QuizUI.quizFront);
+    }
+
+    onShowExplanation() {
+        this.flipHTMLElement(QuizUI.quizFront);
+        this.showHtmlElement(QuizUI.quizBack);
+    }
+
+    goFullScreen() {
+        this.removeScrolling();
+        QuizUI.fullscreenModal.show();
+
+        this.fullscreenNotification(true);
+    }
+
+    exitFullScreen() {
+        this.addScrolling();
+        QuizUI.fullscreenModal.hide();
+
+        this.fullscreenNotification(false);
+
+        //this.uiBinder.unbind();
     }
 }
 
@@ -113,10 +194,10 @@ class QuizzesConfig {
 
 class QuizViewModel {
     private quizViewModel: QuizViewModel;
-    private uiBinder : UIBinder;
+    private quizUI: QuizUI;
 
     private quizzes: Quiz[] = [];
-    private currQuizIdx: number = 0;    
+    private currQuizIdx: number = 0;
 
     // UI bindings
     private isMultipleChoiceQuiz = false;
@@ -137,17 +218,17 @@ class QuizViewModel {
         this.hasExplanation = false;
     }
 
-    constructor(quizModalHtml: HTMLElement) {
+    constructor(fullscreenNotification: FullScreeNotification) {
         let viewModelObs = new ObservableViewModel(this);
         this.quizViewModel = clientViewModel<typeof this>(viewModelObs);
         this.quizViewModel.setDefaults();
 
-        this.uiBinder = new UIBinder(viewModelObs).bindTo(quizModalHtml);
+        this.quizUI = new QuizUI(viewModelObs, fullscreenNotification);
     }
 
     startQuizzes() {
-        QuizUI.fullscreenModal.show();
-        this.onShowStatement();
+        this.quizUI.goFullScreen();
+        this.quizUI.onShowStatement();
 
         //@ts-ignore
         Prism.highlightAll();
@@ -158,7 +239,6 @@ class QuizViewModel {
 
         if (newIdx != this.currQuizIdx) {
             this.currQuizIdx = newIdx;
-            this.quizViewModel.isQuizVerified = false;
             this.updateStateOnNewQuiz();
 
             //@ts-ignore
@@ -167,63 +247,45 @@ class QuizViewModel {
     };
 
     onFinishQuiz(): any {
-        QuizUI.fullscreenModal.hide();
-        this.uiBinder.unbind();
-
+        this.quizUI.exitFullScreen();
     }
 
     onCheckQuiz(): any {
-        let quiz = this.getCurrentQuizData();
-
-        QuizUI.retrieveAnswers().forEach(answer => {
-            let currAnswId = answer.getAttribute('av-id');
-            let isCorrectAnswer = 'correct' in quiz && (quiz.correct.find((answ: any) => answ == currAnswId) != undefined);
-
-            if (isCorrectAnswer) {
-                answer.classList.add("btn-success");
-            } else
-                if (answer.classList.contains('active')) {
-                    answer.classList.add("btn-danger");
-                }
-
-            answer.classList.remove('btn-light');
-            answer.classList.remove('active');
-            answer.classList.add('disabled');
-        });
-
+        this.quizUI.onHighlightAnswers(this.getCurrentQuizData())
         this.quizViewModel.isQuizVerified = true;
     }
 
     onSelectedAnswer(event: any): any {
+        let hitHtmlElement = (event.target as HTMLElement);
+        // Bubble up the hierarchy until we find the button just in case the 
+        // triggering element is something not a button
+        while (hitHtmlElement && hitHtmlElement.nodeName != 'BUTTON') {        
+            hitHtmlElement = hitHtmlElement.parentElement;
+        }
+        
         let quiz = this.getCurrentQuizData();
-        let clickedAnswerId = event.target.getAttribute('av-id');
+        let clickedAnswerId = hitHtmlElement.getAttribute('av-id');
 
         if (!this.isMultipleChoiceQuiz) {
-            QuizUI.retrieveAnswers().forEach(answer => {
-                let currAnswId = answer.getAttribute('av-id');
-                if (currAnswId != clickedAnswerId) {
-                    answer.classList.remove('active');
-                    quiz.answers.find((answ: any) => answ.id == currAnswId).selected = false;
-                }
-            });
+            quiz.answers.forEach((answ: any) => answ.selected = (answ.id == clickedAnswerId));
+            this.quizUI.onUpdateSelectedAnswers(quiz);
         }
 
         let selectedAnswer = quiz.answers.find((answer: any) => answer.id == clickedAnswerId);
 
         if (selectedAnswer) {
-            selectedAnswer.selected = event.target.classList.contains("active");
-            this.quizViewModel.hasSelectedAnswers = quiz.answers.find((ans: any) => ans.selected) != undefined;
+            selectedAnswer.selected = hitHtmlElement.classList.contains("active");
         }
+
+        this.quizViewModel.hasSelectedAnswers = quiz.answers.find((ans: any) => ans.selected) != undefined;
     }
 
     onShowExplanation(): any {
-        QuizUI.flipHTMLElement(QuizUI.quizFront);
-        QuizUI.showHtmlElement(QuizUI.quizBack);
+        this.quizUI.onShowExplanation();
     }
 
     onShowStatement(): any {
-        QuizUI.flipHTMLElement(QuizUI.quizBack);
-        QuizUI.showHtmlElement(QuizUI.quizFront);
+        this.quizUI.onShowStatement();
     }
 
     public getCurrentQuizIndex(): number {
@@ -237,39 +299,32 @@ class QuizViewModel {
     public setQuizzes(quizzes: Quiz[]) {
         this.quizViewModel.setDefaults();
 
-        this.quizzes = quizzes;
+        this.quizzes = [...quizzes];
         this.updateStateOnNewQuiz();
     }
 
     private updateStateOnNewQuiz() {
+        let quiz = this.getCurrentQuizData();
+
         this.quizViewModel.hasMoreQuizzes = this.currQuizIdx < (this.quizzes.length - 1);
         this.quizViewModel.hasExplanation = 'explanation' in this.getCurrentQuizData();
         this.quizViewModel.quizProgress = 100 * (this.quizzes.length ? (1 + this.currQuizIdx) / this.quizzes.length : 0) + "%";
-
-        this.fillQuizData();
-    }
-
-    private fillQuizData() {
-        let quiz = this.getCurrentQuizData();
-        QuizUI.quizBodyFront.replaceChild(DOMmanipulator.fromTemplate(MustacheIt.render(quizTemplateFront, quiz)), QuizUI.quizBodyFront.firstChild);
         this.quizViewModel.isMultipleChoiceQuiz = 'correct' in quiz && quiz.correct.length > 1;
+        this.quizViewModel.isQuizVerified = false;        
+        this.quizViewModel.hasSelectedAnswers = false;
 
-        if ('explanation' in quiz) {
-            QuizUI.quizBodyBack.replaceChild(DOMmanipulator.fromTemplate(MustacheIt.render(quizTemplateBack, quiz)), QuizUI.quizBodyBack.firstChild);
-        }
-
-        new UIBinder(new ObservableViewModel(this)).bindTo(QuizUI.quizBodyFront);
+        this.quizUI.onNewQuiz(quiz);
     }
 }
 
 export class Quizzes {
     private quizConfigs: Record<string, QuizzesConfig> = {};
     private quizVM: QuizViewModel
-    private readonly QUIZZES_URL = "";
 
-    constructor() {
-        QuizUI.initialize();
-        this.quizVM = new QuizViewModel(QuizUI.quizModalHTML);
+    private readonly QUIZZES_URL = window.location.hostname == "localhost" ? "wordpress/quizzes/" : "../wp-content/uploads/2023/quizzes/";    
+
+    constructor(fullscreenNotification: FullScreeNotification) {
+        this.quizVM = new QuizViewModel(fullscreenNotification);
 
         for (let widget of document.querySelectorAll("[class*=av-quiz]")) {
             widget.addEventListener('click', () => {

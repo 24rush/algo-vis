@@ -7,9 +7,11 @@ require('@popperjs/core')
 
 Localize.setLang(LangEnum.Ro);
 
+export type FullScreeNotification = (isFullScreen: boolean) => void;
+
 new UIHooks(() => {
-    new Snippets();
-    new Quizzes();
+    let snippets = new Snippets();
+    new Quizzes(snippets.onFullScreenEvent);
 });
 
 let addCss = (fileName: string) => {
