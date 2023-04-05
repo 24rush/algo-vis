@@ -6,7 +6,7 @@ export interface CodeRendererEventNotifier {
 }
 
 export class CodeRenderer {
-    private readonly MaxCodeLines = 20;
+    private readonly MaxCodeLines = 30;
     private readonly MinCodeLines = 5; // Fill with empty lines 
 
     private editor: any;
@@ -28,18 +28,18 @@ export class CodeRenderer {
         };
 
         this.editor = ace.edit(codeEditorHtmlElement.id);
-        this.editor.setFontSize(14);
+        this.editor.setFontSize(13.5);
         this.editor.setShowPrintMargin(false);
         this.editor.setAutoScrollEditorIntoView(true);
         this.editor.setReadOnly(isReadonly);
-        this.editor.setOption('maxLines', Math.max(this.MaxCodeLines, codeLines.length))
+        this.editor.setOption('maxLines', Math.min(this.MaxCodeLines, codeLines.length))
 
         this.editor.session.setMode("ace/mode/javascript");
         this.editor.session.setValue(convert(sanitizedCode));
 
         this.editor.setOptions({
             useWorker: false,
-            wrap: true
+            wrap: 80
         });
 
         this.editor.on('change', () => {

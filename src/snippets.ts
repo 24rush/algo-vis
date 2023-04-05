@@ -204,7 +204,7 @@ export class Snippets {
                 // Don't create the Splitter if we have explicit verticalView or we are in portrait
                 let splitWidget: any = undefined;
                 let splitSizes = {
-                    sizes: [60, 40],
+                    sizes: [55, 45],
                 };
 
                 if (!Snippets.snippetsUI.orientationWatcher.matches && !childWidget.classList.contains('verticalView'))
