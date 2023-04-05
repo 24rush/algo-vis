@@ -16,7 +16,6 @@ export enum ParentSide {
 }
 
 export class NodeBase {
-    protected graph: ObservableGraph = undefined;
 
     public label: string = "";
     public id: string = "";
@@ -26,31 +25,48 @@ export class NodeBase {
         this.id = value.toString();
     }
 
+    toNodeBase() : NodeBase {
+        let nodeBase = new NodeBase(this.value);
+        nodeBase.id = this.id;
+        nodeBase.label = this.label;
+
+        return nodeBase;
+    }
+}
+
+export class ParentRefNode extends NodeBase {
+    protected graph: ObservableGraph = undefined;
+
     setParentGraph(graph: ObservableGraph) {
         this.graph = graph;
     }
 }
 
 export class ObservableGraph extends BaseObservableType<GraphVariableChangeCbk> {
-
     public __isGraphType__: boolean = true;
     public id: number = 0;
     
     private static id_counter: number = 0;
-
-    constructor(protected type: GraphType) {
+    
+    constructor(protected type: GraphType = GraphType.UNDIRECTED) {
         super();
 
-        this.id = ObservableGraph.id_counter++;
+        this.id = ObservableGraph.id_counter++;        
     }
 
-    copyFrom(other: ObservableGraph) {
+    copyFrom(other: ObservableGraph) : ObservableGraph {
         this.__isGraphType__ = true;
 
         this.id = other.id;        
         this.type = other.type;
         this.name = other.name;
+
+        return this;
     }
+
+    toObservableGraph() : ObservableGraph {        
+        return (new ObservableGraph()).copyFrom(this);        
+    }    
 
     empty() { throw "Not implemented"; }
     isEmpty(): boolean { throw "Not implemented"; }
@@ -110,12 +126,11 @@ export class ObservableGraph extends BaseObservableType<GraphVariableChangeCbk> 
 
 export class GraphVariableChangeCbk {
     onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any) { console.log("Method not implemented."); };
-
-    onAccessNode(_observable: ObservableGraph, _node: NodeBase) { console.log("Method onAccessNode not implemented."); }
+    onAccessNode(_observable: ObservableGraph, _node : NodeBase) { console.log("Method onAccessNode not implemented."); }
 
     onAddNode(_observable: ObservableGraph, _vertex: NodeBase, _parentValue?: NodeBase, _side?: ParentSide) { console.log("Method onAddVertex not implemented."); }
-    onRemoveNode(_observable: ObservableGraph, _vertex: NodeBase) { console.log("Method onRemoveVertex not implemented."); }
+    onRemoveNode(_observable: ObservableGraph, _node : NodeBase) { console.log("Method onRemoveVertex not implemented."); }
 
-    onAddEdge(_observable: ObservableGraph, _source: NodeBase, _destination: NodeBase) { console.log("Method onAddEdge not implemented."); };
-    onRemoveEdge(_observable: ObservableGraph, _source: NodeBase, _destination: NodeBase) { console.log("Method onRemoveEdge not implemented."); };
+    onAddEdge(_observable: ObservableGraph, _sourceNode: NodeBase, _destNode: NodeBase) { console.log("Method onAddEdge not implemented."); };
+    onRemoveEdge(_observable: ObservableGraph, _sourceNode: NodeBase, _destNode: NodeBase) { console.log("Method onRemoveEdge not implemented."); };
 }

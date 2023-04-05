@@ -104,7 +104,7 @@ export class Scene {
     private msgBoxWidget: HTMLElement = undefined;
     private userMsgBox: bootstrap.Toast = undefined;
 
-    private autoReplayInterval = 4400;
+    private autoReplayInterval = 400;
     private autoplayTimer: NodeJS.Timer = undefined;
 
     private timeoutExpiredOnce: boolean = false;
@@ -189,7 +189,7 @@ export class Scene {
             if (avViewModel.selectedSnippetIdx < snippets.length) {
                 onSnippetSelected(snippets[avViewModel.selectedSnippetIdx].id);
             }
-        }
+        };
 
         this.viewModel.onSnippetSelected = (event: any) => {
             let snippetId = Number.parseInt(event.getAttribute('av-id'));
@@ -443,10 +443,6 @@ export class Scene {
             },
             onExecutionFinished(): void {
                 avViewModel.isExecutionCompleted = self.operationRecorder.isReplayFinished();
-
-                if (isAutoPlay) {
-                    self.viewModel.onAutoplayToggled();
-                }
             }
         });
 

@@ -147,7 +147,9 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
 
     // Graph
     onAccessNode(observable: ObservableGraph, node: NodeBase): void {
-        GraphObjectOperationPayload.execute(OperationType.GRAPH_ACCESS_NODE, observable, node.value);
+        let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
+
+        GraphObjectOperationPayload.execute(OperationType.GRAPH_ACCESS_NODE, runtimeObservable, node.value);
     }
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);

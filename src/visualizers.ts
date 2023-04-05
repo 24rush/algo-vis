@@ -64,8 +64,8 @@ class VisualizerViewModel {
 
 export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
-        '<div class="var-box" style="display: flex; align-items: baseline;" av-bind-onclick="onVarNameClicked"> \
-        <span id="var-name" class="var-name" style="text-align: right; min-width: 20%;">{{name}}:</span> \
+        '<div class="var-box" style="display: flex; align-items: baseline;"> \
+        <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked" style="text-align: right; min-width: 20%;">{{name}}:</span> \
     </div> \
     ';
 
@@ -112,7 +112,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         <span id="var-value" style="vertical-align:middle;"></span> \
     </span>';
 
-    protected readonly templateGraph = '<div style="display: table-cell; margin-left:3px; margin-top: 3px; resize:vertical; overflow:auto; width: {{width}}px; height:{{height}}px;"> \
+    protected readonly templateGraph = '<div style="display: block;  resize:vertical; padding: 3px; width: 100%; height:{{height}}px;"> \
     </div>';
 
     protected readonly height: number = 30;
@@ -314,6 +314,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     private redraw(redrawType: DrawnElement) {
+        this.uiBinder.unbindFrom(this.htmlElement);
         this.htmlElement.removeChild(this.htmlElement.lastChild as HTMLElement);
 
         this.keyValueElements = {};
@@ -485,8 +486,9 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 }
             ],
 
-            zoomingEnabled: false,
-            userZoomingEnabled: false
+            zoomingEnabled: true,
+            userZoomingEnabled: true,
+            wheelSensitivity: 0.1
         });
     }
 
@@ -698,12 +700,17 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 animationEasing: 'ease-in-out-sine',
                 fit: true,
                 transform: (node: any, pos: any) => {
-                    pos.y += 20;
+                    //pos.y += 20;
 
-                    let treeNode = observable.findNodeWithId(node.id());
+                    let treeNode = (observable as BinaryTree).findNodeWithId(node.id());
+                    if (!treeNode) {
+                        console.log('No node with id', node.id());
+                        return;
+                    }
+
                     let isOnlyChild = treeNode.isOnlyChild();
 
-                    let offsetComputed = 40;
+                    let offsetComputed = 0; // 40
                     if (!treeNode.isRoot()) {
                         let parent = this.graphVis.nodes().filter(`[id="${treeNode.parent.id}"]`);
                         let parentPos = parent.position();
@@ -733,37 +740,49 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
     }
 
-    onAccessNode(_observable: ObservableGraph, node: NodeBase): void {
-        let graphNode = this.graphVis.filter(`[id = "${node.id}"]`);
-        /*
-                graphNode.animate({
-                    style: { opacity: 1},
-                    duration: 100,
-                    easing: 'ease-in-sine'
-                }).delay(100).animate({
-                    style: { opacity: 0, 'background-color': 'black'},
-                    duration: 100,
-                    easing: 'ease-in-sine'
-                }).delay(0).animate({
-                    style: { opacity: 1, 'background-color': '#0d6efd'},
-                    duration: 100,
-                    easing: 'ease-in-sine'
-                });*/
+    onSetGraphEvent(observable: ObservableGraph, _value: any, _newValue: any): void {
+        console.log(observable, _value, _newValue)
     }
 
-    onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
+    onAccessNode(_observable: ObservableGraph, node: NodeBase): void {
+        let graphNode = this.graphVis.filter(`[id = "${node.id}"]`);
+
+        let duration = 10;
+        for (let i = 0; i < 6; i++)
+            graphNode.animate({
+                style: { opacity: 1 },
+                duration: duration,
+                easing: 'ease-in-sine'
+            }).delay(duration).animate({
+                style: { opacity: 0, 'background-color': 'black' },
+                duration: duration,
+                easing: 'ease-in-sine'
+            }).delay(0).animate({
+                style: { opacity: 1, 'background-color': 'red' },
+                duration: duration,
+                easing: 'ease-in-sine'
+            });
+/*
+            graphNode.animate({
+                style: { opacity: 1, 'background-color': '#0d6efd' },
+                duration: duration,
+                easing: 'ease-in-sine'
+            });*/
+    }
+
+    onAddEdge(observable: ObservableGraph, sourceNode: NodeBase, destNode: NodeBase): void {
         this.ensureGraphDrawn();
 
         this.graphVis.add(
             [
                 {
-                    data: { id: source.id }
+                    data: { id: sourceNode.id }
                 },
                 {
-                    data: { id: destination.id }
+                    data: { id: destNode.id }
                 },
                 {
-                    data: { id: source.id + '-' + destination.id, source: source.id, target: destination.id }
+                    data: { id: sourceNode.id + '-' + destNode.id, source: sourceNode.id, target: destNode.id }
                 }
             ]
         );
@@ -781,19 +800,19 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         this.ensureGraphDrawn();
         this.graphVis.remove(this.graphVis.filter(`[id = "${node.id}"]`));
     }
-    onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
+    onRemoveEdge(observable: ObservableGraph, sourceNode: NodeBase, destNode: NodeBase): void {
         this.ensureGraphDrawn();
 
         this.graphVis.remove(
             [
                 {
-                    data: { id: source.id }
+                    data: { id: sourceNode.id }
                 },
                 {
-                    data: { id: destination.id }
+                    data: { id: destNode.id }
                 },
                 {
-                    data: { id: source.id + '-' + destination.id, source: source.id, target: destination.id }
+                    data: { id: sourceNode.id + '-' + destNode.id, source: sourceNode.id, target: destNode.id }
                 }
             ]
         );

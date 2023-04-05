@@ -1,4 +1,4 @@
-import { GraphNodePayloadType, GraphType, NodeBase, ObservableGraph, ParentSide } from "./av-types-interfaces";
+import { GraphNodePayloadType, GraphType, NodeBase, ObservableGraph, ParentRefNode, ParentSide } from "./av-types-interfaces";
 
 class BinaryTreeNodeProxy {
     constructor(protected target: any) {
@@ -25,7 +25,7 @@ class BinaryTreeNodeProxy {
     }
 }
 
-export class BinaryTreeNode extends NodeBase {
+export class BinaryTreeNode extends ParentRefNode {
     left: BinaryTreeNode = undefined;
     right: BinaryTreeNode = undefined;
     parent: BinaryTreeNode = undefined;
@@ -71,13 +71,13 @@ export class BinaryTreeNode extends NodeBase {
     }
 
     onGetValue() {
-        this.graph?.onAccessNode(this);
+        //this.graph?.onAccessNode(this);
     }
 
-    isRoot() { return this.parent === undefined; }
+    isRoot() { return this.parent == undefined; }
 
-    isLeftChild() { return this.parentSide === ParentSide.LEFT; }
-    isRightChild() { return this.parentSide === ParentSide.RIGHT; }
+    isLeftChild() { return this.parentSide == ParentSide.LEFT; }
+    isRightChild() { return this.parentSide == ParentSide.RIGHT; }
 
     isOnlyChild(): boolean {
         if (!this.parent)
@@ -87,7 +87,7 @@ export class BinaryTreeNode extends NodeBase {
     }
 }
 
-export class GraphNode extends NodeBase {
+export class GraphNode extends ParentRefNode {
     private adjacents: Set<any> = new Set();
     private adjacents_nodes: Map<any, NodeBase> = new Map();
 

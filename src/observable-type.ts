@@ -29,7 +29,7 @@ export class BaseObservableType<NotifyCbkType>
     public name: string;
 
     registerObserver(notifyCbk: NotifyCbkType) {
-        if (!(notifyCbk in this.observers))
+        if (!this.observers.find((notif) => notif == notifyCbk))
             this.observers.push(notifyCbk);
     }
 

@@ -27,6 +27,7 @@ export interface CodeExecutorEvents extends MarkerFunctionEvents, UserInteractio
     onTraceMessage(message: string): void;
     onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void;
 
+    onAccessNode(observable: any, node: any) : void;
     onAddEdge(observable: any, source: any, destination: any): void;
     onAddNode(observable: any, vertex: any, parentValue: any, side: any): void;
     onRemoveNode(observable: any, vertex: any): void;
@@ -185,6 +186,9 @@ export class CodeExecutorProxy {
                     break;
                 case CodeExecutorCommands.onRemoveEdge:
                     this.codeExecutorEventHandler.onRemoveEdge(params[0], params[1], params[2]);
+                    break;
+                case CodeExecutorCommands.onAccessNode:
+                    this.codeExecutorEventHandler.onAccessNode(params[0], params[1]);
                     break;
                 case CodeExecutorCommands.onExceptionRaised:
                     this.codeExecutorEventHandler.onExceptionMessage(params[0], params[1]);

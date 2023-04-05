@@ -20,9 +20,10 @@ export interface ExecutionStatus {
 }
 
 interface GraphNotification {
+    onAccessNode(observable: ObservableGraph, node: NodeBase): void;
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void;
-    onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ParentSide): void;
-    onRemoveNode(observable: ObservableGraph, vertex: NodeBase): void;
+    onAddNode(observable: ObservableGraph, node: NodeBase, parentValue: NodeBase, side: ParentSide): void;
+    onRemoveNode(observable: ObservableGraph, node: NodeBase): void;
     onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void;
 }
 
@@ -85,7 +86,7 @@ export class NotificationEmitter implements VariableScopingNotification, Message
         let notifiers: GraphNotification[] = [];
 
         for (const notifier of this.notificationObservers) {
-            if ("onAddEdge" in notifier || "onAddNode" in notifier || "onRemoveNode" in notifier || "onRemoveEdge" in notifier) {
+            if ("onAccessNode" in notifier || "onAddEdge" in notifier || "onAddNode" in notifier || "onRemoveNode" in notifier || "onRemoveEdge" in notifier) {
                 notifiers.push(notifier as GraphNotification);
             }
         }
@@ -154,6 +155,12 @@ export class NotificationEmitter implements VariableScopingNotification, Message
     }
 
     // GraphNotifications
+    onAccessNode(observable: ObservableGraph, node: NodeBase) {
+        for (const notifier of this.graphNotifications()) {
+            notifier.onAccessNode(observable, node);
+        }
+    }
+
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase) {
         for (const notifier of this.graphNotifications()) {
             notifier.onAddEdge(observable, source, destination);

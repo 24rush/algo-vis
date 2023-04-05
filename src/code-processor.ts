@@ -51,9 +51,9 @@ export class CodeProcessor {
         this.code = code.replace(regex, '$&Wrap')
 
         if (injectMarkers) {
-            [status, ] = this.parseCode();
+            [status,] = this.parseCode();
         }
-            
+
         this.code = '\'use strict\'; \n\
             let BinarySearchTree = Types.BinarySearchTree; \
             let BinaryTree = Types.BinaryTree;\
@@ -81,10 +81,10 @@ export class CodeProcessor {
         this.emptyCodeLineNumbers = [];
         this.varDeclarations = {}; this.scopes = []; this.fcnReturns = [];
         this.funcDefs = {}; this.pushFuncParams = [];
-        this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];        
+        this.markLineOverrides = []; this.noMarkLineZone = []; this.explicitBraces = [];
     }
 
-    private localhostDebug : boolean = true;
+    private localhostDebug: boolean = true;
     private debugEnabled: boolean = (typeof window !== 'undefined' && window.location.hostname == 'localhost') ? this.localhostDebug : false;
 
     dumpDebugInfo() {
@@ -184,6 +184,12 @@ export class CodeProcessor {
 
                         //this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item.body.range[0] + 1, item.body.range[1] - 1));
                         this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item);
+                        break;
+                    }
+                case "BreakStatement":
+                    {
+                        // just end local scope
+                        this.scopes.push(new ScopeDeclaration('local', -1, item.range[0]));
                         break;
                     }
                 case "ReturnStatement":
@@ -340,7 +346,7 @@ export class CodeProcessor {
 
                         this.pushFuncParams.push(new PushFuncParams(item.range[0], item.range[1],
                             RuntimeScopeMonitor.scopeNameToFunctionScope(calledFunc),
-                            varToParamPairs));                        
+                            varToParamPairs));
                     }
 
                     if (item.arguments && item.arguments.length) {
@@ -469,6 +475,9 @@ export class CodeProcessor {
 
         // Scope start setting
         for (const scope of this.scopes) {
+            if (scope.startOfDefinitionIndex == -1) // break statements dont set begin index
+                continue;
+
             let injectedCode = `;startScope('${scope.name}');`;
             addCodeInjection(scope.startOfDefinitionIndex, injectedCode);
         };
@@ -490,8 +499,15 @@ export class CodeProcessor {
         };
 
         // Scope end setting
-        for (const scope of this.scopes) {
-            let injectedCode = `; endScope('${scope.name}');`;
+        let sortedScopes = this.scopes.sort((a: ScopeDeclaration, b: ScopeDeclaration) => {
+            if (a.endOfDefinitionIndex != b.endOfDefinitionIndex)
+                return a.endOfDefinitionIndex - b.endOfDefinitionIndex;
+
+            return b.name.charCodeAt(0) - a.name.charCodeAt(0);
+        });
+
+        for (const scope of sortedScopes) {
+            let injectedCode = `;endScope('${scope.name}');`;
             addCodeInjection(scope.endOfDefinitionIndex, injectedCode);
         };
 

@@ -1,5 +1,5 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphType, ParentSide, GraphVariableChangeCbk, ObservableGraph } from './av-types-interfaces'
+import { NodeBase, GraphType, ParentSide, ObservableGraph, GraphVariableChangeCbk } from './av-types-interfaces'
 import { MarkerFunctionEvents, UserInteractionEvents } from "./code-executor-proxy";
 
 export enum UserInteractionType {
@@ -50,6 +50,7 @@ export enum CodeExecutorCommands {
     onAddEdge,
     onRemoveEdge,
     onRemoveNode,
+    onAccessNode,
 
     onExceptionRaised,
     onConsoleLog
@@ -102,35 +103,38 @@ self.onmessage = (event) => {
 };
 
 export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvents, UserInteractionEvents {
-    // Events sent to CodeExecutorProxy
+    // Events sent to CodeExecutorProxy from the eval thread
     onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any): void {
         throw new Error("Method not implemented.");
     }
-    onAccessNode(_observable: ObservableGraph, _node: NodeBase): void {
-        throw new Error("Method not implemented.");
+    onAccessNode(observable: ObservableGraph, node: NodeBase): void {
+        self.postMessage({
+            cmd: CodeExecutorCommands.onAccessNode,
+            params: [observable.toObservableGraph(), node.toNodeBase()]
+        });
     }
-    onAddNode(_observable: ObservableGraph, _vertex: NodeBase, _parentValue?: NodeBase, _side?: ParentSide): void {
+    onAddNode(observable: ObservableGraph, node: NodeBase, parentValue?: NodeBase, side?: ParentSide): void {
         self.postMessage({
             cmd: CodeExecutorCommands.onAddNode,
-            params: Array.from(arguments)
+            params: [observable.toObservableGraph(), node.toNodeBase(), parentValue?.toNodeBase(), side]
         });
     }
-    onRemoveNode(_observable: ObservableGraph, _vertex: NodeBase): void {
+    onRemoveNode(observable: ObservableGraph, node: NodeBase): void {
         self.postMessage({
             cmd: CodeExecutorCommands.onRemoveNode,
-            params: Array.from(arguments)
+            params: [observable.toObservableGraph(), node.toNodeBase()]
         });
     }
-    onAddEdge(_observable: ObservableGraph, _source: NodeBase, _destination: NodeBase): void {
+    onAddEdge(observable: ObservableGraph, sourceNode: NodeBase, destNode: NodeBase): void {
         self.postMessage({
             cmd: CodeExecutorCommands.onAddEdge,
-            params: Array.from(arguments)
+            params: [observable.toObservableGraph(), sourceNode.toNodeBase(), destNode.toNodeBase()]
         });
     }
-    onRemoveEdge(_observable: ObservableGraph, _source: NodeBase, _destination: NodeBase): void {
+    onRemoveEdge(observable: ObservableGraph, sourceNode: NodeBase, destNode: NodeBase): void {
         self.postMessage({
             cmd: CodeExecutorCommands.onRemoveEdge,
-            params: Array.from(arguments)
+            params: [observable.toObservableGraph(), sourceNode.toNodeBase(), destNode.toNodeBase()]
         });
     }
 
@@ -284,20 +288,24 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
     }
 
     setVar(varname: string, object: any, varsource: string) {
-        self.postMessage({
-            cmd: CodeExecutorCommands.setVar,
-            params: Array.from(arguments)
-        });
-
         if (object && typeof object == 'object' && '__isGraphType__' in object) {
-            let graph = object as ObservableGraph;
             let codex = codeExec();
+            object.registerObserver(codex);
 
-            graph.registerObserver(codex);
+            self.postMessage({
+                cmd: CodeExecutorCommands.setVar,
+                params: [varname, object.toObservableGraph(), varsource]
+            });
+
+        } else {
+            self.postMessage({
+                cmd: CodeExecutorCommands.setVar,
+                params: Array.from(arguments)
+            });
         }
     }
 
-    funcWrap(func: any) : any {        
+    funcWrap(func: any): any {
         //@ts-ignore
         return (arguments as unknown)[0].f();
     }
@@ -306,12 +314,12 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
         return codeExec().userInteractionRequest(UserInteractionType.Prompt, title, defValue) as string;
     }
 
-    alertWrap(title?: string) {
-        codeExec().userInteractionRequest(UserInteractionType.Alert, title);
+    alertWrap() {
+        codeExec().userInteractionRequest(UserInteractionType.Alert, [...arguments].join(' '));
     }
 
-    confirmWrap(title?: string): boolean {
-        return codeExec().userInteractionRequest(UserInteractionType.Confirm, title) as boolean;
+    confirmWrap(): boolean {
+        return codeExec().userInteractionRequest(UserInteractionType.Confirm, [...arguments].join(' ')) as boolean;
     }
 
     private hookConsoleLog(prevFcn: any, hook: boolean = true): any {

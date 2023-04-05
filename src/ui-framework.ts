@@ -218,13 +218,33 @@ export class UIBinder {
             if (!propertyBound) continue;
 
             if (propertyBound in this.viewModel) {
-                htmlElement.addEventListener('click', (this.viewModel as any)[propertyBound].bind(this.viewModel));
+                if (!((propertyBound + '-bind') in this.viewModel)) {
+                    // create function prototype for the bind version of the function so that we can remove it later
+                    (this.viewModel as any).prototype[propertyBound + '-bind'] = (this.viewModel as any)[propertyBound].bind(this.viewModel);
+                }
+
+                htmlElement.addEventListener('click', (this.viewModel as any).prototype[propertyBound + '-bind']);
             } else {
                 throw "Property '" + propertyBound + "' does not exist on view model";
             }
         }
 
         return this;
+    }
+
+    public unbindFrom(widget: Element) {
+        // Search for av-bind-onclick
+        for (let htmlElement of this.getElementsWithAttribute(widget, "av-bind-onclick")) {
+            let propertyBound = htmlElement.getAttribute('av-bind-onclick');
+
+            if (!propertyBound) continue;
+
+            if (propertyBound in this.viewModel) {
+                htmlElement.removeEventListener('click', (this.viewModel as any).prototype[propertyBound + '-bind']);
+            } else {
+                throw "Property '" + propertyBound + "' does not exist on view model";
+            }
+        }
     }
 
     private addPropertyBinding(triggerProperty: string, bindingContext: BindingContext): BindingContext {
