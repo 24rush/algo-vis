@@ -13,6 +13,11 @@
   width: 100% !important;
 }
 
+.quizContainer {
+  width: 50%;
+  margin: auto;
+}
+
 @media (orientation: portrait) {
   .algovis {
     max-width: 100% !important;
@@ -22,16 +27,16 @@
     justify-content: center;
     margin: 1em 0 1em;
   }
+
+  .quizContainer {
+    width: 90%;
+    margin: auto;
+  }
 }
 
 .codeEditor {
   /*height: 100% !important;*/
   max-width: 100% !important;
-}
-
-.quizContainer {
-  width: 50%;
-  margin: auto;
 }
 
 .commentsPopover {
@@ -136,7 +141,7 @@
 }
 
 .blink {
-  animation: blinker 0.2s linear 3;
+  animation: blinker 0.15s linear 3;
 }
 
 @keyframes blinker {

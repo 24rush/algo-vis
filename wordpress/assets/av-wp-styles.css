@@ -152,7 +152,7 @@ highlight {
 
 .counters {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: center;
     margin-bottom: 0.75em;
 }
@@ -177,6 +177,16 @@ highlight {
     font-size: 15px!important;
 }
 
+@media (max-width: 1250px) {
+    .av-ez-toc-container {
+        display: none!important;
+    }
+}
+
 .av-ez-toc-container a:visited {
     color: #444!important;
+}
+
+.counters a:visited {
+    color: #000!important;
 }

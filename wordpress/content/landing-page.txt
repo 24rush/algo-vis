@@ -1,0 +1,83 @@
+de la 0 la 1 în programare pe fast-forward🚀
+
+<div class="text-center">
+<p class="lead text-muted" style="font-family: var(--bs-body-font-family)!important;">Vezi cum funcționează un program 'pe interior' rulând pas cu pas fiecare instrucțiune. În ritmul tău.</p>
+</div>
+
+<div class="is-content-justification-center is-layout-flex wp-container-1 wp-block-buttons py-3 my-3">
+<a href="/ce-este-programarea" class="btn btn-outline-primary" tabindex="-1" role="button" aria-disabled="true">Mergi la prima lecție</a>
+<div onclick="SimpleTour()"><a class="btn btn-outline-secondary btn px-4">Fă un tur al site-ului</a></div>
+</div>
+
+<div class="algovis" av-autoplay>
+let numarGhicit = 0;
+let nrIncercari = 1;
+let stanga = 0, dreapta = 30;
+
+let visuals = new BinarySearchTree();
+{
+    // vizualizare arbore
+    let numere = [15, 7, 3, 1, 2, 5, 4, 6, 11, 9, 8, 10, 13, 12, 14, 23, 19, 17, 16, 18, 21, 20, 22, 27, 25, 24, 26, 29, 28, 30];
+    for (let nr of numere) { visuals.add(nr); }
+}
+  
+alert(`Gândește-te la un număr mai mic decât 30 și tine-l minte. O să iți ghicesc numărul din maxim 5 încercări.
+
+Tu trebuie doar să îmi spui cum este numărul ghicit de mine față de al tău:
+  1 - dacă numărul tău este mai mic decât numărul meu
+  2 - dacă numărul tău este mai mare decât numărul meu
+
+  3 - dacă numerele sunt egale`);
+
+while (stanga <= dreapta) {
+    numarGhicit = Math.ceil((stanga + dreapta) / 2);      
+    visuals.accessValue(numarGhicit);
+
+    let raspuns = prompt(`Încercarea ${nrIncercari}
+    Răspunde tastând următoarele cifre:
+    1 - dacă numărul tău este mai mic decât ${numarGhicit}
+    2 - dacă numărul tău este mai mare decât ${numarGhicit}
+
+    3 - dacă numărul tău este ${numarGhicit}`);
+  
+    if (raspuns == '1') {
+        dreapta = numarGhicit - 1;
+    }
+    else if (raspuns == '2') {
+        stanga = numarGhicit + 1;
+    }
+    else if (raspuns == '3') {
+        alert(`Numărul tău a fost ${numarGhicit} și l-am ghicit din ${nrIncercari} încercări`)
+        break;
+    }
+  
+    nrIncercari++;
+}
+</div>
+
+[stg_kef]
+
+<div class="counters">
+  <div style="display: flex; flex-direction: row; justify-content: center;margin-bottom: 1em; align-items: center;">
+    <i class="bi bi-instagram"></i>
+    <a style="padding-left: 4px; padding-right: 14px;font-size: 0.75em;" href="https://www.instagram.com/primiipasi.info/">primiipasi.info</a></span>
+  </div>
+
+  <div style="display: flex; flex-direction: row;">
+    <div class="counter-container">
+      <i class="bi bi-mortarboard-fill"></i>
+      <div class="counter" data-target="29"></div>
+      <span class="counter-text">secvențe explicate</span>
+    </div>
+    <div class="counter-container">
+      <i class="bi bi-patch-question-fill"></i>
+      <div class="counter" data-target="62"></div>
+      <span class="counter-text">quizzuri</span>
+    </div>
+    <div class="counter-container">
+      <i class="bi bi-hammer"></i>
+      <div class="counter" data-target="36"></div>
+      <span class="counter-text">exerciții rezolvate</span>
+    </div>
+  </div>
+</div>

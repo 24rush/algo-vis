@@ -1,5 +1,5 @@
 # Start web server #
-``` npx webpack serve --live-reload ```
+``` npx webpack serve --live-reload --static assets --static wordpress/assets```
 
 # Start chrome to allow SAB #
 ``` npm run chrome-sab ```
@@ -44,12 +44,12 @@
 §    answers: ]
 
 ### Run generator from project root ###
-``` npm run gen-snippets ```
+``` npm run gen-all ```
 Output json will be in folder pointed by ```-i```
 
 ### HTML ###
 - use ```av-quiz``` class on button to launch the quiz and ```config-id``` attribute to specify the json file for the quiz data
-- use ```<av-elem type="ieditor"></av-elem>``` to open an inline code editor
+- use ```<av-elem type="ieditor" list-of-attributes-for-algovis></av-elem>``` to open an inline code editor
 - use ```<span class="av-tippie" title="Tip">*</span>```
 - use ```<span class="list-arrow"></span>``` for arrows before text
 
@@ -61,3 +61,4 @@ Output json will be in folder pointed by ```-i```
 # Snippet files and standalone editor deployment#
 - .json snippet files to ``` public_html/wp-content/uploads/2023/snips ```
 - standalone/index.html to ``` public_html/wp-content/uploads/2023/standalone/index.html ```
+- standalone/visualizer.html to ``` public_html/wp-content/uploads/2023/standalone/visualizer.html ```

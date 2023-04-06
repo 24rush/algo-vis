@@ -44,6 +44,17 @@ style.css 1565
   transition-duration: 100ms;
 }
 
+1581
+.sidebar-brand {
+  display: flex;
+  color: var(--askella-sidebar-brand-color);
+  margin: 15px;
++ margin-bottom: 10px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
 style.css 794
 a:visited {
   color: white; 

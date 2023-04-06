@@ -60,7 +60,7 @@ export class UIHooks {
                         parentElement = parentElement.parentElement;
 
                     let clonedNode = template[1].cloneNode(true);
-                    for (let attr of hookElem.attributes) {                        
+                    for (let attr of hookElem.attributes) {
                         (clonedNode.firstChild.nextSibling as HTMLElement).setAttribute(attr.name, attr.value);
                     }
 
@@ -138,9 +138,13 @@ export class UIHooks {
             };
 
             entries.forEach((entry) => {
-                document.getElementById('ez-toc-container').querySelectorAll('a').forEach((elem) => {
-                    elem.style.fontWeight = 'normal';
-                });
+                let ez_toc_container = document.getElementById('ez-toc-container');
+
+                if (ez_toc_container) {
+                    ez_toc_container.querySelectorAll('a').forEach((elem) => {
+                        elem.style.fontWeight = 'normal';
+                    });
+                }
 
                 visibilityCache[entry.target.id] = entry.isIntersecting;
 
@@ -150,8 +154,10 @@ export class UIHooks {
             })
         }, options);
 
-        for (let tocItem of document.querySelectorAll('[class=ez-toc-section]')) {
-            observer.observe(tocItem);
-        }
+        setTimeout(() => { // delay the hook in case the toc was not loaded yet
+            for (let tocItem of document.querySelectorAll('[class=ez-toc-section]')) {
+                observer.observe(tocItem);
+            }
+        }, 1000);
     }
 }

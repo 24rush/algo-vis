@@ -147,6 +147,11 @@ export class Scene {
             selectedSnippedId = app.hasAttribute('av-selected') ? parseInt(app.attributes.getNamedItem('av-selected').value) : -1;
         }
 
+        // Disable autoplay on mobile
+        //if (isAutoPlay && window.matchMedia("(orientation: portrait)").matches) {
+        //    isAutoPlay = false;
+        //}
+
         this.operationRecorder = new OperationRecorder(!isVisualisationDisabled);
         this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable);
         let layout = new Layout(variablesPanel);
