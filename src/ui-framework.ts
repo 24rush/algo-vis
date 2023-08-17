@@ -366,8 +366,16 @@ export class UIBinder {
 
                                             break;
                                         }
-                                    default:
+                                    default: {
                                         bindingContext.htmlElement.textContent = newValue ?? propEval;
+                                        
+                                        let parent = bindingContext.htmlElement.parentNode as HTMLElement;
+
+                                        // Handle expanding textareas 
+                                        if (parent && parent.classList.contains('grow-wrap')) {                                            
+                                            parent.dataset.replicatedValue = newValue ?? propEval;
+                                        }
+                                    }
                                 }
                             }
                         }

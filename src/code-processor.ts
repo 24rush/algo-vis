@@ -217,6 +217,10 @@ export class CodeProcessor {
                 case "ForOfStatement":
                 case "ForInStatement":
                     {
+                        let indexParen = this.code.lastIndexOf(')', item.body.range[0]);
+                        this.explicitBraces.push(new IndexRange(indexParen + 1, item.body.range[1]));
+
+                        this.markLineOverrides.push(indexParen + 1);                        
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
 
                         if (item.left && item.left.declarations && item.left.declarations.length > 0) {
@@ -318,6 +322,12 @@ export class CodeProcessor {
                         this.extractVariables(scopeName, item.expression);
                         break;
                     }
+                case 'BinaryExpression':
+                    {
+                        this.extractVariables(scopeName, item.left);
+                        this.extractVariables(scopeName, item.right);
+                        break;
+                    }
                 case "CallExpression": {
                     if (item.callee && item.callee.object && item.callee.object.name) {
                         let varName = item.callee.object.name;
@@ -325,7 +335,10 @@ export class CodeProcessor {
                         let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
 
                         if (vardeclaration.length) {
-                            this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
+                            // setVar should be at the end of any function call of which this call is a part of
+                            // ex. console.log(vect.shift(), 'text');                            
+                            let indexParen = this.code.indexOf(');', item.range[1]);
+                            this.createVariable(foundInScope, varName, vardeclaration[0].vartype, indexParen + 1);
                         }
                     }
                     else if (item.callee.name in this.funcDefs) { // ignoring functions not defined in program
@@ -426,7 +439,8 @@ export class CodeProcessor {
             this.varDeclarations[scopeName] = {};
 
         if (varName in this.varDeclarations[scopeName]) {
-            this.varDeclarations[scopeName][varName].endOfDefinitionIndexes.push(varDecl.endOfDefinitionIndex);
+            if (this.varDeclarations[scopeName][varName].endOfDefinitionIndexes.indexOf(varDecl.endOfDefinitionIndex) == -1)
+                this.varDeclarations[scopeName][varName].endOfDefinitionIndexes.push(varDecl.endOfDefinitionIndex);
         } else {
             this.varDeclarations[scopeName][varName] = varDecl;
         }
@@ -507,7 +521,7 @@ export class CodeProcessor {
         });
 
         for (const scope of sortedScopes) {
-            let injectedCode = `;endScope('${scope.name}');`;
+            let injectedCode = (scope.name == "global" ? "\n" : "") + `;endScope('${scope.name}');`;
             addCodeInjection(scope.endOfDefinitionIndex, injectedCode);
         };
 

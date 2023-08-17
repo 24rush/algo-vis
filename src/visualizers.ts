@@ -78,7 +78,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templatePrimitive: string =
         '<span class="var-value" style="min-width: {{width}}px;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-            <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value" style="vertical-align:baseline;"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
+                <span id="var-value" style="vertical-align:baseline;"></span>\
      </span>';
 
     protected readonly templateArray = '<span style=""> \
@@ -88,7 +88,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         {{#cols}} \
             <div style="padding:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
                 <span class="var-value" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
-                <span av-bind-style-display="{!isString : none, isString: inline}">\'</span><span id="var-value"></span><span av-bind-style-display="{!isString : none, isString: inline}">\'</span> \
+                <span id="var-value"></span>\
                 </span> \
                 <span av-bind-style-display="{isNotQueueOrStack : table, !isNotQueueOrStack : none}" style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index_c}}</span> \
             </div> \
@@ -202,7 +202,10 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         if (objectToPrint == undefined || objectToPrint == null) {
             text.textContent = (objectToPrint === undefined) ? 'undefined' : 'null';
         } else {
-            text.textContent = (this.varValueBinaryDisplay && typeof objectToPrint == 'number') ? dec2bin(objectToPrint) : objectToPrint.toString();
+            if (typeof objectToPrint == 'number') {
+                text.textContent = this.varValueBinaryDisplay ? dec2bin(objectToPrint) : objectToPrint.toString();;
+            } else
+                text.textContent = (typeof objectToPrint == 'string' && objectToPrint[0] != '\'') ? `'${objectToPrint.toString()}'` : objectToPrint.toString();
         }
 
         if (objectToPrint != null && typeof objectToPrint == 'object') {
@@ -376,7 +379,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             return arrayData.map((_v, index) => {
                 return {
                     width: this.width, height: this.height,
-                    index_c: index
+                    index_c: index,
                 };
             });
         };
@@ -762,12 +765,12 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 duration: duration,
                 easing: 'ease-in-sine'
             });
-/*
-            graphNode.animate({
-                style: { opacity: 1, 'background-color': '#0d6efd' },
-                duration: duration,
-                easing: 'ease-in-sine'
-            });*/
+        /*
+                    graphNode.animate({
+                        style: { opacity: 1, 'background-color': '#0d6efd' },
+                        duration: duration,
+                        easing: 'ease-in-sine'
+                    });*/
     }
 
     onAddEdge(observable: ObservableGraph, sourceNode: NodeBase, destNode: NodeBase): void {

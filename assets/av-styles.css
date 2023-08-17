@@ -121,7 +121,7 @@
 .var-value {
   display: table-cell;
   text-align: center;
-  vertical-align: middle;
+  /*vertical-align: middle;*/
   border: 1px solid;
   white-space: nowrap;
   font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
@@ -246,4 +246,26 @@ body#algovis {
 
 .dropdown-header-av {
   color: var(--bs-blue) !important;
+}
+
+/* Expanding textarea for consoleOutput */
+.grow-wrap {
+  display: grid;
+}
+
+.grow-wrap::after {
+  content: attr(data-replicated-value) " ";
+  white-space: pre-wrap;
+  visibility: hidden;
+}
+
+.grow-wrap > textarea {
+  resize: none;
+  overflow: hidden;
+}
+
+.grow-wrap > textarea,
+.grow-wrap::after {
+  padding: 0.5rem;  
+  grid-area: 1 / 1 / 2 / 2;
 }

@@ -435,7 +435,7 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
                     }
                 } else {
                     let varScope = this.rsMonitor.attachVarToScope(varDecl[0], varDecl[1]);
-                    if (observableScope.endsWith(varScope) && currentRuntimeScope.endsWith(varDecl[1])) {
+                    if (varScope.indexOf('!') == -1 && observableScope.endsWith(varScope) && currentRuntimeScope.endsWith(varDecl[1])) {
                         if (varName != undefined) {
                             if (observable.name == varName)
                                 runtimeObservables.push(observable);

@@ -89,7 +89,7 @@ class AVViewModel {
         this.hasInputBox = true;
         this.hasSolution = false;
 
-        this.isFunctionalityDisabled = false;
+        this.isFunctionalityDisabled = true;
         this.userInteraction = UserInteractionType.Alert;
     }
 }
@@ -104,7 +104,7 @@ export class Scene {
     private msgBoxWidget: HTMLElement = undefined;
     private userMsgBox: bootstrap.Toast = undefined;
 
-    private autoReplayInterval = 400;
+    private autoReplayInterval = 600;
     private autoplayTimer: NodeJS.Timer = undefined;
 
     private timeoutExpiredOnce: boolean = false;
@@ -133,6 +133,7 @@ export class Scene {
         let isAutoPlay = app.hasAttribute('av-autoplay');
         let isWriteable = app.hasAttribute('av-write');
         let isVisualisationDisabled = app.hasAttribute('av-novis');
+        let isAutocomplete = app.hasAttribute('av-autocomplete');
 
         let selectedSnippedId = -1;
         let isExercise = app.hasAttribute('av-exercise');
@@ -153,7 +154,7 @@ export class Scene {
         //}
 
         this.operationRecorder = new OperationRecorder(!isVisualisationDisabled);
-        this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable);
+        this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable, isAutocomplete);
         let layout = new Layout(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
@@ -285,7 +286,7 @@ export class Scene {
         }
 
         this.viewModel.onPlaybackSpeedChangedSSlow = () => {
-            this.autoReplayInterval = 400;
+            this.autoReplayInterval = 500;
         }
         this.viewModel.onPlaybackSpeedChangedSlow = () => {
             this.autoReplayInterval = 200;
@@ -452,9 +453,13 @@ export class Scene {
         });
 
         let onSourceCodeUpdated = (newCode: string, isUserGenerated: boolean) => {
+            if (newCode.trim() == '')
+                return;
+
             if (!this.timeoutExpiredOnce && isUserGenerated)
                 this.timestampTouched = Date.now();
-
+            
+            avViewModel.isFunctionalityDisabled = false;
             avViewModel.consoleOutput = "";
             layout.clearAll();
 
@@ -467,6 +472,9 @@ export class Scene {
             if (!isWriteable && !isVisualisationDisabled && this.operationRecorder.isNotStarted()) {
                 this.operationRecorder.startReplay();
             }
+
+            if (isAutoPlay) 
+                this.viewModel.onAutoplayToggled()
         };
 
         this.codeRenderer.registerEventNotifier({ onSourceCodeUpdated: onSourceCodeUpdated });
