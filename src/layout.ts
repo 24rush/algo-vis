@@ -35,7 +35,8 @@ export class Layout {
         }
         else if (uiScopeName == 'local') {
             let parentFunc = functionScopesList.pop();
-            uiScopeName = parentFunc ? Localize.str(11) + Localize.str(10) + parentFunc : Localize.str(12);
+            // Handles local scopes inside other local scopes
+            uiScopeName = (parentFunc && parentFunc != "local") ? Localize.str(11) + Localize.str(10) + parentFunc : Localize.str(12);
         } else {
             uiScopeName = Localize.str(10) + uiScopeName;
         }
@@ -44,7 +45,7 @@ export class Layout {
     }
 
     private isLocalScope(scopeName: string): boolean {
-        return scopeName.indexOf('local') != -1 && scopeName.substring(0, scopeName.lastIndexOf('.')) != "";
+        return scopeName.indexOf('local') != -1 && scopeName.substring(0, scopeName.lastIndexOf('.')) != "";    
     }
 
     private getTemplateForScope(scopeName: string): string {

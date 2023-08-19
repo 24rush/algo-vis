@@ -11,11 +11,11 @@ class IndexRange {
     constructor(public s: number, public e: number) { }
 }
 
-class VariableDeclaration {
+export class VariableDeclaration {
     public endOfDefinitionIndexes: number[] = [];
     public source: string = "";
 
-    constructor(public declarationScopeName: string, public name: string, public vartype: VarType, public endOfDefinitionIndex: number) {
+    constructor(public declarationScopeName: string, public name: string, public vartype: VarType, public endOfDefinitionIndex: number, public isBinary: boolean) {
         this.endOfDefinitionIndexes = [endOfDefinitionIndex];
     }
 }
@@ -113,7 +113,9 @@ export class CodeProcessor {
                 varScope = scopeName.substring(0, scopeName.indexOf('.'));
             }
 
-            let varDecl = this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite);
+            let isBinary = decl.init && decl.init.raw && decl.init.raw.includes('0b');
+
+            let varDecl = this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite, isBinary);
 
             if (decl.init) {
                 switch (decl.init.type) {
@@ -179,11 +181,11 @@ export class CodeProcessor {
                             }
 
                             this.funcDefs[funcName].push(param.name);
-                            this.createVariable(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.let, item.body.range[0] + 1);
+                            this.createVariable(scopeName + '.' + RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.let, item.body.range[0] + 1);
                         }
 
                         //this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item.body.range[0] + 1, item.body.range[1] - 1));
-                        this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item);
+                        this.extractVariables(scopeName + '.' + RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), item);
                         break;
                     }
                 case "BreakStatement":
@@ -220,7 +222,7 @@ export class CodeProcessor {
                         let indexParen = this.code.lastIndexOf(')', item.body.range[0]);
                         this.explicitBraces.push(new IndexRange(indexParen + 1, item.body.range[1]));
 
-                        this.markLineOverrides.push(indexParen + 1);                        
+                        this.markLineOverrides.push(indexParen + 1);
                         this.scopes.push(new ScopeDeclaration("local", item.range[0], item.range[1]));
 
                         if (item.left && item.left.declarations && item.left.declarations.length > 0) {
@@ -337,7 +339,7 @@ export class CodeProcessor {
                         if (vardeclaration.length) {
                             // setVar should be at the end of any function call of which this call is a part of
                             // ex. console.log(vect.shift(), 'text');                            
-                            let indexParen = this.code.indexOf(');', item.range[1]);
+                            let indexParen = this.code.indexOf(');', item.range[0]);
                             this.createVariable(foundInScope, varName, vardeclaration[0].vartype, indexParen + 1);
                         }
                     }
@@ -412,7 +414,7 @@ export class CodeProcessor {
                     let foundInScope = scopeName;
 
                     if (varName == "this") {
-                        varDeclarations.push(new VariableDeclaration(scopeName, varName, VarType.let, -1));
+                        varDeclarations.push(new VariableDeclaration(scopeName, varName, VarType.let, -1, false));
                     }
                     else {
                         [foundInScope, varDeclarations] = this.searchScopeAndParent(scopeName, varName);
@@ -432,8 +434,8 @@ export class CodeProcessor {
         }
     }
 
-    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number): VariableDeclaration {
-        let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex);
+    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number, isBinary: boolean = false): VariableDeclaration {
+        let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex, isBinary);
 
         if (!(scopeName in this.varDeclarations))
             this.varDeclarations[scopeName] = {};
@@ -660,20 +662,20 @@ export class CodeProcessor {
     private searchScopeAndParent(startScope: string, varName: string): [string, VariableDeclaration[]] {
         let foundInScope = startScope;
 
-        let vardeclaration = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
-        if (vardeclaration.length == 0) {
+        let vardeclarations = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
+        if (vardeclarations.length == 0) {
             foundInScope = startScope.split(".local").join("");
-            vardeclaration = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
+            vardeclarations = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
 
-            if (vardeclaration.length == 0) {
+            if (vardeclarations.length == 0) {
                 foundInScope = 'global';
-                vardeclaration = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
+                vardeclarations = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
             }
         } else {
-            foundInScope = vardeclaration[0].declarationScopeName;
+            foundInScope = vardeclarations[0].declarationScopeName;
         }
 
-        return [foundInScope, vardeclaration];
+        return [foundInScope, vardeclarations];
     };
 
     public searchVarInAllScopes(varName: string): VariableDeclaration[] {
@@ -717,22 +719,21 @@ export class CodeProcessor {
             // and then up the chain till it reaches the function
             scopeName = foundScopes.join('.');
 
-            let varsInScope = this.varDeclarations[scopeName];
-            if (varsInScope == undefined || Object.keys(varsInScope).length == 0)
-                return foundVars;
+            for (let varDeclScope of Object.entries(this.varDeclarations)) {
+                if (varDeclScope[0].endsWith(scopeName)) {
+                    let varsInScope = this.varDeclarations[varDeclScope[0]];
+                    for (let variable of Object.values(varsInScope)) {                        
+                        if (varType != undefined && variable.vartype != varType)
+                            continue;
 
-            for (let variableName of Object.keys(varsInScope)) {
-                let variable = this.varDeclarations[scopeName][variableName];
+                        if (varName != undefined && variable.name != varName)
+                            continue;
 
-                if (varType != undefined && variable.vartype != varType)
-                    continue;
-
-                if (varName != undefined && variable.name != varName)
-                    continue;
-
-                foundVars.push(variable);
-                if (varName != undefined)
-                    break;
+                        foundVars.push(variable);
+                        if (varName != undefined)
+                            break;
+                    }
+                }
             }
 
             foundScopes.pop();

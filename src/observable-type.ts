@@ -5,9 +5,9 @@ export type ObservableType = ObservableJSVariable | ObservableGraph;
 
 export class JSVariableChangeCbk {
     // set Reference + Primitive
-    onSetReferenceEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
-    onSetEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };    
-    
+    onSetReferenceEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+    onSetEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
+
     // set Array and array at index
     onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any) { /*console.log("Method not implemented.");*/ };
     onSetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, newValue: any, index_r: number, index_c: number) { /*console.log("Method not implemented.");*/ };
@@ -19,13 +19,13 @@ export class JSVariableChangeCbk {
     // get primitive and array at index and object property
     onGetEvent(observable: ObservableJSVariable, value: any) { /*console.log("Method not implemented.");*/ }
     onGetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, index_r: number, index_c?: number) { /*console.log("Method not implemented.");*/ };
-    onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };    
+    onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
 }
 
 export class BaseObservableType<NotifyCbkType>
 {
     protected observers: NotifyCbkType[] = [];
-    
+
     public name: string;
 
     registerObserver(notifyCbk: NotifyCbkType) {
@@ -57,7 +57,7 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
 {
     protected initValue: any;
 
-    constructor(public name: string, protected value?: any) {
+    constructor(public name: string, protected value?: any, public isBinary?: boolean) {
         super();
 
         this.initValue = value ? JSON.parse(JSON.stringify(value)) : value;
@@ -93,7 +93,19 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
             else throw "Cannot at index on primitive";
         }
 
-        return index_c != undefined ? this.value[index_r][index_c] : this.value[index_r];
+        let extractValueAtPosOrNull = (value: any, row: string | number | symbol, col?: string | number | symbol) => {
+            if (value && value[row]) {
+                if (col != undefined) {
+                    return value[row][col];
+                } else {
+                    return value[row];
+                }
+            }
+
+            return null;
+        };
+
+        return extractValueAtPosOrNull(this.value, index_r, index_c);
     }
 
     public setReference(newReference: string) {
@@ -115,17 +127,17 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
             switch (variableType) {
                 case VariableType.undefined:
                 case VariableType.Primitive: observer.onSetEvent(this, oldValues, this.value); break;
-                case VariableType.Array: observer.onSetArrayValueEvent(this, oldValues? [...oldValues] : oldValues, this.value? [...this.value] : this.value); break;
+                case VariableType.Array: observer.onSetArrayValueEvent(this, oldValues ? [...oldValues] : oldValues, this.value ? [...this.value] : this.value); break;
                 case VariableType.Object: observer.onSetObjectValueEvent(this, oldValues, this.value); break;
                 default: throw "OBSERVABLE type unknown"
-            }                
+            }
         }
     }
 
     private determineType(object: any): VariableType {
         if (!object)
             return VariableType.undefined;
-            
+
         let variableType = Object.prototype.toString.call(object);
 
         let isArray = (variableType == "[object Array]");

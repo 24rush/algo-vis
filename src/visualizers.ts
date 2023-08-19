@@ -26,10 +26,14 @@ class VisualizerViewModel {
     isNotQueueOrStack: boolean = true;
     isBorderless: boolean = false; // isEmpty or isString
     isString: boolean = false;
+    isBinary: boolean = false;
 
     onVarNameClicked(): void { }
 
-    public reset(value: any, varname: string) {
+    public reset(observable: ObservableJSVariable | ObservableGraph) {
+        var value = observable.getValue();
+        var varname = observable.getName();
+
         this.isBorderless = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0) || typeof value == 'string';
         this.isString = (typeof value == 'string') || (value && value[0] != undefined && typeof value[0] == 'string');
 
@@ -64,8 +68,10 @@ class VisualizerViewModel {
 
 export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
-        '<div class="var-box" style="display: flex; align-items: baseline;"> \
-        <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked" style="text-align: right; min-width: 20%;">{{name}}:</span> \
+        '<div class="var-box" style="display: flex; align-items: baseline; user-select: none"> \
+            <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked" style="text-align: right; min-width: 20%;">{{name}}</span> \
+            <span id="var-name" class="var-name-bin" av-bind-style-display="{!isBinary: none, isBinary: inline}" av-bind-onclick="onVarNameClicked">bin</span> \
+            <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked" style="padding-left: 5px; padding-right: 5px;">:</span> \
     </div> \
     ';
 
@@ -83,8 +89,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
     protected readonly templateArray = '<span style=""> \
     {{#rows}} \
-        <div style="display: flex; flex-wrap: wrap;">\
-        <span class="align-self-baseline" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
+        <div style="display: flex; flex-wrap: wrap;" av-bind-style-flex-direction="{isNotStack: row, !isNotStack: column}">\
+        <span class="align-self-center" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
         {{#cols}} \
             <div style="padding:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
                 <span class="var-value" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
@@ -127,8 +133,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected fontSizeCache: Record<string, number> = {};
 
     protected varNameDrawn = false;
-    protected varValueDrawn: boolean = false;
-    protected varValueBinaryDisplay: boolean = false;
+    protected varValueDrawn: boolean = false;    
     protected elementToDrawType: DrawnElement = DrawnElement.undefined;
     protected pendingDraw: DrawnElement = DrawnElement.undefined;
 
@@ -140,10 +145,13 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         this.observable.registerObserver(this);
 
         this.viewModel.onVarNameClicked = () => {
-            this.varValueBinaryDisplay = !this.varValueBinaryDisplay;
+            if (typeof this.observable.getValue() == "number") {
+                this.clientViewModel.isBinary = !this.clientViewModel.isBinary;
+            }
             this.redraw(this.elementToDrawType);
         };
         let viewModel = new ObservableViewModel(this.viewModel);
+        this.viewModel.isBinary = (observable as ObservableJSVariable) && (observable as ObservableJSVariable).isBinary;
 
         this.clientViewModel = clientViewModel<typeof this.viewModel>(viewModel);
         this.uiBinder = new UIBinder(viewModel);
@@ -203,7 +211,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             text.textContent = (objectToPrint === undefined) ? 'undefined' : 'null';
         } else {
             if (typeof objectToPrint == 'number') {
-                text.textContent = this.varValueBinaryDisplay ? dec2bin(objectToPrint) : objectToPrint.toString();;
+                text.textContent = this.clientViewModel.isBinary ? dec2bin(objectToPrint) : objectToPrint.toString();;
             } else
                 text.textContent = (typeof objectToPrint == 'string' && objectToPrint[0] != '\'') ? `'${objectToPrint.toString()}'` : objectToPrint.toString();
         }
@@ -335,7 +343,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     private drawPrimitive(observable: ObservableJSVariable | ObservableGraph) {
-        this.clientViewModel.reset(observable.getValue(), observable.getName());
+        this.clientViewModel.reset(observable);
 
         let rendered = MustacheIt.render(this.templatePrimitive, {
             width: this.width, height: this.height
@@ -346,7 +354,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         this.htmlElement.append(valuesHtmlElement);
 
-        this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
+        this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');        
         this.fitText(this.text, observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
 
         this.varValueDrawn = true;
@@ -376,6 +384,13 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         let nr_cols: number;
 
         let funcMapCols = (arrayData: any[]) => {
+            if (!arrayData) {
+                return {
+                    width: this.width, height: this.height,
+                    index_c: 0,
+                }
+            }
+
             return arrayData.map((_v, index) => {
                 return {
                     width: this.width, height: this.height,
@@ -422,7 +437,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     private drawObject(observable: ObservableJSVariable) {
-        this.clientViewModel.reset(observable.getValue(), this.observable.getName());
+        this.clientViewModel.reset(observable);
 
         let keysToRender = observable.getKeys();
 
@@ -496,7 +511,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     private drawGraph(observable: ObservableGraph) {
-        this.clientViewModel.reset(observable.getValue(), observable.getName());
+        this.clientViewModel.reset(observable);
 
         let rendered = MustacheIt.render(observable.isEmpty() ? this.templateEmptyGraph : this.templateGraph, {
             width: observable.isEmpty() ? this.width : this.htmlElement.clientWidth, height: observable.isEmpty() ? this.height : 350
@@ -520,7 +535,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     onSetReferenceEvent(observable: ObservableJSVariable, oldReference: string, newReference: any): void {
-        this.clientViewModel.reset(observable.getValue(), observable.getName());
+        this.clientViewModel.reset(observable);
 
         if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Reference;
@@ -543,7 +558,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     onSetEvent(observable: ObservableJSVariable | ObservableGraph, _currValue: any, newValue: any): void {
-        this.clientViewModel.reset(observable.getValue(), observable.getName());
+        this.clientViewModel.reset(observable);
 
         let isPrimitiveType = !(observable instanceof ObservableGraph);
         let drawnElement = isPrimitiveType ? DrawnElement.Primitive : DrawnElement.Graph;
@@ -581,7 +596,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
-        this.clientViewModel.reset(observable.getValue(), observable.getName());
+        this.clientViewModel.reset(observable);
 
         if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Array;
@@ -601,7 +616,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
             if (this.checkIsMultiArray(array)) {
                 for (let r in array)
-                    arrElements += array[r].length;
+                    arrElements += array[r] ? array[r].length : 0;
             } else {
                 arrElements = array.length
             }
@@ -668,7 +683,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     }
 
     onSetObjectPropertyEvent(observable: ObservableJSVariable, _value: any, newValue: any, key: string | number | symbol): void {
-        this.clientViewModel.reset(observable.getValue(), observable.getName());
+        this.clientViewModel.reset(observable);
 
         if (!this.varNameDrawn) {
             this.pendingDraw = DrawnElement.Object;

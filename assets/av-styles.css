@@ -112,10 +112,17 @@
 
 .var-name {
   cursor: pointer;
-  vertical-align: middle;
-  padding-right: 5px;
+  vertical-align: middle;  
   white-space: nowrap;
   font: 18px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
+}
+
+.var-name-bin {
+  font-style: italic;
+  align-self: end;
+  font-size: 11px;
+  vertical-align: sub;
+  display: inline !important;
 }
 
 .var-value {

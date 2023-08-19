@@ -4,7 +4,7 @@ import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNod
 import { CodeExecutorProxy } from "./code-executor-proxy";
 import { UserInteractionType } from "./code-executor";
 import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
-import { CodeProcessor, VarType } from "./code-processor";
+import { CodeProcessor, VarType, VariableDeclaration } from "./code-processor";
 import { ExecutionStatus, MessageNotification, NotificationEmitter, VariableScopingNotification } from "./notification-emitter";
 
 enum OperationType {
@@ -179,7 +179,6 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     // Runtime data
     private rsMonitor = new RuntimeScopeMonitor();
     private observedVariables: ObservableJSVariable[] = [];
-    private runtimeObservables: Map<string, any> = new Map();
     private refs: Record<string, string> = {}; // [funcName.paramName] = [scopeName.varName]    
 
     private status: OperationRecorderStatus = OperationRecorderStatus.Idle;
@@ -192,7 +191,7 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
         this.codeExecProxy.registerNotificationObserver(this);
     }
 
-    isNotStarted() : boolean { return this.status == OperationRecorderStatus.Idle;}
+    isNotStarted(): boolean { return this.status == OperationRecorderStatus.Idle; }
     isReplayFinished(): boolean { return this.status == OperationRecorderStatus.ReplayEnded; }
 
     isWaiting(): boolean { return this.status == OperationRecorderStatus.Waiting; }
@@ -313,9 +312,8 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
         if (this.isReferenceObject(varValue)) {
             let varRuntimeScope = this.rsMonitor.attachVarToScope(varName, runtimeScopeName);
 
-            if (varSource) {
-                runtimeScopeName = this.rsMonitor.getScopeExclLast();
-                this.refs[varRuntimeScope] = this.rsMonitor.extendScopeNameWith(runtimeScopeName, varSource);
+            if (varSource) {                
+                this.refs[varRuntimeScope] = this.rsMonitor.getParentScope() + "." + varSource;
             }
 
             let dstScopedVar = this.getReferencedObject(varRuntimeScope);
@@ -363,7 +361,6 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     */
 
     private resetExecutionState() {
-        this.runtimeObservables = new Map();
         this.refs = {};
 
         for (let primitiveObservers of this.observedVariables) {
@@ -391,11 +388,11 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
             await this.codeExecProxy.execute();
 
         } catch (e) {
-            this.status = OperationRecorderStatus.Idle;            
+            this.status = OperationRecorderStatus.Idle;
 
             console.log(e);
 
-            let message = (typeof e == 'object' && 'message' in e) ? e.message : e;            
+            let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
             this.notificationEmitter.onExceptionMessage(true, message);
             this.notificationEmitter.onExecutionFinished();
 
@@ -425,24 +422,12 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
 
         let runtimeObservables: any[] = [];
 
-        if (!varDecls.length) return runtimeObservables;
+        //if (!varDecls.length) return runtimeObservables;
 
-        for (let varDecl of varDecls) {
-            for (let [observableScope, observable] of this.runtimeObservables) {
-                if (isVarVariable) {
-                    if (observable.name == varName) {
-                        runtimeObservables.push(observable);
-                    }
-                } else {
-                    let varScope = this.rsMonitor.attachVarToScope(varDecl[0], varDecl[1]);
-                    if (varScope.indexOf('!') == -1 && observableScope.endsWith(varScope) && currentRuntimeScope.endsWith(varDecl[1])) {
-                        if (varName != undefined) {
-                            if (observable.name == varName)
-                                runtimeObservables.push(observable);
-                        } else {
-                            runtimeObservables.push(observable);
-                        }
-                    }
+        for (let scopeObservables of this.rsMonitor.getScopesReversed()) {
+            for (let runtimeObservable of scopeObservables.observables) {
+                if (runtimeObservable.name == varName) {
+                    runtimeObservables.push(runtimeObservable);
                 }
             }
         }
@@ -451,24 +436,12 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     }
 
     private executeRuntimeObservableVarLifetime(operationType: OperationType, runtimeObservables: any[]) {
-        let currentRuntimeScope = this.rsMonitor.getCurrentScope();
+        let notifyScopeUpdate = (scopeOperationType: OperationType, runtimeObservable: any) => {
+            let currentRuntimeScope = this.rsMonitor.getCurrentScope();
 
-        if ((!runtimeObservables || !runtimeObservables.length)) {
-            if (operationType == OperationType.SCOPE_END)
-                this.notificationEmitter.onExitScopeVariable(currentRuntimeScope);
-
-            return;
-        }
-
-        for (let runtimeObservable of runtimeObservables) {
-            if (operationType == OperationType.SCOPE_START) {
-                runtimeObservable.empty();
-            }
-
-            switch (operationType) {
+            switch (scopeOperationType) {
                 case OperationType.SCOPE_END:
                     // var variables enter in scope already and it also creates the templates for scopes
-                    this.runtimeObservables.delete(this.rsMonitor.attachVarToScope(runtimeObservable.name, currentRuntimeScope));
                     this.notificationEmitter.onExitScopeVariable(currentRuntimeScope, runtimeObservable);
                     break;
                 default:
@@ -479,24 +452,55 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
                     break;
             }
         }
+
+        if ((!runtimeObservables || !runtimeObservables.length)) {
+            notifyScopeUpdate(operationType, undefined);
+            return;
+        }
+
+        for (let runtimeObservable of runtimeObservables) {
+            if (operationType == OperationType.SCOPE_START) {
+                runtimeObservable.empty();
+            }
+
+            notifyScopeUpdate(operationType, runtimeObservable);
+        }
     }
 
     private getRuntimeObservableWithId(id: number): any {
-        for (let [_observableScope, observable] of this.runtimeObservables) {
-            if (observable.id == id) {
-                return observable;
+        for (let scopeObservables of this.rsMonitor.getScopesReversed()) {
+            for (let runtimeObservable of scopeObservables.observables) {
+                if (runtimeObservable.id == id) {
+                    return runtimeObservable;
+                }
             }
         }
     }
 
-    private createRuntimeObservable(scopeName: string, varName: string, varValue: any): [boolean, any] {
-        if (this.runtimeObservables.has(this.rsMonitor.attachVarToScope(varName, scopeName)))
-            return [false, this.runtimeObservables.get(this.rsMonitor.attachVarToScope(varName, scopeName))];
+    private createRuntimeObservable(currentRuntimeScope: string, varName: string, varValue: any): [boolean, any] {
+        let findVariableDeclaration = (varDecls: VariableDeclaration[]): VariableDeclaration => {
+            if (varDecls) {
+                for (let varDecl of varDecls) {
+                    if (varDecl.name == varName) {
+                        return varDecl;
+                    }
+                }
+            }
 
-        let existingRuntimeObservable = this.findRuntimeObservableFromName(varName);
+            return undefined;
+        }
 
-        if (existingRuntimeObservable.length)
-            return [false, existingRuntimeObservable[0]];
+        let [runtimeScopeName, existingRuntimeObservable] = this.rsMonitor.findRuntimeObservableWithName(varName);
+
+        let varDecls: VariableDeclaration[] = this.codeProcessor.getVarDeclsTillFuncBorder(this.rsMonitor.getCurrentScope(), VarType.let, varName);        
+        let varDecl = findVariableDeclaration(varDecls);
+
+        if (existingRuntimeObservable) {
+            let isNew = varDecl && varDecl.declarationScopeName.length > runtimeScopeName.length;
+
+            if (!isNew)
+                return [false, existingRuntimeObservable];
+        }
 
         let runtimeObservable: any;
         if (varValue && typeof varValue == 'object' && '__isGraphType__' in varValue) {
@@ -516,12 +520,11 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
             varValue.name = varName;
             runtimeObservable.copyFrom(varValue);
         }
-        else
-            runtimeObservable = new ObservableJSVariable(varName, varValue);
+        else {        
+            runtimeObservable = new ObservableJSVariable(varName, varValue, varDecl && varDecl.isBinary);
+        }
 
-        let varInCurrentScope = this.rsMonitor.attachVarToScope(varName, scopeName);
-
-        this.runtimeObservables.set(varInCurrentScope, runtimeObservable);
+        this.rsMonitor.storeRuntimeObservableInScope(runtimeObservable);
         this.registerObservedVariable(runtimeObservable);
 
         return [true, runtimeObservable];

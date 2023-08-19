@@ -1,18 +1,31 @@
+export class ScopeObservables {
+    public runtimeScopeName: string;
+    public observables: any[] = [];
+
+    constructor(scopeName: string) {
+        this.runtimeScopeName = scopeName;
+    }
+}
 
 export class RuntimeScopeMonitor {
-    protected currentScope: string[] = [];
+    protected currentScope: ScopeObservables[] = [];
+    protected currentScopeString: string = "";
 
     public reset() {
         this.currentScope = [];
+        this.currentScopeString = "";
     }
 
-    public scopeStart(scopeName: string) {        
-        this.currentScope.push(scopeName);
+    public scopeStart(scopeName: string) {
+        this.currentScope.push(new ScopeObservables(scopeName));
+        this.computeCurrentScopeString();
     }
 
-    public scopeEnd(scopeName: string) {        
-        if (this.currentScope[this.currentScope.length - 1] == scopeName)
+    public scopeEnd(scopeName: string) {
+        if (this.currentScope[this.currentScope.length - 1].runtimeScopeName == scopeName) {
             this.currentScope.pop();
+            this.computeCurrentScopeString();
+        }
         else {
             console.log(this.currentScope + " vs " + scopeName);
             throw ('LAST SCOPE IS NOT AS EXPECTED ');
@@ -20,47 +33,71 @@ export class RuntimeScopeMonitor {
     }
 
     public getCurrentScope() {
-        return this.currentScope.join('.');
+        return this.currentScopeString;
     }
 
-    public getFullScopeOfVar(scopeName: string, varName: string) {
-        let fullScope = this.attachVarToScope(varName, scopeName);
-
-        if (!scopeName.startsWith('global'))
-            fullScope = this.extendScopeNameWith("global", fullScope);
-        
-        return fullScope;
+    public getScopesReversed(): ScopeObservables[] {
+        return [...this.currentScope].reverse();
     }
 
-    public getLastScope() : string {
-        if (this.currentScope.length > 0)
-            this.currentScope[this.currentScope.length - 1];
-        
-        return "";
-    }
-
-    public getScopeExclLast() {
+    public getParentScope(): string {
         let scopes = [...this.currentScope];
         scopes.pop();
-        
+
         if (scopes.length == 0)
-            scopes.push("global");
-            
-        return scopes.join('.');
+            scopes.push(new ScopeObservables("global"));
+
+        let currentRuntimeScopeExclLast = "";
+        scopes.forEach(scopeObservables => currentRuntimeScopeExclLast += scopeObservables.runtimeScopeName + ".");
+
+        return this.removeTrailingDot(currentRuntimeScopeExclLast);
     }
 
-    public attachVarToScope(varName: string, scopeName: string) : string {
+    public findRuntimeObservableWithName(varName: string): [string, any] {
+        let allScopes = this.getScopesReversed();
+
+        for (let i = 0; i < allScopes.length; i++) {            
+            for (let runtimeObservable of allScopes[i].observables) {
+                if (runtimeObservable.name == varName) {
+                    // Go up the hierarchy and concatenate scopes
+                    let wholeRuntimeScopeName = "";
+                    for (let j = allScopes.length - 1; j >= i; j--)
+                        wholeRuntimeScopeName += allScopes[j].runtimeScopeName + '.';
+
+                    return [this.removeTrailingDot(wholeRuntimeScopeName), runtimeObservable];
+                }
+            }
+        }
+
+        return [undefined, undefined];
+    }
+
+    public storeRuntimeObservableInScope(runtimeObservable: any) {
+        this.currentScope[this.currentScope.length - 1].observables.push(runtimeObservable);
+    }
+
+    public attachVarToScope(varName: string, scopeName: string): string {
         if (varName != "")
             return scopeName + "." + varName;
-        
-        return scopeName;
-    }
 
-    public extendScopeNameWith(scopeName: string, extensionScope: string) : string {
-        return scopeName + "." + extensionScope;
+        return scopeName;
     }
 
     public static scopeNameToFunctionScope(scopeName: string): string {
         return (scopeName != "global" && scopeName != "local" && scopeName[0] != '!') ? "!" + scopeName : scopeName;
+    }
+
+    private computeCurrentScopeString() {
+        this.currentScopeString = "";
+        this.currentScope.forEach(scopeObservables => this.currentScopeString += scopeObservables.runtimeScopeName + ".");
+        this.currentScopeString = this.removeTrailingDot(this.currentScopeString);
+    }
+
+    private removeTrailingDot(scope: string): string {
+        if (scope.lastIndexOf('.') == scope.length - 1) {
+            return scope.slice(0, -1);
+        }
+
+        return scope;
     }
 }

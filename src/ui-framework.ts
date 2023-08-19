@@ -90,7 +90,7 @@ export class UIBinder {
 
     public bindTo(widget: Element): UIBinder {
         // Search for all known binding attributes
-        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-value", "av-bind-style-width", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style"];
+        let bindingAttrs = ["av-bind-text", "av-bind-class", "av-bind-value", "av-bind-style-width", "av-bind-style-display", "av-bind-style-border", "av-bind-style-font-style", "av-bind-style-flex-direction"];
         let bindingType = BindingType.undefined;
         let styleTargetProp: string = undefined;
 
@@ -119,13 +119,13 @@ export class UIBinder {
                             bindingType = BindingType.VALUE;
                             break;
                         }
-                    case "av-bind-style-width":
-                    case "av-bind-style-display":
-                    case "av-bind-style-border":
-                    case "av-bind-style-font-style":
+                    default:
                         {
-                            bindingType = BindingType.STYLE;
-                            styleTargetProp = bindingAttr.replace('av-bind-style-', '');
+                            if (bindingAttr.includes("av-bind-style-")) {
+                                bindingType = BindingType.STYLE;
+                                styleTargetProp = bindingAttr.replace('av-bind-style-', '');
+                            }
+
                             break;
                         }
                 }
@@ -330,6 +330,10 @@ export class UIBinder {
                                             bindingContext.htmlElement.style.removeProperty('font-style');
                                             bindingContext.htmlElement.style.fontStyle = propValueAfterEval;
                                             break;
+                                        case "flex-direction":
+                                            bindingContext.htmlElement.style.removeProperty('flex-direction');
+                                            bindingContext.htmlElement.style['flexDirection'] = propValueAfterEval;
+                                            break;
                                     }
                                 }
 
@@ -368,11 +372,11 @@ export class UIBinder {
                                         }
                                     default: {
                                         bindingContext.htmlElement.textContent = newValue ?? propEval;
-                                        
+
                                         let parent = bindingContext.htmlElement.parentNode as HTMLElement;
 
                                         // Handle expanding textareas 
-                                        if (parent && parent.classList.contains('grow-wrap')) {                                            
+                                        if (parent && parent.classList.contains('grow-wrap')) {
                                             parent.dataset.replicatedValue = newValue ?? propEval;
                                         }
                                     }
