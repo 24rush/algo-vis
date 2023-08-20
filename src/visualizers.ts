@@ -69,8 +69,10 @@ class VisualizerViewModel {
 export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
         '<div class="var-box" style="display: flex; align-items: baseline; user-select: none"> \
-            <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked" style="text-align: right; min-width: 20%;">{{name}}</span> \
-            <span id="var-name" class="var-name-bin" av-bind-style-display="{!isBinary: none, isBinary: inline}" av-bind-onclick="onVarNameClicked">bin</span> \
+            <div style="min-width: 20%; text-align: right;"> \
+                <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked">{{name}}</span> \
+                <span id="var-name" class="var-name-bin" av-bind-style-display="{!isBinary: none, isBinary: inline}" av-bind-onclick="onVarNameClicked">bin</span> \
+            </div> \
             <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked" style="padding-left: 5px; padding-right: 5px;">:</span> \
     </div> \
     ';
@@ -78,13 +80,13 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templateReference: string =
         '<span class="var-value" style="display: table; border:none; height:{{height}}px;"> \
         <span style="font-style: italic; vertical-align:middle;" av-bind-text="LangStrId.9"></span> \
-        <span id="var-value" style="vertical-align:middle;"></span> \
+        <span id="var-value"></span> \
      </span>';
 
     protected readonly templatePrimitive: string =
         '<span class="var-value" style="min-width: {{width}}px;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-                <span id="var-value" style="vertical-align:baseline;"></span>\
+                <span id="var-value"></span>\
      </span>';
 
     protected readonly templateArray = '<span style=""> \
@@ -115,7 +117,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     </span>';
 
     protected readonly templateEmptyGraph = '<span class="var-value" style="display: table; margin-left:3px; margin-top: 3px; width: {{width}}px; height:{{height}}px;" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-        <span id="var-value" style="vertical-align:middle;"></span> \
+        <span id="var-value"></span> \
     </span>';
 
     protected readonly templateGraph = '<div style="display: block;  resize:vertical; padding: 3px; width: 100%; height:{{height}}px;"> \
@@ -204,7 +206,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
     private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         let dec2bin = (dec: number): string => {
-            return (dec >>> 0).toString(2);
+            return (dec >>> 0).toString(2).padStart(32, '0');
         }
 
         if (objectToPrint == undefined || objectToPrint == null) {

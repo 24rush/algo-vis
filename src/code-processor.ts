@@ -108,54 +108,54 @@ export class CodeProcessor {
         for (let decl of vardata.declarations) {
             let varType = vardata.kind == "var" ? VarType.var : VarType.let;
             let varScope = scopeName;
-
+            
             if (varType == VarType.var && scopeName.indexOf('.') != -1) {
                 varScope = scopeName.substring(0, scopeName.indexOf('.'));
             }
 
-            let isBinary = decl.init && decl.init.raw && decl.init.raw.includes('0b');
+            let varIsBinary = decl.init && decl.init.raw && decl.init.raw.includes('0b');
 
-            let varDecl = this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite, isBinary);
+            let varDecl = this.createVariable(varScope, decl.id.name, varType, declIndexOverwrite == -1 ? vardata.range[1] : declIndexOverwrite, varIsBinary);
 
-            if (decl.init) {
-                switch (decl.init.type) {
-                    case "Identifier": {
-                        varDecl.source = decl.init.name;
-                        break;
-                    }
-                    case "ArrayExpression":
-                    case "ObjectExpression": {
-                        this.addNoMarklineZone(decl.init.range[0] - 1, decl.init.range[1] + 1);
-                        break;
-                    }
-                    case "CallExpression": {
-                        // Pass variable declaration start/end to be used for noMarkZone
-                        this.extractVariables(scopeName, decl.init, vardata.range[0], vardata.range[1]);
-                        break;
-                    }
-                    case "ArrowFunctionExpression": {
-                        let funcName = decl.id.name;
+            if (!decl.init)
+                continue;
 
-                        for (let param of decl.init.params) {
-                            if (!(funcName in this.funcDefs)) {
-                                this.funcDefs[funcName] = [];
-                            }
+            switch (decl.init.type) {
+                case "Identifier": {                                    
+                    varDecl.source = decl.init.name;
+                    break;
+                }
+                case "ArrayExpression":
+                case "ObjectExpression": {
+                    this.addNoMarklineZone(decl.init.range[0] - 1, decl.init.range[1] + 1);
+                    break;
+                }
+                case "CallExpression": {
+                    this.extractVariables(scopeName, decl.init);
+                    break;
+                }
+                case "ArrowFunctionExpression": {
+                    let funcName = decl.id.name;
 
-                            this.funcDefs[funcName].push(param.name);
-                            this.createVariable(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.var, decl.init.body.range[0] + 1);
+                    for (let param of decl.init.params) {
+                        if (!(funcName in this.funcDefs)) {
+                            this.funcDefs[funcName] = [];
                         }
 
-                        this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(decl.id.name), decl.init.body.range[0] + 1, decl.init.body.range[1] - 1));
-                        this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(decl.id.name), decl.init.body);
-
-                        break;
+                        this.funcDefs[funcName].push(param.name);
+                        this.createVariable(RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.var, decl.init.body.range[0] + 1);
                     }
+
+                    this.scopes.push(new ScopeDeclaration(RuntimeScopeMonitor.scopeNameToFunctionScope(decl.id.name), decl.init.body.range[0] + 1, decl.init.body.range[1] - 1));
+                    this.extractVariables(RuntimeScopeMonitor.scopeNameToFunctionScope(decl.id.name), decl.init.body);
+
+                    break;
                 }
             }
         }
     }
 
-    private extractVariables(scopeName: string, scope: any, varDeclStart?: number, varDeclEnd?: number) {
+    private extractVariables(scopeName: string, scope: any) {
         if (!scope)
             return;
 
@@ -334,7 +334,7 @@ export class CodeProcessor {
                     if (item.callee && item.callee.object && item.callee.object.name) {
                         let varName = item.callee.object.name;
 
-                        let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
+                        let [foundInScope, vardeclaration] = this.searchVarInScopeAndParent(scopeName, varName);
 
                         if (vardeclaration.length) {
                             // setVar should be at the end of any function call of which this call is a part of
@@ -379,7 +379,7 @@ export class CodeProcessor {
                         if (item.operator && item.operator == "delete") {
                             let varName = item.argument.object.name;
 
-                            let [foundInScope, vardeclaration] = this.searchScopeAndParent(scopeName, varName);
+                            let [foundInScope, vardeclaration] = this.searchVarInScopeAndParent(scopeName, varName);
 
                             if (vardeclaration.length > 0) {
                                 this.createVariable(foundInScope, varName, vardeclaration[0].vartype, item.range[1] + 1);
@@ -417,7 +417,7 @@ export class CodeProcessor {
                         varDeclarations.push(new VariableDeclaration(scopeName, varName, VarType.let, -1, false));
                     }
                     else {
-                        [foundInScope, varDeclarations] = this.searchScopeAndParent(scopeName, varName);
+                        [foundInScope, varDeclarations] = this.searchVarInScopeAndParent(scopeName, varName);
                     }
 
                     if (varDeclarations.length > 0) {
@@ -434,11 +434,11 @@ export class CodeProcessor {
         }
     }
 
-    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number, isBinary: boolean = false): VariableDeclaration {
-        let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex, isBinary);
-
+    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number, isBinary: boolean = false): VariableDeclaration {        
         if (!(scopeName in this.varDeclarations))
             this.varDeclarations[scopeName] = {};
+
+        let varDecl = new VariableDeclaration(scopeName, varName, varType, endOfDefinitionIndex, isBinary);
 
         if (varName in this.varDeclarations[scopeName]) {
             if (this.varDeclarations[scopeName][varName].endOfDefinitionIndexes.indexOf(varDecl.endOfDefinitionIndex) == -1)
@@ -476,6 +476,7 @@ export class CodeProcessor {
 
     private injectCookies() {
         let injectAtIndex: any = {};
+
         let addCodeInjection = (index: number, injectedCode: string) => {
             if (!(index in injectAtIndex))
                 injectAtIndex[index] = [];
@@ -597,8 +598,7 @@ export class CodeProcessor {
                     this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length, diffLen);
                 }
                 else {
-                    replacedTokenStr += (tokenizedLine + replacement);
-                    // MISTERY
+                    replacedTokenStr += (tokenizedLine + replacement);                    
                     let insertedSize = (tokenizedLine + replacement).length;
                     this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length - insertedSize, diffLen);
                 }
@@ -659,7 +659,7 @@ export class CodeProcessor {
     }
 
 
-    private searchScopeAndParent(startScope: string, varName: string): [string, VariableDeclaration[]] {
+    private searchVarInScopeAndParent(startScope: string, varName: string): [string, VariableDeclaration[]] {
         let foundInScope = startScope;
 
         let vardeclarations = this.getVarDeclsTillFuncBorder(foundInScope, undefined, varName);
@@ -722,7 +722,7 @@ export class CodeProcessor {
             for (let varDeclScope of Object.entries(this.varDeclarations)) {
                 if (varDeclScope[0].endsWith(scopeName)) {
                     let varsInScope = this.varDeclarations[varDeclScope[0]];
-                    for (let variable of Object.values(varsInScope)) {                        
+                    for (let variable of Object.values(varsInScope)) {
                         if (varType != undefined && variable.vartype != varType)
                             continue;
 

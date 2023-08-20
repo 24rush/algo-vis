@@ -159,6 +159,14 @@ export class Layout {
         if (!observable) {
             this.removeScope(scopeName, parentScopeHtmlElement, undefined, onLayoutOperationsStatus);
             delete this.observableToVisualizer[key];
+
+            // Find all variables under scopeName and remove them
+            for (let key of Object.keys(this.observableToVisualizer)) {
+                if (key.replace(scopeName + ".", "").indexOf('.') == -1) {
+                    delete this.observableToVisualizer[key];
+                }
+            }
+
             this.scopes.delete(scopeName);
 
             return;

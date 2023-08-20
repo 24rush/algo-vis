@@ -134,6 +134,11 @@
   font: 21px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
 }
 
+[id^=var-value] {
+  padding: 2px;
+  vertical-align:middle;
+}
+
 .fade-out {
   visibility: hidden;
   background-color: lightgrey;

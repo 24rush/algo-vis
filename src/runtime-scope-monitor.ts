@@ -32,7 +32,7 @@ export class RuntimeScopeMonitor {
         }
     }
 
-    public getCurrentScope() {
+    public getCurrentScope() : string {
         return this.currentScopeString;
     }
 
