@@ -6,7 +6,7 @@
                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
                     <div class="progress-bar" av-bind-style-width="quizProgress"></div>
                 </div>
-                <button type="button" class="btn-close" av-bind-onclick="onFinishQuiz" style="position: absolute; right: 15px;" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="av-btn-close" av-bind-onclick="onFinishQuiz" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
             <div class="quizContainer">
@@ -16,7 +16,7 @@
 
                     <div class="d-flex mb-3" style="padding: 1rem;">
                         <button av-bind-onclick="onCheckQuiz" type="button"
-                            class="p-2 popover-dismiss rounded-right btn btn-primary" style="margin-right: 10px;"
+                            class="p-2 popover-dismiss rounded-right btn btn-primary av-btn" style="margin-right: 10px;"
                             av-bind-class="{!hasSelectedAnswers : disabled}"
                             av-bind-style-display="{isQuizVerified: none, !isQuizVerified: inline-block}">
                             <i class="bi bi-check-lg"></i>
@@ -24,21 +24,21 @@
                         </button>
 
                         <button av-bind-onclick="onShowExplanation" type="button"
-                            class="p-2 popover-dismiss rounded-right btn btn-outline-secondary"
+                            class="p-2 popover-dismiss rounded-right btn btn-outline-secondary av-btn"
                             av-bind-style-display="{hasExplanation: inline-block, !hasExplanation: none, !isQuizVerified: none}">
                             <i class="bi bi-question-lg"></i>
                             <span av-bind-text="LangStrId.23" style="padding-right: 3px;">Show explanation</span>
                         </button>
 
                         <button av-bind-onclick="onNextQuiz" type="button"
-                            class="ms-auto p-2 popover-dismiss rounded-right btn btn-primary"
+                            class="ms-auto p-2 popover-dismiss rounded-right btn btn-primary av-btn"
                             av-bind-style-display="{hasMoreQuizzes: inline-block, !hasMoreQuizzes: none}">
                             <i class="bi bi-arrow-right"></i>
                             <span av-bind-text="LangStrId.21" style="padding-right: 3px;">Next</span>
                         </button>
 
                         <button av-bind-onclick="onFinishQuiz" type="button"
-                            class="ms-auto p-2 popover-dismiss rounded-right btn btn-primary"
+                            class="ms-auto p-2 popover-dismiss rounded-right btn btn-primary av-btn"
                             av-bind-style-display="{!hasMoreQuizzes: inline-block, hasMoreQuizzes: none}">
                             <i class="bi bi-x-lg"></i>
                             <span av-bind-text="LangStrId.25" style="padding-right: 3px;">Finish</span>
@@ -51,7 +51,7 @@
 
                     <div class="d-flex mb-3" style="padding: 1rem;">
                         <button av-bind-onclick="onShowStatement" type="button"
-                            class="popover-dismiss rounded-right btn btn-outline-secondary"
+                            class="popover-dismiss rounded-right btn btn-outline-secondary av-btn"
                             av-bind-style-display="{hasExplanation: inline-block, !hasExplanation: none}">
                             <i class="bi bi-arrow-counterclockwise"></i>
                             <span av-bind-text="LangStrId.24" style="padding-right: 3px;">Back to statement</span>

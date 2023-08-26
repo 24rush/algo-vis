@@ -10,7 +10,7 @@ type OnLayoutOperationsStatus = (hasPendingOperations: boolean) => void;
 export class Layout {
     protected readonly scopeTemplate = '\
     <ul class="list-group list-group-mine" style="margin-left: 1em;" av-scope="{{scope}}"> \
-      <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px; ">{{scopeName}}</li> \
+      <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px; margin-top: 0; ">{{scopeName}}</li> \
       <li class="list-group-item" style="padding-right: 0px; display: table;"></li> \
     </ul>'
 

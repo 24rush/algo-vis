@@ -25,7 +25,7 @@
         </div>
         <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
             <button av-bind-onclick="onAdvance" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
-                class="popover-dismiss rounded-right btn btn-light btn-overrides av-btn"
+                class="popover-dismiss rounded-right btn btn-primary btn-overrides av-btn"
                 av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}">
                 <i class="bi bi-play-fill"></i>
                 <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
@@ -74,7 +74,7 @@
                         </div>
                     </li>
                     <li>
-                        <h6 class="dropdown-header" av-bind-text="LangStrId.13">Playback speed</h6>
+                        <span class="dropdown-header" av-bind-text="LangStrId.13">Playback speed</span>
                     </li>
                     <li><a class="dropdown-item">
                             <div class="btn-group btn-group-sm" role="group">
@@ -115,7 +115,7 @@
                 <span av-bind-text="LangStrId.29"></span><strong av-bind-text="timeRemainingForSolution"></strong> <span av-bind-text="LangStrId.31"></span>
                 <br><br><i av-bind-text="LangStrId.30"></i>
                 <div class="mt-2 pt-2">                    
-                    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="toast"
+                    <button type="button" class="btn btn-primary btn-sm av-btn" data-bs-dismiss="toast"
                         av-bind-text="LangStrId.18">OK</button>
                 </div>
             </div>
@@ -131,9 +131,9 @@
                 <input av-focused type="text" class="form-control" av-bind-value="promptDefaultValue"
                     av-bind-style-display="{!hasInputBox : none, hasInputBox: inline-block}">
                 <div class="mt-2 pt-2">
-                    <button type="button" class="btn btn-primary btn-sm" av-bind-onclick="onPromptOk"
+                    <button type="button" class="btn btn-primary btn-sm av-btn" av-bind-onclick="onPromptOk"
                         av-bind-text="LangStrId.18">OK</button>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast"
+                    <button type="button" class="btn btn-secondary btn-sm av-btn" data-bs-dismiss="toast"
                         av-bind-style-display="{!hasCancelBtn : none, hasCancelBtn: inline-block}"
                         av-bind-onclick="onPromptCancel" av-bind-text="LangStrId.19">Cancel</button>
                 </div>
@@ -148,13 +148,13 @@
             <li class="list-group-item fw-semibold"
                 av-bind-style-display="{!hasCompilationError : none, hasCompilationError: block}"><span
                     av-bind-text="LangStrId.5">Compilation error</span>
-                <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
+                <button type="button" class="btn btn-danger btn-sm av-btn" style="vertical-align: baseline;"
                     av-bind-text='{hasCompilationError: compilationErrorMessage()}'></button>
             </li>
 
             <li class="list-group-item fw-semibold" av-bind-style-display="{!hasException : none, hasException: block}">
                 <span av-bind-text="LangStrId.17">Exception</span>
-                <button type="button" class="btn btn-danger btn-sm" style="vertical-align: baseline;"
+                <button type="button" class="btn btn-danger btn-sm av-btn" style="vertical-align: baseline;"
                     av-bind-text='exceptionMessage'></button>
             </li>
 

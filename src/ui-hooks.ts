@@ -108,13 +108,13 @@ export class UIHooks {
                 }
             };
 
-            setInterval(updateCounter, 2000);
+            setInterval(updateCounter, 1000);
         };
 
         // Move counters below the logo
         let counters = document.querySelector('[class=counters]');
-        if (counters) {
-            let logo = document.querySelector('[class=flex-container]');
+        let logo = document.querySelector('[class=flex-container]');
+        if (counters && logo) {            
             logo.after(counters);
         }
 
@@ -158,6 +158,6 @@ export class UIHooks {
             for (let tocItem of document.querySelectorAll('[class=ez-toc-section]')) {
                 observer.observe(tocItem);
             }
-        }, 1000);
+        }, 2000);
     }
 }

@@ -1,0 +1,44 @@
+§code:
+let numarGhicit = 0;
+let nrIncercari = 1;
+let stanga = 0, dreapta = 30;
+
+let visuals = new BinarySearchTree();
+{
+    // vizualizare arbore
+    let numere = [15, 7, 3, 1, 2, 5, 4, 6, 11, 9, 8, 10, 13, 12, 14, 23, 19, 17, 16, 18, 21, 20, 22, 27, 25, 24, 26, 29, 28, 30];
+    for (let nr of numere) { visuals.add(nr); }
+}
+  
+alert(`Gândește-te la un număr mai mic decât 30 și tine-l minte. O să iți ghicesc numărul din maxim 5 încercări.
+
+Tu trebuie doar să îmi spui cum este numărul ghicit de mine față de al tău:
+  1 - dacă numărul tău este mai mic decât numărul meu
+  2 - dacă numărul tău este mai mare decât numărul meu
+
+  3 - dacă numerele sunt egale`);
+
+while (stanga <= dreapta) {
+    numarGhicit = Math.ceil((stanga + dreapta) / 2);      
+    visuals.accessValue(numarGhicit);
+
+    let raspuns = prompt(`Încercarea ${nrIncercari}
+    Răspunde tastând următoarele cifre:
+    1 - dacă numărul tău este mai mic decât ${numarGhicit}
+    2 - dacă numărul tău este mai mare decât ${numarGhicit}
+
+    3 - dacă numărul tău este ${numarGhicit}`);
+  
+    if (raspuns == '1') {
+        dreapta = numarGhicit - 1;
+    }
+    else if (raspuns == '2') {
+        stanga = numarGhicit + 1;
+    }
+    else if (raspuns == '3') {
+        alert(`Numărul tău a fost ${numarGhicit} și l-am ghicit din ${nrIncercari} încercări`)
+        break;
+    }
+  
+    nrIncercari++;
+}
