@@ -18,7 +18,7 @@
   margin: auto;
 }
 
-@media (orientation: portrait) {
+@media (max-width: 968px) {
   .algovis {
     max-width: 100% !important;
     resize: both;
@@ -70,8 +70,20 @@
 }
 
 .av-btn {
-  background-color: var(--bs-blue) !important;
-  color: var(--bs-white) !important;
+  background-color: var(--bs-btn-bg) !important;
+}
+
+.av-btn-close {
+  box-sizing: content-box;
+  width: 1em;
+  height: 1em;
+  padding: 0.25em 0.25em;
+  color: #000;
+  background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat!important;
+  border: 0;
+  border-radius: 0.375rem;
+  opacity: .5;
+  position: absolute; right: 15px;
 }
 
 .av-btn:hover {
@@ -106,13 +118,17 @@
   border: 2px solid #0d6efd;
 }
 
+.list-group-mine > li {
+  margin-bottom: 0px !important;
+}
+
 .var-box {
   padding: 3px;
 }
 
 .var-name {
   cursor: pointer;
-  vertical-align: middle;  
+  /* vertical-align: middle;   */
   white-space: nowrap;
   font: 18px/normal 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace
 }

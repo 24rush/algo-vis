@@ -26,15 +26,18 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
   },
+  externals: {
+    bootstrap: 'bootstrap',
+  },
   output: {
     filename: 'bundle.js',
     path: path.resolve(__dirname, 'build')
   },
   devServer: {
     watchFiles: ['src/**/*'],
-    hot:false,
+    hot: false,
     static: {
-      directory: path.join(__dirname, 'build'),      
+      directory: path.join(__dirname, 'build'),
     },
     compress: true,
     port: 9000,

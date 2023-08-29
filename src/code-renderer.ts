@@ -26,7 +26,7 @@ export class CodeRenderer {
         this.editor = ace.edit(codeEditorHtmlElement.id);
         this.editor.session.setMode("ace/mode/javascript");
 
-        this.editor.setFontSize(18);
+        this.editor.setFontSize(15);
         this.editor.setShowPrintMargin(false);
         this.editor.setAutoScrollEditorIntoView(true);
         this.editor.setReadOnly(isReadonly);
