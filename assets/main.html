@@ -160,11 +160,11 @@
 
             <li av-bind-style-display="{isVisualisationDisabled: none}"
                 class="list-group-item fw-semibold"><span av-bind-text="LangStrId.7">Variables</span>
-                <div class="panelVariables" style="margin-left: -1em;">
+                <div class="panelVariables">
                 </div>
             </li>
             <li class="list-group-item fw-semibold av-console grow-wrap"><span av-bind-text="LangStrId.8">Console output</span>
-                <textarea class="form-control" style="background-color:white; width: 100%; max-width: 100%;" rows="4"
+                <textarea class="form-control" style="background-color:white; width: 100%; max-width: 100%; overflow: auto;" rows="4"
                     max-rows="28" av-bind-text="consoleOutput" disabled onInput="this.parentNode.dataset.replicatedValue = this.value"></textarea>
             </li>
         </ul>

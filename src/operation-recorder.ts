@@ -489,8 +489,21 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     }
 
     private getReferencedObject(scopeVarName: string): string {
+        let matched = false;
+
         while (scopeVarName in this.refs) {
             scopeVarName = this.refs[scopeVarName];
+            matched = true;
+        }
+
+        if (matched)
+            return scopeVarName;
+
+        // If we did not match then try to remove local scopes and try again
+        let posLastLocal = scopeVarName.lastIndexOf('local.');
+        if (posLastLocal != -1) {
+            let newScopeName = scopeVarName.substring(0, posLastLocal) + scopeVarName.substring(posLastLocal + 6);
+            return this.getReferencedObject(newScopeName);
         }
 
         return scopeVarName;

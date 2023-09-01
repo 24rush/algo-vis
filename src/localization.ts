@@ -36,7 +36,8 @@ var en_langMap : Record<number, string> = {
     28: "Have a bit more patience",
     29: "We know it's hard but give it a bit more time. Around: ",
     30: "The solution can be shown after 5 minutes since you first started typing in the editor",
-    31: "minutes"
+    31: "minutes",
+    32: "no variables"    
 }
 
 var ro_langMap : Record<number, string> = {
@@ -71,7 +72,8 @@ var ro_langMap : Record<number, string> = {
     28: "Mai ai puțină răbdare",
     29: "Știm că e greu dar mai gândește-te puțin înainte să vezi soluția. Măcar încă: ",
     30: "Soluția se va afișa doar după 5 minute de când ai început să tastezi în editor",
-    31: "minute"
+    31: "minute",
+    32: "fără variabile"
 }
 
 export class Localize

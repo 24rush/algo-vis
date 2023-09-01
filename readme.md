@@ -1,5 +1,5 @@
 # Start web server #
-``` npx webpack serve --live-reload --static assets --static wordpress/assets```
+``` npx run serve```
 
 # Start chrome to allow SAB #
 ``` npm run chrome-sab ```

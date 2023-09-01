@@ -7,8 +7,8 @@ var MustacheIt = require('mustache');
 var bootstrap = require('bootstrap')
 
 export class UIHooks {
-    constructor(private onHookingCompleted: any) {
-        window.addEventListener("DOMContentLoaded", () => {
+    constructor(onHookingCompleted: any) {
+        window.addEventListener("load", () => {
             this.loadHooks();
 
             onHookingCompleted();

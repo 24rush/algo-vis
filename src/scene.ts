@@ -496,7 +496,7 @@ export class Scene {
             let commentsElement = app.querySelector("[class*=commentsPopover]") as HTMLElement;
 
             if ('style' in aceCursor) {
-                commentsElement.style['top'] = parseInt(aceCursor.style['top']) + 0.5 * parseInt(aceCursor.style['height']) + "px";
+                commentsElement.style['top'] = parseInt(aceCursor.style['top']) + 1 * parseInt(aceCursor.style['height']) + "px";
 
                 this.commentsPopoverHandle = this.snippetEventsCbks.onShowPopover(commentsElement, options);
             }
@@ -535,7 +535,13 @@ export class Scene {
                 };
 
                 checkerFunc();
-            } else options.content = "";
+            } else {
+                // If we previously had a comment then remove the popover
+                if (options.content != "") {
+                    this.commentsPopoverHandle = this.snippetEventsCbks.onDisposePopover(this.commentsPopoverHandle);
+                }
+                options.content = "";
+            }
         };
 
         setTimeout(() => {

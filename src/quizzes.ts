@@ -321,7 +321,7 @@ export class Quizzes {
     private quizConfigs: Record<string, QuizzesConfig> = {};
     private quizVM: QuizViewModel
 
-    private readonly QUIZZES_URL = window.location.hostname == "localhost" ? "wordpress/quizzes/" : "../wp-content/uploads/2023/quizzes/";    
+    private readonly QUIZZES_URL = "/assets/algovis/quizzes/";    
 
     constructor(fullscreenNotification: FullScreeNotification) {
         this.quizVM = new QuizViewModel(fullscreenNotification);

@@ -26,7 +26,7 @@ export class CodeRenderer {
         this.editor = ace.edit(codeEditorHtmlElement.id);
         this.editor.session.setMode("ace/mode/javascript");
 
-        this.editor.setFontSize(15);
+        this.editor.setFontSize(14);
         this.editor.setShowPrintMargin(false);
         this.editor.setAutoScrollEditorIntoView(true);
         this.editor.setReadOnly(isReadonly);
@@ -160,6 +160,7 @@ export class CodeRenderer {
     private removeComments(sourceCode: string): [any, string, number] {
         let lineComments: string[] = [];
         let noOfLines = 0;
+        let lineNo = 1;
         let regexp = new RegExp("/\\*\\*\\*([\\s\\S]*?)\\*\\*\\*/"); /*** Comment ***/
         let lineByLine = sourceCode.split('\n');
 
@@ -167,7 +168,7 @@ export class CodeRenderer {
         for (let line of lineByLine) {
             let matches = regexp.exec(line);
             if (matches) {
-                lineComments[noOfLines] = matches[1].trim();
+                lineComments[lineNo] = matches[1].trim();
                 sanitizedCode += line.replace(matches[0], '');
             } else {
                 sanitizedCode += line;
@@ -175,6 +176,7 @@ export class CodeRenderer {
 
             sanitizedCode += "\n";
             noOfLines++;
+            lineNo++;
         }
 
         return [lineComments, sanitizedCode.substring(0, sanitizedCode.length - 1), noOfLines];

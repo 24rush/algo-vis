@@ -7,24 +7,41 @@ var MustacheIt = require('mustache');
 
 type OnLayoutOperationsStatus = (hasPendingOperations: boolean) => void;
 
-export class Layout {
-    protected readonly scopeTemplate = '\
-    <ul class="list-group list-group-mine" style="margin-left: 1em;" av-scope="{{scope}}"> \
-      <li class="list-group-item active" style="font-style: italic; font-weight:500; padding-right: 0px; margin-top: 0; ">{{scopeName}}</li> \
-      <li class="list-group-item" style="padding-right: 0px; display: table;"></li> \
-    </ul>'
+class ScopeTemplateElements {
+    public scopeHtmlElement: HTMLElement;
+    public scope_body: HTMLElement;
+    public scope_empty_span: HTMLElement;
 
-    protected readonly localScopeTemplate = '\
-    <ul class="list-group list-group-mine" style="border: none; padding: 8px; margin-left: 0px;" av-scope="{{scope}}"> \
-      <li class="list-group-item" style="font-style: italic; font-weight:500; padding-right: 0px;">{{scopeName}}</li> \
-      <li class="list-group-item" style="display: table;"></li> \
-    </ul>'
+    constructor(scopeHtmlElement: HTMLElement) {
+        this.scopeHtmlElement = scopeHtmlElement;
+        this.scope_body = scopeHtmlElement.querySelector('.accordion-body');
+        this.scope_empty_span = this.scope_body.querySelector('.empty-scope');
+        this.scope_empty_span.textContent = Localize.str(32);
+    }
+}
+
+export class Layout {
+    protected readonly accordionScope = '\
+    <div class="accordion accordion-flush" id="accordionPanelsStayOpenExample" av-scope="{{scope}}"> \
+        <div class="accordion-item"> \
+            <span class="accordion-header" id="panelsStayOpen-heading{{scope_idx}}"> \
+                <button class="accordion-button scope-name" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapse{{scope_idx}}" aria-expanded="true" aria-controls="panelsStayOpen-collapse{{scope_idx}}">\
+                    {{scopeName}} \
+                </button>\
+            </span>\
+            <div id="panelsStayOpen-collapse{{scope_idx}}" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-heading{{scope_idx}}">\
+                <div class="accordion-body scope-body">\
+                    <div class="empty-scope">empty</div>\
+                </div> \
+            </div> \
+    </div>';
 
     constructor(protected scene: HTMLElement) {
     }
 
     private observableToVisualizer: Record<string, VariableVisualizer> = {}; // {key = scope.varname, {Visualizer}}
-    private scopes: Map<string, HTMLElement> = new Map(); // {key = scope, {HTMLElement}}    
+    private scopes: Map<string, ScopeTemplateElements> = new Map(); // {key = scope, {HTMLElement}}  
+    private static scope_idx: number = 0;
 
     private codeScopeToUiScope(codeScope: string): string {
         let functionScopesList = codeScope.replace('global.', '').split('!').join('').split('.');
@@ -45,36 +62,29 @@ export class Layout {
     }
 
     private isLocalScope(scopeName: string): boolean {
-        return scopeName.indexOf('local') != -1 && scopeName.substring(0, scopeName.lastIndexOf('.')) != "";    
+        return scopeName.indexOf('local') != -1 && scopeName.substring(0, scopeName.lastIndexOf('.')) != "";
     }
 
-    private getTemplateForScope(scopeName: string): string {
-        return this.isLocalScope(scopeName) ? this.localScopeTemplate : this.scopeTemplate;
-    }
-
-    private checkScopesExist(scopeName: string, htmlElementParent: any) {
+    private checkScopesExist(scopeName: string) {
         let scopeChain = scopeName.split('.');
-
-        if (scopeChain.length == 1 && scopeName == "global" && !this.scopes.has(scopeName)) {
-            let scopeHtmlElement = this.createHtmlElementForScope(scopeName);
-            htmlElementParent.append(scopeHtmlElement);
-            this.scopes.set(scopeName, scopeHtmlElement);
-
-            return;
-        }
-
-        let parentHtmlElement = htmlElementParent;
-        let currentScopeName = scopeChain[0];
-        let scopeHtmlElement = parentHtmlElement;
+        let parentHtmlElement : ScopeTemplateElements;
+        let currentScopeName = "";
 
         for (let scope of scopeChain) {
-            if (scope != "global")
+            if (currentScopeName === "")
+                currentScopeName = scope;
+            else
                 currentScopeName += "." + scope;
 
             if (!this.scopes.has(currentScopeName)) {
-                scopeHtmlElement = this.createHtmlElementForScope(currentScopeName);
-                this.isLocalScope(currentScopeName) ? parentHtmlElement.children[0].insertAdjacentElement("afterend", scopeHtmlElement) : parentHtmlElement.append(scopeHtmlElement);
-                this.scopes.set(currentScopeName, scopeHtmlElement);
+                let scopeHtmlElement = this.createHtmlElementForScope(currentScopeName);
+
+                if (this.scopes.size == 0)
+                    this.scene.append(scopeHtmlElement);
+                else
+                    parentHtmlElement.scope_body.append(scopeHtmlElement);
+
+                this.scopes.set(currentScopeName, new ScopeTemplateElements(scopeHtmlElement));
             }
 
             parentHtmlElement = this.scopes.get(currentScopeName);
@@ -82,28 +92,24 @@ export class Layout {
     }
 
     private createHtmlElementForScope(scopeName: string): HTMLElement {
-        let rendered = MustacheIt.render(this.getTemplateForScope(scopeName), { scopeName: this.codeScopeToUiScope(scopeName), scope: scopeName });
+        let rendered = MustacheIt.render(this.accordionScope, { scopeName: this.codeScopeToUiScope(scopeName), scope: scopeName, scope_idx: Layout.scope_idx++ });
         let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);
 
         return scopeHtmlElement;
     }
 
     public add(scopeName: string, observable: ObservableType): boolean {
-        this.checkScopesExist(scopeName, this.scene);
+        this.checkScopesExist(scopeName);
 
         if (!this.scopes.has(scopeName)) {
-            let scopeHtmlElement = this.createHtmlElementForScope(scopeName);
             let parentScopeName = scopeName.substring(0, scopeName.lastIndexOf('.'));
             if (parentScopeName == "") parentScopeName = "global";
 
-            let parentScopeHtmlElement;
-            if (parentScopeName == "global")
-                parentScopeHtmlElement = this.scene;
-            else
-                parentScopeHtmlElement = this.scene.querySelector("[av-scope='" + parentScopeName + "']");
+            let parentScopeHtmlElement = parentScopeName == "global" ? this.scene : this.scene.querySelector("[av-scope='" + parentScopeName + "']");
 
-            this.isLocalScope(scopeName) ? parentScopeHtmlElement.children[0].insertAdjacentElement("afterend", scopeHtmlElement) : parentScopeHtmlElement.prepend(scopeHtmlElement);
-            this.scopes.set(scopeName, scopeHtmlElement);
+            let scopeHtmlElement = this.createHtmlElementForScope(scopeName);
+            this.isLocalScope(scopeName) ? DOMmanipulator.childElementWithClass(parentScopeHtmlElement, '.accordion-body').append(scopeHtmlElement) : parentScopeHtmlElement.prepend(scopeHtmlElement);
+            this.scopes.set(scopeName, new ScopeTemplateElements(scopeHtmlElement));
         }
 
         if (observable) {
@@ -114,10 +120,12 @@ export class Layout {
             }
 
             let visualizer = this.observableToVisualizer[key];
-            let scopeHtmlElement: HTMLElement = this.scopes.get(scopeName);
+            let scopeHtmlElements = this.scopes.get(scopeName);
+
             let htmlElement = visualizer.drawVarName();
             if (htmlElement) {
-                scopeHtmlElement.children[1].prepend(htmlElement);
+                scopeHtmlElements.scope_body.prepend(htmlElement);
+                scopeHtmlElements.scope_empty_span.style.display = "none";
             }
 
             visualizer.updatePendingDraws();
@@ -131,7 +139,7 @@ export class Layout {
 
         if (!fadingHtmlElem)
             return;
-            
+
         if (onLayoutOperationsStatus)
             onLayoutOperationsStatus(true);
 
@@ -204,7 +212,7 @@ export class Layout {
         this.observableToVisualizer = {};
 
         for (let [_, scope] of this.scopes)
-            scope.remove();
+            scope.scopeHtmlElement.remove();
 
         this.scopes.clear();
     }

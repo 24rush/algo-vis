@@ -104,7 +104,7 @@ class SnippetsUI implements SnippetEvents {
     public fullscreenModal: any;
     public snippetsModalBody: HTMLElement;
     public appContainer: HTMLElement;
-    public orientationWatcher: MediaQueryList = window.matchMedia("(orientation: portrait)");
+    public orientationWatcher: MediaQueryList = window.matchMedia("(max-width: 968px)");
 
     initialize() {
         document.body.append(DOMmanipulator.fromTemplate(fullScreenModalTemplate));
@@ -165,9 +165,9 @@ class SnippetsUI implements SnippetEvents {
 export class Snippets {
     private snippetsConfig: SnippetsConfig;
     private static snippetsUI: SnippetsUI = new SnippetsUI();
-
-    private readonly GITHUB_SNIPPETS_URL = window.location.hostname == "localhost" ? "/wordpress/snippets/" : "../wp-content/uploads/2023/snips/";
-
+    
+    private readonly GITHUB_SNIPPETS_URL = "/assets/algovis/";
+    
     constructor() {
         Snippets.snippetsUI.initialize();
 
@@ -177,9 +177,9 @@ export class Snippets {
 
             if (widget.hasAttribute('av-exercise')) {
                 let jsonFileAndId = widget.getAttribute('av-exercise').split(':');
-                configId = jsonFileAndId[0];
-            } else {
-                configId = widget.getAttribute('config-id');
+                configId = "exercises/" + jsonFileAndId[0];
+            } else if (widget.hasAttribute('config-id')) {
+                configId = "snippets/" + widget.getAttribute('config-id');
             }
 
             let codeEditorId = "code-editor-" + (index++).toString();

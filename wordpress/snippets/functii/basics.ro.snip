@@ -63,10 +63,9 @@ function solicita_numar(tip_numar) {
     return numar;
 }
 
-function numar_la_patrat(tip_numar) {
-	let numar = solicita_numar(tip_numar)
-	console.log('Valoarea numarului ' + tip_numar + 'la patrat este ' + numar * numar);
+function numar_la_patrat(tip_numar) {	
+	return numar * numar; // sau return Math.pow(numar, 2);
 }
 
-numar_la_patrat('pozitiv');
-numar_la_patrat('negativ');
+console.log('Valoarea numarului pozitiv la patrat este ' + numar_la_patrat(solicita_numar('pozitiv')));
+console.log('Valoarea numarului negativ la patrat este ' + numar_la_patrat(solicita_numar('negativ')));

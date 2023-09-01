@@ -180,4 +180,8 @@ export class DOMmanipulator
 
         return elements;
     }
+
+    static childElementWithClass(parent: Element, childClass: string) : HTMLElement {
+        return parent.querySelector(childClass);
+    }
 }
