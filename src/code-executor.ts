@@ -1,5 +1,5 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphType, ParentSide, ObservableGraph, GraphVariableChangeCbk } from './av-types-interfaces'
+import { NodeBase, GraphType, ParentSide, ObservableGraph, GraphVariableChangeCbk, NodeAccessType } from './av-types-interfaces'
 import { MarkerFunctionEvents, UserInteractionEvents } from "./code-executor-proxy";
 
 export enum UserInteractionType {
@@ -107,10 +107,10 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
     onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any): void {
         throw new Error("Method not implemented.");
     }
-    onAccessNode(observable: ObservableGraph, node: NodeBase): void {
+    onAccessNode(observable: ObservableGraph, node: NodeBase, accessType: NodeAccessType): void {
         self.postMessage({
             cmd: CodeExecutorCommands.onAccessNode,
-            params: [observable.toObservableGraph(), node.toNodeBase()]
+            params: [observable.toObservableGraph(), node.toNodeBase(), accessType]
         });
     }
     onAddNode(observable: ObservableGraph, node: NodeBase, parentValue?: NodeBase, side?: ParentSide): void {
@@ -167,7 +167,7 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
         try {
             var Types = {
                 Graph: Graph, GraphType: GraphType, GraphNode: NodeBase, BinaryTreeNode: BinaryTreeNode,
-                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ParentSide,
+                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ParentSide, AccessType: NodeAccessType
             };
 
             var Funcs = this;
@@ -287,6 +287,29 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
         });
     }
 
+    private deepCopy(obj: any) {
+        const result: any = {};
+
+        if (obj instanceof BinaryTreeNode) {
+            return obj.toNodeBase();
+        }
+
+        if (typeof obj !== "object" ||
+            typeof obj === undefined ||
+            obj === null ||           
+            typeof obj == "function") {
+            return obj;
+        }
+
+        const keys = Object.keys(obj);
+
+        for (let key in keys) {
+            result[keys[key]] = this.deepCopy(obj[keys[key]])
+        }
+
+        return result;
+    }
+
     setVar(varname: string, object: any, varsource: string) {
         if (object && typeof object == 'object' && '__isGraphType__' in object) {
             let codex = codeExec();
@@ -298,9 +321,10 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
             });
 
         } else {
+            let codex = codeExec();
             self.postMessage({
                 cmd: CodeExecutorCommands.setVar,
-                params: Array.from(arguments)
+                params: [varname, codex.deepCopy(object), varsource]
             });
         }
     }

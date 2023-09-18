@@ -62,6 +62,7 @@ export class CodeProcessor {
             let GraphNode = Types.GraphNode; \
             let BinaryTreeNode = Types.BinaryTreeNode; \
             let TreeNodeSide = Types.ParentSide;       \
+            let AccessType = Types.AccessType; \
             let markcl = Funcs.markcl; \
             let forcemarkcl = Funcs.forcemarkcl; \
             let setVar = Funcs.setVar; \
@@ -108,7 +109,7 @@ export class CodeProcessor {
         for (let decl of vardata.declarations) {
             let varType = vardata.kind == "var" ? VarType.var : VarType.let;
             let varScope = scopeName;
-            
+
             if (varType == VarType.var && scopeName.indexOf('.') != -1) {
                 varScope = scopeName.substring(0, scopeName.indexOf('.'));
             }
@@ -121,7 +122,7 @@ export class CodeProcessor {
                 continue;
 
             switch (decl.init.type) {
-                case "Identifier": {                                    
+                case "Identifier": {
                     varDecl.source = decl.init.name;
                     break;
                 }
@@ -351,12 +352,20 @@ export class CodeProcessor {
                             let argument = item.arguments[i];
                             let paramName = argument.name;
 
-                            let vardeclaration = this.getVarDeclsTillFuncBorder(scopeName, undefined, paramName);
+                            if (!paramName) {
+                                // See if it's a object.property
+                                if ('object' in argument && 'property' in argument)
+                                    paramName = argument.object.name;// + '.' + argument.property.name;
+                            }
 
-                            if (vardeclaration.length > 0 && calledFunc in this.funcDefs) {
-                                varToParamPairs.push([RuntimeScopeMonitor.scopeNameToFunctionScope(calledFunc) + "." + this.funcDefs[calledFunc][i], paramName]);
-                            } //else
-                            // throw ('Func unknown ' + calledFunc + " " + (calledFunc in this.funcDefs))
+                            if (paramName) {
+                                let vardeclaration = this.getVarDeclsTillFuncBorder(scopeName, undefined, paramName);
+
+                                if (vardeclaration.length > 0 && calledFunc in this.funcDefs) {
+                                    varToParamPairs.push([RuntimeScopeMonitor.scopeNameToFunctionScope(calledFunc) + "." + this.funcDefs[calledFunc][i], paramName]);
+                                } //else
+                                // throw ('Func unknown ' + calledFunc + " " + (calledFunc in this.funcDefs))
+                            }
                         }
 
                         this.pushFuncParams.push(new PushFuncParams(item.range[0], item.range[1],
@@ -434,7 +443,7 @@ export class CodeProcessor {
         }
     }
 
-    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number, isBinary: boolean = false): VariableDeclaration {        
+    private createVariable(scopeName: string, varName: string, varType: VarType, endOfDefinitionIndex: number, isBinary: boolean = false): VariableDeclaration {
         if (!(scopeName in this.varDeclarations))
             this.varDeclarations[scopeName] = {};
 
@@ -576,6 +585,32 @@ export class CodeProcessor {
         this.fcnReturns = [];
         this.markLineOverrides = [];
 
+        // Move global VariableDeclarations on top of all functions
+        if (syntax.body) {
+            let lastVarDeclIdx = -1;
+            let declIdx = 0;
+
+            while (declIdx < syntax.body.length) {
+                if (syntax.body[declIdx].type != "VariableDeclaration") {
+                    declIdx++;
+                    continue;
+                }
+
+                if (lastVarDeclIdx != declIdx) {
+                    // Move VariableDeclaration on top
+                    syntax.body.splice(lastVarDeclIdx + 1, 0, syntax.body[declIdx]);
+                    // Delete it from previous position
+                    syntax.body.splice(declIdx + 1, 1);
+
+                    lastVarDeclIdx++;
+                }
+                else
+                    lastVarDeclIdx = declIdx;
+
+                declIdx++;
+            }
+        }
+
         this.scopes.push(new ScopeDeclaration('global', syntax.range[0], syntax.range[1]));
         this.markLineOverrides.push(syntax.range[1]);
 
@@ -598,7 +633,7 @@ export class CodeProcessor {
                     this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length, diffLen);
                 }
                 else {
-                    replacedTokenStr += (tokenizedLine + replacement);                    
+                    replacedTokenStr += (tokenizedLine + replacement);
                     let insertedSize = (tokenizedLine + replacement).length;
                     this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length - insertedSize, diffLen);
                 }

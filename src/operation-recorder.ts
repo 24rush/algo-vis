@@ -1,6 +1,6 @@
 import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType } from './av-types-interfaces'
+import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType, NodeAccessType } from './av-types-interfaces'
 import { CodeExecutorProxy } from "./code-executor-proxy";
 import { UserInteractionType } from "./code-executor";
 import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
@@ -73,7 +73,7 @@ class RWIndexedObjectOperationPayload {
 }
 
 class GraphObjectOperationPayload {
-    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ParentSide) {
+    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ParentSide, accessType?: NodeAccessType) {
         switch (operationType) {
             case OperationType.GRAPH_ADD_EDGE:
                 (observableGraph as Graph).addEdge(source, destinationOrParent);
@@ -101,7 +101,7 @@ class GraphObjectOperationPayload {
                 // Nothing to do
                 break;
             case OperationType.GRAPH_ACCESS_NODE:
-                observableGraph.accessValue(source);
+                observableGraph.accessValue(source, accessType);
                 break;
             default:
                 throw 'Cannot process operation type: ' + operationType;
@@ -146,10 +146,10 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     }
 
     // Graph
-    onAccessNode(observable: ObservableGraph, node: NodeBase): void {
+    onAccessNode(observable: ObservableGraph, node: NodeBase, accessType: NodeAccessType): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
 
-        GraphObjectOperationPayload.execute(OperationType.GRAPH_ACCESS_NODE, runtimeObservable, node.value);
+        GraphObjectOperationPayload.execute(OperationType.GRAPH_ACCESS_NODE, runtimeObservable, node.value, undefined, undefined, accessType);
     }
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
@@ -291,12 +291,12 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     }
 
     setVar(varName: string, varValue: any, varSource: string) {
-        if (varValue instanceof NodeBase || varValue instanceof BinaryTreeNode)
+        if (varValue instanceof NodeBase || varValue instanceof BinaryTreeNode || varValue instanceof BinaryTree)
             return;
 
         let runtimeScopeName = this.rsMonitor.getCurrentScope();
 
-        if (this.isReferenceObject(varValue)) {
+        if (this.isReferenceObject(varValue) && !("__isGraphType__" in varValue)) {
             let varRuntimeScope = this.rsMonitor.attachVarToScope(varName, runtimeScopeName);
 
             if (varSource) {
