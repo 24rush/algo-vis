@@ -2,8 +2,8 @@
     <div class="halfScreen leftPane">
         <div class="btn-group btn-group-sm d-flex flex-row dropdown-center av-snippets"
             av-bind-style-display="{isSnippetSet: flex, !isSnippetSet: none}">
-            <button class="dropdown-toggle btn btn-light btn-overrides" type="button" data-bs-toggle="dropdown"
-                aria-expanded="false" av-bind-text="selectedSnippetDesc">
+            <button class="dropdown-toggle btn btn-light" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                av-bind-text="selectedSnippetDesc">
             </button>
             <ul class="dropdown-menu" av-bind-onclick="onSnippetSelected" style="cursor: pointer;">
                 {{#levels}}
@@ -18,20 +18,20 @@
                 {{/levels}}
             </ul>
 
-            <button av-bind-onclick="onNextSnippet" type="button" class="btn btn-light btn-overrides"
+            <button av-bind-onclick="onNextSnippet" type="button" class="btn btn-light"
                 av-bind-class="{!hasMoreSnippets : disabled}" style="flex-grow: 0 !important;">
                 <span class="bi bi-arrow-right-square" style="padding: 0.4rem;"></span>
             </button>
         </div>
         <div class="av-buttonsBar btn-group btn-group-sm d-flex flex-row">
             <button av-bind-onclick="onAdvance" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
-                class="popover-dismiss rounded-right btn btn-primary btn-overrides av-btn"
+                class="popover-dismiss rounded-right btn btn-primary av-btn-square av-btn"
                 av-bind-class="{isExecutionCompleted : disabled, isFunctionalityDisabled : disabled}">
                 <i class="bi bi-play-fill"></i>
                 <span av-bind-text="LangStrId.4" style="padding-right: 3px;">Execute line</span>
             </button>
 
-            <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light btn-overrides"
+            <button av-bind-onclick="onAutoplayToggled" type="button" class="btn btn-light"
                 av-bind-class="{isFunctionalityDisabled : disabled, isVisualisationDisabled: av-btn}">
                 <i class="bi bi-fast-forward-fill"
                     av-bind-class="{!isPaused : bi-pause-fill, isPaused : bi-fast-forward-fill}"></i>
@@ -39,25 +39,24 @@
             </button>
 
             <button av-bind-onclick="onRestart" av-bind-style-display="{isVisualisationDisabled: none}" type="button"
-                class="btn btn-light btn-overrides"
-                av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
+                class="btn btn-light" av-bind-class="{!isPaused : disabled, isFunctionalityDisabled : disabled}">
                 <i class="bi bi-arrow-clockwise"></i>
                 <span av-bind-text="LangStrId.6">Restart</span>
             </button>
 
             <button av-bind-onclick="onShowSolution" av-bind-style-display="{!hasSolution: none}" type="button"
-                class="btn btn-light btn-overrides">
+                class="btn btn-light ">
                 <i class="bi bi-eyeglasses"></i>
                 <span av-bind-text='{!isSolution: LangStrId.26, isSolution: LangStrId.27}'>Show solution</span>
             </button>
 
-            <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light btn-overrides"
+            <button av-bind-onclick="onFullscreen" type="button" class="btn btn-light "
                 style="flex-grow: 0 !important;">
                 <span class="bi bi-arrows-fullscreen" style="padding: 0.4rem;"></span>
             </button>
 
             <div av-bind-style-display="{isVisualisationDisabled: none}">
-                <button class="btn btn-light btn-overrides" type="button" id="dropdownMenuButton-{{codeEditorId}}"
+                <button class="btn btn-light av-btn-square h-100" type="button" id="dropdownMenuButton-{{codeEditorId}}"
                     data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" data-bs-auto-close="outside">
                     <span class="bi bi-three-dots-vertical"></span>
                 </button>
@@ -102,7 +101,8 @@
             </div>
         </div>
 
-        <div class="commentsPopover" data-bs-container="body" data-bs-trigger="focus" data-bs-toggle="popover" data-bs-placement="bottom">
+        <div class="commentsPopover" data-bs-container="body" data-bs-trigger="focus" data-bs-toggle="popover"
+            data-bs-placement="bottom">
         </div>
 
         <div id="msgBox-{{codeEditorId}}" data-bs-autohide="false" class="toast toast-container p-3" role="alert"
@@ -112,17 +112,19 @@
             </div>
 
             <div class="toast-body fade show">
-                <span av-bind-text="LangStrId.29"></span><strong av-bind-text="timeRemainingForSolution"></strong> <span av-bind-text="LangStrId.31"></span>
+                <span av-bind-text="LangStrId.29"></span><strong av-bind-text="timeRemainingForSolution"></strong> <span
+                    av-bind-text="LangStrId.31"></span>
                 <br><br><i av-bind-text="LangStrId.30"></i>
-                <div class="mt-2 pt-2">                    
+                <div class="mt-2 pt-2">
                     <button type="button" class="btn btn-primary btn-sm av-btn" data-bs-dismiss="toast"
                         av-bind-text="LangStrId.18">OK</button>
                 </div>
             </div>
         </div>
 
-        <div id="toast-{{codeEditorId}}" data-bs-autohide="false" data-bs-animation="false" class="toast toast-container p-3"
-            style="pointer-events: all; position:relative; width: 100%" aria-live="assertive" aria-atomic="true">
+        <div id="toast-{{codeEditorId}}" data-bs-autohide="false" data-bs-animation="false"
+            class="toast toast-container p-3" style="pointer-events: all; position:relative; width: 100%"
+            aria-live="assertive" aria-atomic="true">
             <div class="toast-header" style="margin-bottom: 0;">
                 <span class="me-auto" style="white-space: pre-wrap;" av-bind-text="promptTitle"></span>
             </div>
@@ -158,15 +160,34 @@
                     av-bind-text='exceptionMessage'></button>
             </li>
 
-            <li av-bind-style-display="{isVisualisationDisabled: none}"
-                class="list-group-item fw-semibold"><span av-bind-text="LangStrId.7">Variables</span>
-                <div class="panelVariables">
+            <div class="btn-group btn-group-sm d-flex flex-row dropdown-center">
+                <button av-bind-style-display="{isVisualisationDisabled: none}" disabled
+                    class="btn btn-light av-btn-square" style="font-size: 0.875rem; opacity: 1;">
+                    <i class="bi bi-repeat" style="padding-right: 2px;"></i>
+                    <span av-bind-text="LangStrId.7">Variables</span>
+                </button>
+
+                <div class="btn-group btn-group-sm btn btn-light av-btn-square"
+                    style="display: flex;align-items: center;">
+                    <input type="checkbox" class="btn-check av-btn-pressable" id="{{codeEditorId}}-consoleCollapse"
+                        data-bs-toggle="collapse" autocomplete="off" data-bs-target="#{{codeEditorId}}-consoleCollapse"
+                        aria-expanded="false" aria-controls="{{codeEditorId}}-consoleCollapse">
+
+                    <label class="btn av-btn-square" for="{{codeEditorId}}-consoleCollapse" style="height: 100%;">
+                        <i class="bi bi-terminal" style="padding-right: 2px;"></i>
+                        <span av-bind-text="LangStrId.8">Console output</span>
+                    </label>
                 </div>
-            </li>
-            <li class="list-group-item fw-semibold av-console grow-wrap"><span av-bind-text="LangStrId.8">Console output</span>
-                <textarea class="form-control" style="background-color:white; width: 100%; max-width: 100%; overflow: auto;" rows="4"
-                    max-rows="28" av-bind-text="consoleOutput" disabled onInput="this.parentNode.dataset.replicatedValue = this.value"></textarea>
-            </li>
+            </div>
+
+            <div class="collapse multi-collapse" id="{{codeEditorId}}-consoleCollapse">
+                <textarea class="form-control"
+                    style="background-color:white; width: 100%; max-width: 100%; overflow: auto; border-radius: 0;"
+                    rows="4" max-rows="28" av-bind-text="consoleOutput" disabled
+                    onInput="this.parentNode.dataset.replicatedValue = this.value"></textarea>
+            </div>
+            <div class="panelVariables">
+            </div>
         </ul>
     </div>
 </div>

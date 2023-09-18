@@ -7,9 +7,10 @@ var dagre = require('cytoscape-dagre');
 Cytoscape.use(dagre);
 
 import { ObservableJSVariable, JSVariableChangeCbk, ObservableType } from "./observable-type"
-import { GraphVariableChangeCbk, NodeBase, ObservableGraph } from "./av-types-interfaces";
-import { BinaryTree, Graph } from "./av-types";
+import { GraphVariableChangeCbk, NodeAccessType, NodeBase, ObservableGraph } from "./av-types-interfaces";
+import { BinaryTree, BinaryTreeNode, Graph } from "./av-types";
 import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
+import { Localize } from "./localization";
 
 enum DrawnElement {
     undefined,
@@ -42,7 +43,7 @@ class VisualizerViewModel {
 
         this.isMultiArray = this.checkIsMultiArray(value);
         this.isNotStack = varname.indexOf('stack') == -1;
-        this.isNotQueueOrStack = this.isNotStack && varname.indexOf('queue') == -1;
+        this.isNotQueueOrStack = this.isNotStack; /*&& varname.indexOf('queue') == -1;*/
 
         if (this.isBorderless) { // Overwrites to handle empty values
             this.isNotStack = true;
@@ -69,7 +70,7 @@ class VisualizerViewModel {
 export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableChangeCbk {
     protected readonly templateVarName =
         '<div class="var-box" style="display: flex; align-items: center; user-select: none"> \
-            <div style="min-width: 20%; text-align: right;"> \
+            <div style="display: flex; min-width: 20%; justify-content: flex-end;"> \
                 <span id="var-name" class="var-name" av-bind-onclick="onVarNameClicked">{{name}}</span> \
                 <span id="var-name" class="var-name-bin" av-bind-style-display="{!isBinary: none, isBinary: inline}" av-bind-onclick="onVarNameClicked">bin</span> \
             </div> \
@@ -78,15 +79,15 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     ';
 
     protected readonly templateReference: string =
-        '<div class="var-value" style="display: flex; justify-content: flex-start; align-items: center; border:none;width:100%; height:{{height}}px;"> \
-            <span style="font-style: italic; vertical-align:middle;" av-bind-text="LangStrId.9"></span> \
-            <div id="var-value" style="padding-left: 5px"></div> \
+        '<div class="var-value" style="display: flex; flex-wrap: wrap; justify-content: flex-start; align-items: center; border:none;width:100%;"> \
+            <span style="font-style: italic;" av-bind-text="LangStrId.9"></span> \
+            <span id="var-value" style="padding-left: 5px"></span> \
         </div>';
 
     protected readonly templatePrimitive: string =
-        '<div class="var-value" style="min-width: {{width}}px;" \
+        '<div class="var-value" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; min-width: {{width}}px;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-                <div id="var-value"></div>\
+                <span id="var-value"></span>\
      </div>';
 
     protected readonly templateArray = '<span style=""> \
@@ -94,7 +95,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         <div style="display: flex; flex-wrap: wrap;" av-bind-style-flex-direction="{isNotStack: row, !isNotStack: column}">\
         <span class="align-self-center" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
         {{#cols}} \
-            <div style="padding:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
+            <div style="padding-right:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
                 <span class="var-value" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
                 <div id="var-value"></div>\
                 </span> \
@@ -105,12 +106,12 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     {{/rows}} \
     </span>';
 
-    protected readonly templateObject = '<span style="display: table;" class="justify-contents-baseline"> \
+    protected readonly templateObject = '<span style="display: flex; flex-wrap: wrap;" class="justify-contents-baseline"> \
     {{#data}} \
         <div style="padding-right: 3px; display: table-cell;"> \
-            <span class="var-value" av-bind-style-border="{isBorderless : none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
-                <div id="var-value"></div> \
-            </span> \
+            <div class="var-value" av-bind-style-border="{isBorderless : none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
+                <span id="var-value"></span> \
+            </div> \
             <span av-bind-style-display="{!isBorderless : table, isBorderless : none}" style="margin: 0 auto; font-style: italic; font-size: x-small;">{{index}}</span> \
         </div> \
     {{/data}} \
@@ -123,8 +124,9 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templateGraph = '<div style="display: block;  resize:vertical; padding: 3px; width: 100%; height:{{height}}px;"> \
     </div>';
 
-    protected readonly height: number = 30;
-    protected readonly width: number = 30;
+    protected readonly height: number = 23;
+    protected readonly width: number = 23;
+    protected readonly fontSize: number = 13;
 
     protected htmlElement: HTMLElement = undefined;
     protected keyValueElements: Record<string | number | symbol, HTMLElement> = {};
@@ -149,8 +151,9 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         this.viewModel.onVarNameClicked = () => {
             if (typeof this.observable.getValue() == "number") {
                 this.clientViewModel.isBinary = !this.clientViewModel.isBinary;
+
+                this.redraw(this.elementToDrawType);
             }
-            this.redraw(this.elementToDrawType);
         };
         let viewModel = new ObservableViewModel(this.viewModel);
         this.viewModel.isBinary = (observable as ObservableJSVariable) && (observable as ObservableJSVariable).isBinary;
@@ -204,6 +207,16 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }, 600);
     }
 
+    private toStringKnownObject(varValue: any): string {
+        if (typeof varValue != "object" || !('type' in varValue))
+            return varValue.toString();
+
+        switch (varValue['type']) {
+            case "NodeBase":
+                return varValue['value'].toString();
+        }
+    }
+
     private fitText(text: HTMLElement, objectToPrint: any, maxWidth: number, maxHeight: number, disableAutoResize: boolean = false) {
         let dec2bin = (dec: number): string => {
             return (dec >>> 0).toString(2).padStart(32, '0');
@@ -215,7 +228,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             if (typeof objectToPrint == 'number') {
                 text.textContent = this.clientViewModel.isBinary ? dec2bin(objectToPrint) : objectToPrint.toString();;
             } else
-                text.textContent = (typeof objectToPrint == 'string' && objectToPrint[0] != '\'') ? `'${objectToPrint.toString()}'` : objectToPrint.toString();
+                text.textContent = (typeof objectToPrint == 'string' && objectToPrint[0] != '\'') ? `'${objectToPrint.toString()}'` : this.toStringKnownObject(objectToPrint);
         }
 
         if (objectToPrint != null && typeof objectToPrint == 'object') {
@@ -228,7 +241,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 }
 
             if (isEmptyObject) {
-                text.textContent = 'empty';
+                text.textContent = Localize.str(33);
                 this.resetFontSize(text);
                 return;
             }
@@ -242,24 +255,24 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         let cachedFontSizeForNewValue = (text.id in this.fontSizeCache) ? this.fontSizeCache[text.id] : 0;
         let currentFontSize = Number.parseInt(window.getComputedStyle(text, null).getPropertyValue('font-size'));
-        if (!currentFontSize || Number.isNaN(currentFontSize)) currentFontSize = 15;
+        if (!currentFontSize || Number.isNaN(currentFontSize)) currentFontSize = this.fontSize;
 
         if (cachedFontSizeForNewValue > 0 && cachedFontSizeForNewValue == currentFontSize) {
             return;
         }
 
-        let directionToBounds = (w: number, h: number) => {   
-            if (w > maxWidth || h > maxHeight)
+        let directionToBounds = (w: number, h: number) => {
+            if (/*w > maxWidth || */h > maxHeight)
                 return -1;
-            if (w < maxWidth && h < maxHeight)
+            if (/*w < maxWidth && */h < maxHeight)
                 return 1;
 
             return 0;
         };
 
-        maxWidth = text.clientWidth;  
-        maxHeight = 28; // account for border (30 - 2)
-        let wh = this.textWidth(text);             
+        maxWidth = text.clientWidth;
+        maxHeight = this.height - 2; // account for border (30 - 2)
+        let wh = this.textWidth(text);
         let currDirectionToBounds = directionToBounds(wh.w, wh.h);
 
         if (currDirectionToBounds == 0) {
@@ -355,7 +368,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         this.htmlElement.append(valuesHtmlElement);
 
-        this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');        
+        this.text = DOMmanipulator.elementStartsWithId(valuesHtmlElement, 'var-value');
         this.fitText(this.text, observable.getValue(), this.htmlElement.clientWidth, this.htmlElement.clientHeight);
 
         this.varValueDrawn = true;
@@ -364,7 +377,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
     public drawReference(observable: ObservableJSVariable) {
         let rendered = MustacheIt.render(this.templateReference, {
-            width: 30, height: 30
+            width: this.width, height: this.height
         });
 
         let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
@@ -453,7 +466,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         let rendered = MustacheIt.render(this.templateObject, {
             data: keysToRender.map(key => {
                 return {
-                    width: this.width, height: isEmpty ? 40 : this.height, // TODO
+                    width: this.width, height: this.height,
                     index: key
                 };
             }),
@@ -633,7 +646,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 for (let [i, v] of newValue.entries()) {
                     if (value[i] != newValue[i])
                         this.onSetArrayAtIndexEvent(observable, v, v, i);
-                };
+                }
             }
             else {
                 for (let [r, _v] of newValue.entries()) {
@@ -641,7 +654,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                         if (value[r][c] != newValue[r][c])
                             this.onSetArrayAtIndexEvent(observable, newValue[r][c], newValue[r][c], r, c);
                     }
-                };
+                }
             }
         }
     }
@@ -707,11 +720,74 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
         if (!(observable instanceof BinaryTree)) {
             this.layout = this.graphVis.layout({
-                name: 'grid',
+                name: 'cose',
                 infinite: true,
                 fit: true,
             });
         } else {
+            const SPACING = 40;
+            let levels: Map<number, BinaryTreeNode[]> = new Map();
+            let binTreeRoot = (observable as BinaryTree).getRoot();
+
+            binTreeRoot.level = 0;
+            binTreeRoot.dirrScore = 0;
+
+            let queue: BinaryTreeNode[] = [binTreeRoot];
+
+            while (queue.length) {
+                let currNode = queue.shift();
+
+                if (levels.has(currNode.level))
+                    levels.get(currNode.level).push(currNode);
+                else levels.set(currNode.level, [currNode]);
+
+                if (currNode.left) {
+                    currNode.left.offsetX = -SPACING;
+                    currNode.left.dirrScore = currNode.dirrScore - 1;
+                    queue.push(currNode.left);
+                }
+
+                if (currNode.right) {
+                    currNode.right.offsetX = SPACING;
+                    currNode.right.dirrScore = currNode.dirrScore + 1;
+                    queue.push(currNode.right);
+                }
+            }
+
+            for (let [level, nodes] of levels.entries()) {
+                if (level < 2)
+                    continue;
+
+                for (let dirrScoreIdx = -level + 1; dirrScoreIdx < level; dirrScoreIdx++) {
+                    let hittinNodes: BinaryTreeNode[] = [];
+
+                    for (let node of nodes) {
+                        if (node.dirrScore == dirrScoreIdx)
+                            hittinNodes.push(node);
+                    }
+
+                    if (hittinNodes.length > 1) {
+                        let h1 = hittinNodes[0].parent, h2 = hittinNodes[1].parent;
+            
+                        while (h1 != h2) {
+                            //h1.offsetX += h1.isLeftChild() ? -SPACING : SPACING;
+                            //h2.offsetX += h2.isLeftChild() ? -SPACING : SPACING;
+
+                            h1 = h1.parent; h2 = h2.parent;
+                        }
+
+                        if (h1.left) h1.left.offsetX -= SPACING;
+                        if (h1.right) h1.right.offsetX += SPACING;
+
+                        while (h1 != binTreeRoot) {
+                            //h1.offsetX += h1.isLeftChild() ? -SPACING : SPACING;
+                            h1 = h1.parent;
+                        }
+
+                    }
+                }
+            }
+
             this.layout = this.graphVis.layout({
                 name: 'dagre',
                 animate: true,
@@ -719,31 +795,21 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 animationEasing: 'ease-in-out-sine',
                 fit: true,
                 transform: (node: any, pos: any) => {
-                    //pos.y += 20;
-
                     let treeNode = (observable as BinaryTree).findNodeWithId(node.id());
-                    if (!treeNode) {
-                        console.log('No node with id', node.id());
-                        return;
+                    if (!treeNode)
+                        return pos;
+
+                    if (treeNode.isRoot()) {
+                        treeNode.offsetX = pos.x;
+                        console.log(`${node.id()} ${treeNode.offsetX} ${pos.x}`);
+
+                        return pos;
                     }
 
-                    let isOnlyChild = treeNode.isOnlyChild();
+                    treeNode.offsetX += treeNode.parent.offsetX;
+                    pos.x = treeNode.offsetX;
 
-                    let offsetComputed = 0; // 40
-                    if (!treeNode.isRoot()) {
-                        let parent = this.graphVis.nodes().filter(`[id="${treeNode.parent.id}"]`);
-                        let parentPos = parent.position();
-
-                        offsetComputed = Math.abs(parentPos.y - pos.y) * 0.5;
-                    }
-
-                    let sideOffSet = 0;
-                    if (isOnlyChild) {
-                        sideOffSet = treeNode.isLeftChild() ? -offsetComputed : offsetComputed;
-                    }
-
-                    treeNode.offset = (treeNode.parent ? treeNode.parent.offset : 0) + sideOffSet;
-                    pos.x += treeNode.offset;
+                    console.log(`${node.id()} ${treeNode.offsetX} ${pos.x}`);
 
                     return pos;
                 }
@@ -763,11 +829,11 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         console.log(observable, _value, _newValue)
     }
 
-    onAccessNode(_observable: ObservableGraph, node: NodeBase): void {
+    onAccessNode(_observable: ObservableGraph, node: NodeBase, accessType: NodeAccessType): void {
         let graphNode = this.graphVis.filter(`[id = "${node.id}"]`);
 
-        let duration = 10;
-        for (let i = 0; i < 6; i++)
+        let duration = 8;
+        for (let i = 0; i < 2; i++)
             graphNode.animate({
                 style: { opacity: 1 },
                 duration: duration,
@@ -776,17 +842,19 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                 style: { opacity: 0, 'background-color': 'black' },
                 duration: duration,
                 easing: 'ease-in-sine'
-            }).delay(0).animate({
-                style: { opacity: 1, 'background-color': 'red' },
+            }).delay(duration).animate({
+                style: { opacity: 1, 'background-color': '#0d6efd' },
                 duration: duration,
                 easing: 'ease-in-sine'
             });
-        /*
-                    graphNode.animate({
-                        style: { opacity: 1, 'background-color': '#0d6efd' },
-                        duration: duration,
-                        easing: 'ease-in-sine'
-                    });*/
+
+        if (accessType == NodeAccessType.Mark) {
+            graphNode.animate({
+                style: { opacity: 1, 'background-color': '#d63384' },
+                duration: duration,
+                easing: 'ease-in-sine'
+            });
+        }
     }
 
     onAddEdge(observable: ObservableGraph, sourceNode: NodeBase, destNode: NodeBase): void {

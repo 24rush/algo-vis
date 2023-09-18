@@ -351,7 +351,7 @@ export class Scene {
         });
 
         this.viewModel.onShowSolution = () => {
-            const MINUTES_REQUIRED_TO_WORK = 5;
+            const MINUTES_REQUIRED_TO_WORK = 2;
             let minToMs = (min: number) => min * 60 * 1000;
 
             let showSolution = () => {

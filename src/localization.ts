@@ -12,7 +12,7 @@ var en_langMap : Record<number, string> = {
     4: "Execute line",
     5: "Compilation error",
     6: "Restart",
-    7: "Variables",
+    7: "Variables, scopes and functions",
     8: "Console output",
     9: "reference to ",
     10: "function ",
@@ -37,7 +37,8 @@ var en_langMap : Record<number, string> = {
     29: "We know it's hard but give it a bit more time. Around: ",
     30: "The solution can be shown after 5 minutes since you first started typing in the editor",
     31: "minutes",
-    32: "no variables"    
+    32: "no variables",
+    33: "empty"   
 }
 
 var ro_langMap : Record<number, string> = {
@@ -48,8 +49,8 @@ var ro_langMap : Record<number, string> = {
     4: "Execută linie",
     5: "Eroare compilare",
     6: "De la început",
-    7: "Variabile",
-    8: "Consolă de ieșire",
+    7: "Variabile, scopuri și funcții",
+    8: "Consola de ieșire",
     9: "referă pe ",
     10: "funcția ",
     11: "scop local în ",
@@ -73,7 +74,8 @@ var ro_langMap : Record<number, string> = {
     29: "Știm că e greu dar mai gândește-te puțin înainte să vezi soluția. Măcar încă: ",
     30: "Soluția se va afișa doar după 5 minute de când ai început să tastezi în editor",
     31: "minute",
-    32: "fără variabile"
+    32: "nu conține variabile",
+    33: "fără conținut"
 }
 
 export class Localize

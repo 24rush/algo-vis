@@ -47,6 +47,7 @@ export enum VariableType {
     Primitive,
     Array,
     Object,
+    Set,
     Reference,
 
     Graph,
@@ -73,7 +74,19 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
 
     public getType() { return this.determineType(this.value); }
 
-    public getKeys(): any[] { return Object.keys(this.value) }
+    // For printing objects
+    public getKeys(): any[] { 
+        let isPrintable = "type" in this.value;
+        
+        if (isPrintable) {
+            switch (this.value["type"]) {
+                case "NodeBase":
+                    return ["value"];
+            }
+        }
+
+        return Object.keys(this.value) 
+    }
 
     public getValue(): any {
         for (let observer of this.observers) {
@@ -118,8 +131,11 @@ export class ObservableJSVariable extends BaseObservableType<JSVariableChangeCbk
     }
 
     public setValue(value: any) {
+        // handle Sets        
+        let isSet = (Object.prototype.toString.call(value) == "[object Set]");        
+
         let oldValues = this.value ? JSON.parse(JSON.stringify(this.value)) : this.value;
-        this.value = value ? JSON.parse(JSON.stringify(value)) : value;
+        this.value = value ? JSON.parse(JSON.stringify(isSet ? [...value] : value)) : value;
 
         let variableType = this.determineType(value);
 
