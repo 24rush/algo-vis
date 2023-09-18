@@ -1,4 +1,4 @@
-import { GraphNodePayloadType, GraphType, NodeBase, ObservableGraph, ParentRefNode, ParentSide } from "./av-types-interfaces";
+import { AdjacencyList, GraphNodePayloadType, GraphType, NodeAccessType, NodeBase, ObservableGraph, ParentRefNode, ParentSide } from "./av-types-interfaces";
 
 class BinaryTreeNodeProxy {
     constructor(protected target: any) {
@@ -29,8 +29,11 @@ export class BinaryTreeNode extends ParentRefNode {
     left: BinaryTreeNode = undefined;
     right: BinaryTreeNode = undefined;
     parent: BinaryTreeNode = undefined;
+
     multiplicity: number = 0;
-    offset: number = 0;
+    level: number = 0;
+    dirrScore: number = 0;
+    offsetX: number = 0;
 
     private parentSide: ParentSide = undefined;
 
@@ -40,9 +43,12 @@ export class BinaryTreeNode extends ParentRefNode {
         return new BinaryTreeNodeProxy(this) as unknown as BinaryTreeNode;
     }
 
-    createChild(side: ParentSide, value: GraphNodePayloadType) {
+    createChild(side: ParentSide, value: GraphNodePayloadType): BinaryTreeNode {
         let addedNode = value != undefined ? new BinaryTreeNode(value) : undefined;
+        addedNode.level = this.level + 1;
         this.setChild(side, addedNode);
+
+        return addedNode;
     }
 
     setChild(side: ParentSide, addedNode: BinaryTreeNode) {
@@ -88,27 +94,35 @@ export class BinaryTreeNode extends ParentRefNode {
 }
 
 export class GraphNode extends ParentRefNode {
-    private adjacents: Set<any> = new Set();
-    private adjacents_nodes: Map<any, NodeBase> = new Map();
+    private adjacents: Set<GraphNodePayloadType> = new Set();
+    private adjacents_nodes: Map<GraphNodePayloadType, GraphNode> = new Map();
 
-    constructor(value: any) {
+    constructor(value: GraphNodePayloadType) {
         super(value);
     }
 
-    addAdjacent(value: any) {
-        this.adjacents.add(value);
+    addAdjacent(node: GraphNode) {
+        this.adjacents.add(node.value);
 
-        if (!this.adjacents_nodes.has(value)) {
-            this.adjacents_nodes.set(value, new NodeBase(value));
+        if (!this.adjacents_nodes.has(node.value)) {
+            this.adjacents_nodes.set(node.value, node);
         }
     }
 
-    removeAdjacent(value: any) {
-        if (this.adjacents_nodes.has(value)) {
-            this.adjacents_nodes.delete(value);
+    removeAdjacent(node: GraphNode) {
+        if (this.adjacents_nodes.has(node.value)) {
+            this.adjacents_nodes.delete(node.value);
         }
 
-        return this.adjacents.delete(value);
+        return this.adjacents.delete(node.value);
+    }
+
+    isAdjacent(value: GraphNodePayloadType): boolean {
+        return this.adjacents.has(value);
+    }
+
+    getAdjacents(): GraphNode[] {
+        return Array.from(this.adjacents_nodes.values());
     }
 }
 
@@ -122,24 +136,73 @@ export class Graph extends ObservableGraph {
     override empty() { this.nodes.clear(); }
     override isEmpty(): boolean { return this.nodes.size == 0; }
     override find(value: any): GraphNode { return this.nodes.get(value); }
-    override accessValue(value: GraphNodePayloadType) {
+    override accessValue(value: GraphNodePayloadType, accessType: NodeAccessType) {
         let node = this.find(value);
 
         if (node) {
-            this.onAccessNode(node);
+            this.onAccessNode(node, accessType);
         }
     }
 
     hasDirectedEdges(): boolean { return this.type == GraphType.DIRECTED; }
-    
+
+    override generate(node_count: number) {
+        let getRndInt = (max: number) => {
+            return Math.floor(Math.random() * max);
+        }
+
+        for (let rowIndex = 0; rowIndex < node_count; rowIndex++) {
+            this.addVertex(rowIndex + 1);
+            for (let colIndex = this.type == GraphType.UNDIRECTED ? rowIndex : 0; colIndex < node_count; colIndex++) {
+                if (rowIndex == colIndex)
+                    continue;
+
+                let element = getRndInt(2);
+
+                if (element != 0) {
+                    this.addEdge(rowIndex + 1, colIndex + 1);
+                }
+            }
+        }
+    }
+
+    override generate_with(nodes: GraphNodePayloadType[]) {
+        let nodes_unique: GraphNodePayloadType[] = Array.from(new Set(nodes));
+
+        for (let rowIndex = 0; rowIndex < nodes_unique.length; rowIndex++) {
+            this.addVertex(nodes_unique[rowIndex]);
+
+            for (let colIndex = 0; colIndex < nodes_unique.length; colIndex++) {
+                if (rowIndex == colIndex)
+                    continue;
+
+                this.addVertex(nodes_unique[colIndex]);
+
+                let element = Math.floor(Math.random() * 2);
+
+                if (element != 0) {
+                    this.addEdge(nodes_unique[rowIndex], nodes_unique[colIndex]);
+                }
+            }
+        }
+    }
+
     fromAdjacencyMatrix(matrix: GraphNodePayloadType[][]) {
         for (let rowIndex = 0; rowIndex < matrix.length; rowIndex++) {
             for (let colIndex = this.type == GraphType.UNDIRECTED ? rowIndex : 0; colIndex < matrix[rowIndex].length; colIndex++) {
                 let element = matrix[rowIndex][colIndex];
-                
+
                 if (element != 0) {
-                    this.addEdge(rowIndex, colIndex);
+                    this.addEdge(rowIndex + 1, colIndex + 1);
                 }
+            }
+        }
+    }
+
+    fromAdjacencyList(adjList: AdjacencyList) {
+        for (let [node, adjNodes] of Object.entries(adjList)) {
+            for (let adjNode of adjNodes) {
+                this.addEdge(typeof adjNode == "number" ? Number.parseInt(node) : node, adjNode);
             }
         }
     }
@@ -160,7 +223,9 @@ export class Graph extends ObservableGraph {
     removeVertex(value: GraphNodePayloadType) {
         const current = this.nodes.get(value);
         if (current) {
-            Array.from(this.nodes.values()).forEach((node) => node.removeAdjacent(current.value));
+            Array.from(this.nodes.values()).forEach((node) => node.removeAdjacent(current));
+            this.nodes.delete(value);
+
             this.onNodeRemoved(current);
         }
     }
@@ -173,13 +238,16 @@ export class Graph extends ObservableGraph {
         const sourceNode = this.addVertex(source);
         const destinationNode = this.addVertex(destination);
 
-        sourceNode.addAdjacent(destinationNode);
+        let alreadyAdj = destinationNode.isAdjacent(sourceNode.value) || sourceNode.isAdjacent(destinationNode.value);
 
+        sourceNode.addAdjacent(destinationNode);
         if (this.type === GraphType.UNDIRECTED) {
             destinationNode.addAdjacent(sourceNode);
         }
 
-        this.onEdgeAdded(sourceNode, destinationNode);
+        if (!alreadyAdj) {
+            this.onEdgeAdded(sourceNode, destinationNode);
+        }
 
         return [sourceNode, destinationNode];
     }
@@ -209,16 +277,86 @@ export class BinaryTree extends ObservableGraph {
         super(type);
     }
 
+    override generate(node_count: number) {
+        let nodes: Set<GraphNodePayloadType> = new Set();
+
+        let getRndInt = (max: number) => {
+            return Math.ceil(Math.random() * max);
+        }
+
+        while (nodes.size != node_count) {
+            nodes.add(getRndInt(node_count));
+        }
+
+        this.generate_with(Array.from(nodes.values()));
+    }
+
+    override generate_with(nodes: GraphNodePayloadType[]): void {
+        let root: BinaryTreeNode = nodes.length ? this.createRoot(nodes[0]) : undefined;
+
+        if (nodes.length == 1) {
+            return;
+        }
+
+        let getRndInt = (max: number) => {
+            return Math.floor(Math.random() * max);
+        }
+
+        let addFn = (parent: BinaryTreeNode) => {
+            if (!nodes.length)
+                return;
+
+            let rnd = getRndInt(4);
+
+            switch (rnd) {
+                // left side
+                case 0: {
+                    if (parent.left)
+                        addFn(parent.left);
+                    else
+                        addFn(this.add(nodes.shift(), parent.value, ParentSide.LEFT));
+                    break;
+                }
+                // right side
+                case 1: {
+                    if (parent.right)
+                        addFn(parent.right);
+                    else
+                        addFn(this.add(nodes.shift(), parent.value, ParentSide.RIGHT));
+                    break;
+                }
+                // both sides
+                case 2: {
+                    if (!parent.left)
+                        addFn(this.add(nodes.shift(), parent.value, ParentSide.LEFT));
+
+                    if (!parent.right)
+                        addFn(this.add(nodes.shift(), parent.value, ParentSide.RIGHT));
+
+                    break;
+                }
+                // no sides
+                case 3: {
+                    return;
+                }
+            }
+        }
+
+        nodes.shift();
+        while (nodes.length)
+            addFn(root);
+    }
+
     override empty() { this.root = undefined; }
     override isEmpty(): boolean { return this.root == undefined; }
     override find(value: any): BinaryTreeNode {
         return this.findExhaustive(value);
     }
-    override accessValue(value: GraphNodePayloadType) {
+    override accessValue(value: GraphNodePayloadType, accessType: NodeAccessType) {
         let node = this.find(value);
 
         if (node) {
-            this.onAccessNode(node);
+            this.onAccessNode(node, accessType);
         }
     }
 
@@ -233,7 +371,11 @@ export class BinaryTree extends ObservableGraph {
         return this.root;
     }
 
-    add(valueToAdd: BinaryTreeNode | GraphNodePayloadType, forcedParentValue: GraphNodePayloadType, forcedSideToAdd: ParentSide) {
+    getRoot() : BinaryTreeNode {
+        return this.root;
+    }
+
+    add(valueToAdd: BinaryTreeNode | GraphNodePayloadType, forcedParentValue: GraphNodePayloadType, forcedSideToAdd: ParentSide): BinaryTreeNode {
         let value = (valueToAdd instanceof BinaryTreeNode) ? valueToAdd.value : valueToAdd;
 
         if (this.root && (forcedParentValue == undefined || forcedSideToAdd == undefined))
@@ -252,7 +394,8 @@ export class BinaryTree extends ObservableGraph {
         }
 
         let futureParent = this.findExhaustive(forcedParentValue, this.root);
-        futureParent.createChild(forcedSideToAdd, value);
+
+        return futureParent.createChild(forcedSideToAdd, value);
     }
 
     remove(value: GraphNodePayloadType) {
@@ -302,7 +445,7 @@ export class BinaryTree extends ObservableGraph {
         if (nodeToRemove.multiplicity > 1) {
             nodeToRemove.multiplicity -= 1;
             return;
-        }        
+        }
 
         this.onNodeRemoved(nodeToRemove);
 
@@ -320,14 +463,33 @@ export class BinaryTree extends ObservableGraph {
             if (this.root) { this.root.parent = null; }
         } else {
             parent.setChild(nodeToRemove.isLeftChild() ? ParentSide.LEFT : ParentSide.RIGHT, childrenOfRemovedNode);
-        }        
+        }
     }
 }
 
 export class BinarySearchTree extends BinaryTree {
-
     constructor() {
         super(GraphType.BST);
+    }
+
+    override generate(node_count: number) {
+        let nodes: Set<GraphNodePayloadType> = new Set();
+
+        let getRndInt = (max: number) => {
+            return Math.ceil(Math.random() * max);
+        }
+
+        while (nodes.size != node_count) {
+            nodes.add(getRndInt(node_count));
+        }
+
+        this.generate_with(Array.from(nodes.values()));
+    }
+
+    override generate_with(nodes: GraphNodePayloadType[]): void {
+        for (let node of nodes)
+            if (!this.find(node))
+                this.add(node);
     }
 
     createNode(value: any): BinaryTreeNode {
@@ -342,7 +504,7 @@ export class BinarySearchTree extends BinaryTree {
     }
 
     override createRoot(_value: any): BinaryTreeNode {
-        throw 'Cannot explicitly createRoot in a binary search tree. Use .createNode or .add method instead.'
+        throw 'Cannot explicitly createRoot in a binary search tree. Use createNode or add method instead.'
     }
 
     override add(valueToAdd: BinaryTreeNode | GraphNodePayloadType) {
@@ -372,11 +534,11 @@ export class BinarySearchTree extends BinaryTree {
         return this.findNodeAndFutureParent(value, this.root)[0];
     }
 
-    override accessValue(value: GraphNodePayloadType) {
+    override accessValue(value: GraphNodePayloadType, accessType: NodeAccessType) {
         let node = this.find(value);
 
         if (node) {
-            this.onAccessNode(node);
+            this.onAccessNode(node, accessType);
         }
     }
 
