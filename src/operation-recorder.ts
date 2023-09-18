@@ -1,6 +1,6 @@
 import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ParentSide, GraphNodePayloadType, GraphType, NodeAccessType } from './av-types-interfaces'
+import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ChildSide, GraphNodePayloadType, GraphType, NodeAccessType } from './av-types-interfaces'
 import { CodeExecutorProxy } from "./code-executor-proxy";
 import { UserInteractionType } from "./code-executor";
 import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
@@ -73,7 +73,7 @@ class RWIndexedObjectOperationPayload {
 }
 
 class GraphObjectOperationPayload {
-    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ParentSide, accessType?: NodeAccessType) {
+    static execute(operationType: OperationType, observableGraph: ObservableGraph, source: GraphNodePayloadType, destinationOrParent?: GraphNodePayloadType, side?: ChildSide, accessType?: NodeAccessType) {
         switch (operationType) {
             case OperationType.GRAPH_ADD_EDGE:
                 (observableGraph as Graph).addEdge(source, destinationOrParent);
@@ -157,7 +157,7 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
 
         GraphObjectOperationPayload.execute(isGraph ? OperationType.GRAPH_ADD_EDGE : OperationType.BINARY_TREE_ADD_EDGE, runtimeObservable, source.value, destination.value);
     }
-    onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ParentSide): void {
+    onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ChildSide): void {
         let runtimeObservable = this.getRuntimeObservableWithId(observable.id);
         let isGraph = runtimeObservable instanceof Graph;
 

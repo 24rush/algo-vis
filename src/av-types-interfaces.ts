@@ -11,7 +11,7 @@ export enum GraphType {
     BT
 }
 
-export enum ParentSide {
+export enum ChildSide {
     LEFT,
     RIGHT
 }
@@ -101,7 +101,7 @@ export class ObservableGraph extends BaseObservableType<GraphVariableChangeCbk> 
         }
     }
 
-    onNodeAdded(node: NodeBase, side?: ParentSide) {
+    onNodeAdded(node: NodeBase, side?: ChildSide) {
         if (!node)
             return;
 
@@ -140,7 +140,7 @@ export class GraphVariableChangeCbk {
     onSetEvent(_observable: ObservableGraph, _value: any, _newValue: any) { console.log("Method not implemented."); };
     onAccessNode(_observable: ObservableGraph, _node: NodeBase, accessType: NodeAccessType) { console.log("Method onAccessNode not implemented."); }
 
-    onAddNode(_observable: ObservableGraph, _vertex: NodeBase, _parentValue?: NodeBase, _side?: ParentSide) { console.log("Method onAddVertex not implemented."); }
+    onAddNode(_observable: ObservableGraph, _vertex: NodeBase, _parentValue?: NodeBase, _side?: ChildSide) { console.log("Method onAddVertex not implemented."); }
     onRemoveNode(_observable: ObservableGraph, _node: NodeBase) { console.log("Method onRemoveVertex not implemented."); }
 
     onAddEdge(_observable: ObservableGraph, _sourceNode: NodeBase, _destNode: NodeBase) { console.log("Method onAddEdge not implemented."); };

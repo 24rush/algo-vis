@@ -1,4 +1,4 @@
-import { NodeAccessType, NodeBase, ObservableGraph, ParentSide } from "./av-types-interfaces";
+import { NodeAccessType, NodeBase, ObservableGraph, ChildSide } from "./av-types-interfaces";
 import { UserInteractionType } from "./code-executor";
 import { ObservableJSVariable } from "./observable-type";
 
@@ -22,7 +22,7 @@ export interface ExecutionStatus {
 interface GraphNotification {
     onAccessNode(observable: ObservableGraph, node: NodeBase, accessType: NodeAccessType): void;
     onAddEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void;
-    onAddNode(observable: ObservableGraph, node: NodeBase, parentValue: NodeBase, side: ParentSide): void;
+    onAddNode(observable: ObservableGraph, node: NodeBase, parentValue: NodeBase, side: ChildSide): void;
     onRemoveNode(observable: ObservableGraph, node: NodeBase): void;
     onRemoveEdge(observable: ObservableGraph, source: NodeBase, destination: NodeBase): void;
 }
@@ -167,7 +167,7 @@ export class NotificationEmitter implements VariableScopingNotification, Message
         }
     }
 
-    onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ParentSide) {
+    onAddNode(observable: ObservableGraph, vertex: NodeBase, parentValue: NodeBase, side: ChildSide) {
         for (const notifier of this.graphNotifications()) {
             notifier.onAddNode(observable, vertex, parentValue, side);
         }

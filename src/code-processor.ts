@@ -411,6 +411,11 @@ export class CodeProcessor {
                         if (!varName && item.left && item.left.object && item.left.object.type == "ThisExpression") {
                             varName = "this";
                         }
+
+                        // Handle right as CallExpression
+                        if (item.right && item.right.type == "CallExpression") {
+                            this.extractVariables(scopeName, item.right);
+                        }
                     }
                     else if (item.type == "UpdateExpression") // ++ operator
                     {

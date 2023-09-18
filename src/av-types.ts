@@ -1,4 +1,4 @@
-import { AdjacencyList, GraphNodePayloadType, GraphType, NodeAccessType, NodeBase, ObservableGraph, ParentRefNode, ParentSide } from "./av-types-interfaces";
+import { AdjacencyList, GraphNodePayloadType, GraphType, NodeAccessType, NodeBase, ObservableGraph, ParentRefNode, ChildSide } from "./av-types-interfaces";
 
 class BinaryTreeNodeProxy {
     constructor(protected target: any) {
@@ -7,9 +7,9 @@ class BinaryTreeNodeProxy {
                 property in target ? target[property] = newValue : target = newValue;
 
                 if (property === 'left') {
-                    target.updateObject(ParentSide.LEFT, newValue);
+                    target.updateObject(ChildSide.LEFT, newValue);
                 } else if (property === 'right') {
-                    target.updateObject(ParentSide.RIGHT, newValue);
+                    target.updateObject(ChildSide.RIGHT, newValue);
                 }
 
                 return true;
@@ -35,7 +35,7 @@ export class BinaryTreeNode extends ParentRefNode {
     dirrScore: number = 0;
     offsetX: number = 0;
 
-    private parentSide: ParentSide = undefined;
+    private parentSide: ChildSide = undefined;
 
     constructor(value: any) {
         super(value);
@@ -43,7 +43,7 @@ export class BinaryTreeNode extends ParentRefNode {
         return new BinaryTreeNodeProxy(this) as unknown as BinaryTreeNode;
     }
 
-    createChild(side: ParentSide, value: GraphNodePayloadType): BinaryTreeNode {
+    createChild(side: ChildSide, value: GraphNodePayloadType): BinaryTreeNode {
         let addedNode = value != undefined ? new BinaryTreeNode(value) : undefined;
         addedNode.level = this.level + 1;
         this.setChild(side, addedNode);
@@ -51,17 +51,17 @@ export class BinaryTreeNode extends ParentRefNode {
         return addedNode;
     }
 
-    setChild(side: ParentSide, addedNode: BinaryTreeNode) {
-        (side === ParentSide.LEFT) ? this.left = addedNode : this.right = addedNode;
+    setChild(side: ChildSide, addedNode: BinaryTreeNode) {
+        (side === ChildSide.LEFT) ? this.left = addedNode : this.right = addedNode;
         this.updateObject(side, addedNode);
     }
 
-    updateObject(side: ParentSide, addedNode: BinaryTreeNode) {
+    updateObject(side: ChildSide, addedNode: BinaryTreeNode) {
         if (!addedNode) return;
 
         if (this.graph.getType() == GraphType.BST) {
-            if ((side == ParentSide.LEFT && addedNode.value > this.value) ||
-                (side == ParentSide.RIGHT && addedNode.value < this.value))
+            if ((side == ChildSide.LEFT && addedNode.value > this.value) ||
+                (side == ChildSide.RIGHT && addedNode.value < this.value))
                 throw `Cannot add node as it doesn't follow convention: left < parent < right (${addedNode.value} ${this.value})`;
         }
 
@@ -82,8 +82,8 @@ export class BinaryTreeNode extends ParentRefNode {
 
     isRoot() { return this.parent == undefined; }
 
-    isLeftChild() { return this.parentSide == ParentSide.LEFT; }
-    isRightChild() { return this.parentSide == ParentSide.RIGHT; }
+    isLeftChild() { return this.parentSide == ChildSide.LEFT; }
+    isRightChild() { return this.parentSide == ChildSide.RIGHT; }
 
     isOnlyChild(): boolean {
         if (!this.parent)
@@ -303,7 +303,7 @@ export class BinaryTree extends ObservableGraph {
         }
 
         let addFn = (parent: BinaryTreeNode) => {
-            if (!nodes.length)
+            if (!nodes.length || !parent)
                 return;
 
             let rnd = getRndInt(4);
@@ -314,7 +314,7 @@ export class BinaryTree extends ObservableGraph {
                     if (parent.left)
                         addFn(parent.left);
                     else
-                        addFn(this.add(nodes.shift(), parent.value, ParentSide.LEFT));
+                        addFn(this.add(nodes.shift(), parent.value, ChildSide.LEFT));
                     break;
                 }
                 // right side
@@ -322,16 +322,16 @@ export class BinaryTree extends ObservableGraph {
                     if (parent.right)
                         addFn(parent.right);
                     else
-                        addFn(this.add(nodes.shift(), parent.value, ParentSide.RIGHT));
+                        addFn(this.add(nodes.shift(), parent.value, ChildSide.RIGHT));
                     break;
                 }
                 // both sides
                 case 2: {
                     if (!parent.left)
-                        addFn(this.add(nodes.shift(), parent.value, ParentSide.LEFT));
+                        addFn(this.add(nodes.shift(), parent.value, ChildSide.LEFT));
 
                     if (!parent.right)
-                        addFn(this.add(nodes.shift(), parent.value, ParentSide.RIGHT));
+                        addFn(this.add(nodes.shift(), parent.value, ChildSide.RIGHT));
 
                     break;
                 }
@@ -375,7 +375,10 @@ export class BinaryTree extends ObservableGraph {
         return this.root;
     }
 
-    add(valueToAdd: BinaryTreeNode | GraphNodePayloadType, forcedParentValue: GraphNodePayloadType, forcedSideToAdd: ParentSide): BinaryTreeNode {
+    add(valueToAdd: BinaryTreeNode | GraphNodePayloadType, forcedParentValue: GraphNodePayloadType, forcedSideToAdd: ChildSide): BinaryTreeNode {
+        if (!valueToAdd)
+            return;
+
         let value = (valueToAdd instanceof BinaryTreeNode) ? valueToAdd.value : valueToAdd;
 
         if (this.root && (forcedParentValue == undefined || forcedSideToAdd == undefined))
@@ -454,7 +457,7 @@ export class BinaryTree extends ObservableGraph {
 
         if (nodeToRemove.right) {
             const leftmost = this.getLeftmost(nodeToRemove.right);
-            leftmost.setChild(ParentSide.LEFT, nodeToRemove.left);
+            leftmost.setChild(ChildSide.LEFT, nodeToRemove.left);
             childrenOfRemovedNode = nodeToRemove.right;
         }
 
@@ -462,7 +465,7 @@ export class BinaryTree extends ObservableGraph {
             this.root = childrenOfRemovedNode;
             if (this.root) { this.root.parent = null; }
         } else {
-            parent.setChild(nodeToRemove.isLeftChild() ? ParentSide.LEFT : ParentSide.RIGHT, childrenOfRemovedNode);
+            parent.setChild(nodeToRemove.isLeftChild() ? ChildSide.LEFT : ChildSide.RIGHT, childrenOfRemovedNode);
         }
     }
 }
@@ -522,7 +525,7 @@ export class BinarySearchTree extends BinaryTree {
             return;
         }
 
-        futureParent.createChild(value < futureParent.value ? ParentSide.LEFT : ParentSide.RIGHT, value);
+        futureParent.createChild(value < futureParent.value ? ChildSide.LEFT : ChildSide.RIGHT, value);
     }
 
     override remove(value: GraphNodePayloadType) {

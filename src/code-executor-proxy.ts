@@ -131,7 +131,7 @@ export class CodeExecutorProxy {
     }
 
     //@ts-ignore
-    private codexWorker = new Worker(new URL('./code-executor.ts', import.meta.url));
+    private codexWorker = new Worker(/* webpackChunkName: "av0-worker" */new URL('./code-executor.ts', import.meta.url));
     private codeExecutorEventHandler: NotificationEmitter = new NotificationEmitter();
     private sharedMem = new SharedArrayBuffer(128 * Int16Array.BYTES_PER_ELEMENT);
     private advanceFlag = new Int32Array(this.sharedMem);

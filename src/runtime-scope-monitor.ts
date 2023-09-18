@@ -55,8 +55,15 @@ export class RuntimeScopeMonitor {
 
     public findRuntimeObservableWithName(varName: string): [string, any] {
         let allScopes = this.getScopesReversed();
+        let firstFunctionChecked = false;
 
         for (let i = 0; i < allScopes.length; i++) {            
+            let scopeRuntime = allScopes[i].runtimeScopeName;
+
+            if (firstFunctionChecked && (scopeRuntime.includes('!') || scopeRuntime === "local")) {
+                continue; // skip all remaining functions and locals till we get to global
+            }
+
             for (let runtimeObservable of allScopes[i].observables) {
                 if (runtimeObservable.name == varName) {
                     // Go up the hierarchy and concatenate scopes
@@ -66,6 +73,10 @@ export class RuntimeScopeMonitor {
 
                     return [this.removeTrailingDot(wholeRuntimeScopeName), runtimeObservable];
                 }
+            }
+
+            if (allScopes[i].runtimeScopeName.includes('!')) {
+                firstFunctionChecked = true;
             }
         }
 

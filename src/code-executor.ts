@@ -1,5 +1,5 @@
 import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphType, ParentSide, ObservableGraph, GraphVariableChangeCbk, NodeAccessType } from './av-types-interfaces'
+import { NodeBase, GraphType, ChildSide, ObservableGraph, GraphVariableChangeCbk, NodeAccessType } from './av-types-interfaces'
 import { MarkerFunctionEvents, UserInteractionEvents } from "./code-executor-proxy";
 
 export enum UserInteractionType {
@@ -113,7 +113,7 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
             params: [observable.toObservableGraph(), node.toNodeBase(), accessType]
         });
     }
-    onAddNode(observable: ObservableGraph, node: NodeBase, parentValue?: NodeBase, side?: ParentSide): void {
+    onAddNode(observable: ObservableGraph, node: NodeBase, parentValue?: NodeBase, side?: ChildSide): void {
         self.postMessage({
             cmd: CodeExecutorCommands.onAddNode,
             params: [observable.toObservableGraph(), node.toNodeBase(), parentValue?.toNodeBase(), side]
@@ -167,7 +167,7 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
         try {
             var Types = {
                 Graph: Graph, GraphType: GraphType, GraphNode: NodeBase, BinaryTreeNode: BinaryTreeNode,
-                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ParentSide, AccessType: NodeAccessType
+                BinaryTree: BinaryTree, BinarySearchTree: BinarySearchTree, ParentSide: ChildSide, AccessType: NodeAccessType
             };
 
             var Funcs = this;
@@ -300,6 +300,12 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
             typeof obj == "function") {
             return obj;
         }
+
+        if (typeof obj === 'object' && 'length' in obj && obj.length > 0) {
+            if(typeof obj[0] == 'object' && 'length' in obj[0] && obj[0].length > 0)
+                if (Object.prototype.toString.call(obj[0]) != "[Object object]")
+                    return obj;
+        }        
 
         const keys = Object.keys(obj);
 

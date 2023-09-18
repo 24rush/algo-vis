@@ -93,7 +93,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     protected readonly templateArray = '<span style=""> \
     {{#rows}} \
         <div style="display: flex; flex-wrap: wrap;" av-bind-style-flex-direction="{isNotStack: row, !isNotStack: column}">\
-        <span class="align-self-center" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;">{{index_r}}</span> \
+        <span class="align-self-center" av-bind-style-display="{isMultiArray : table-cell, !isMultiArray : none}" style="font-style: italic; font-size: x-small;margin-right: 5px;">{{index_r}}</span> \
         {{#cols}} \
             <div style="padding-right:3px;" av-bind-style-display="{isNotStack : table-cell, !isNotStack : table-row}" > \
                 <span class="var-value" av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}" style="width: {{width}}px; height:{{height}}px;"> \
@@ -801,15 +801,11 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
                     if (treeNode.isRoot()) {
                         treeNode.offsetX = pos.x;
-                        console.log(`${node.id()} ${treeNode.offsetX} ${pos.x}`);
-
                         return pos;
                     }
 
                     treeNode.offsetX += treeNode.parent.offsetX;
                     pos.x = treeNode.offsetX;
-
-                    console.log(`${node.id()} ${treeNode.offsetX} ${pos.x}`);
 
                     return pos;
                 }
