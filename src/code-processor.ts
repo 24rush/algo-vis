@@ -215,6 +215,11 @@ export class CodeProcessor {
 
                         this.fcnReturns.push(item.range[0]);
 
+                        if (item.argument) {
+                            this.extractVariables(scopeName, item.argument.left);
+                            this.extractVariables(scopeName, item.argument.right);
+                        }
+
                         break;
                     }
                 case "ForOfStatement":
@@ -258,7 +263,7 @@ export class CodeProcessor {
 
                         if (item.consequent && item.consequent.type != "BlockStatement") {
                             let indexParen = this.code.lastIndexOf(')', item.consequent.range[0]);
-                            this.explicitBraces.push(new IndexRange(indexParen + 1, item.consequent.range[1]));
+                            this.explicitBraces.push(new IndexRange(indexParen + 1, item.consequent.range[1] + 1));
                         }
 
                         if (item.alternate) {
@@ -273,6 +278,7 @@ export class CodeProcessor {
                         addScopeIfBlockStatement(item.consequent);
                         addScopeIfBlockStatement(item.alternate);
 
+                        //TODO if no braces present, consider removing .local
                         this.extractVariables(scopeName + ".local", item.consequent);
                         this.extractVariables(scopeName + ".local", item.alternate);
 
@@ -332,8 +338,8 @@ export class CodeProcessor {
                         break;
                     }
                 case "CallExpression": {
-                    if (item.callee && item.callee.object && item.callee.object.name) {
-                        let varName = item.callee.object.name;
+                    if (item.callee && item.callee.object) {
+                        let varName = item.callee.object.name ?? (item.callee.object.object ? item.callee.object.object.name : undefined);
 
                         let [foundInScope, vardeclaration] = this.searchVarInScopeAndParent(scopeName, varName);
 
@@ -547,8 +553,8 @@ export class CodeProcessor {
             let injectedCode = `funcWrap( {f: () => { pushParams(${JSON.stringify(pushParams.varToParams)}); startScope('` + pushParams.funcScopeName + `'); let ret = `;
             addCodeInjection(pushParams.startOfDefinitionIndex, injectedCode);
 
-            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `'); return ret;}} )`;
-            addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);
+            injectedCode = `; popParams(${JSON.stringify(pushParams.varToParams)}); endScope('` + pushParams.funcScopeName + `');<FORCEFCNRET>; return ret;}} )`;
+            addCodeInjection(pushParams.endOfDefinitionIndex, injectedCode);            
         }
 
         // Function returns
@@ -633,7 +639,8 @@ export class CodeProcessor {
 
             for (let indexLine = 0; indexLine < tokenizedLines.length - 1; indexLine++) {
                 let tokenizedLine = tokenizedLines[indexLine];
-                if (this.isInNoMarkLineZone(this.code.length + tokenizedLine.length)) {
+                // allow forcemarkl to be inserted before funcWrap.f returns so we can do recursive calls
+                if (token != "<FORCEFCNRET>" && this.isInNoMarkLineZone(this.code.length + tokenizedLine.length)) {
                     replacedTokenStr += tokenizedLine;
                     this.updateNoMarkLineZone(this.code.length + replacedTokenStr.length, diffLen);
                 }
@@ -680,7 +687,8 @@ export class CodeProcessor {
 
                 let codeLineMarker2 = `;forcemarkcl(${lineIndex + 1});`;
                 line = replaceTokens("<FORCEMARKLINE>", codeLineMarker2, line);
-
+                line = replaceTokens("<FORCEFCNRET>", codeLineMarker2, line);
+                
                 let codeLineMarker = `;markcl(${lineIndex + 1}); `;
                 let indxOfCommentEnding = line.indexOf('*/'); // Don't put line marker in comment section
                 if (indxOfCommentEnding != -1 && indxOfCommentEnding < line.length - 3) {

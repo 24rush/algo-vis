@@ -199,8 +199,8 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
     forcemarkcl(lineNumber: number): boolean {
         let codex = codeExec();
 
-        if (codex.lastLineNo == lineNumber)
-            return;
+        //if (codex.lastLineNo == lineNumber)
+          //  return;
 
         if (!codex.advanceFlag) {
             throw 'AdvanceFlag not received';
@@ -294,23 +294,23 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
             return obj.toNodeBase();
         }
 
+        if (typeof obj == "function")
+            return;
+
         if (typeof obj !== "object" ||
             typeof obj === undefined ||
-            obj === null ||           
+            obj === null ||
             typeof obj == "function") {
             return obj;
         }
 
-        if (typeof obj === 'object' && 'length' in obj && obj.length > 0) {
-            if(typeof obj[0] == 'object' && 'length' in obj[0] && obj[0].length > 0)
-                if (Object.prototype.toString.call(obj[0]) != "[Object object]")
-                    return obj;
-        }        
-
         const keys = Object.keys(obj);
 
         for (let key in keys) {
-            result[keys[key]] = this.deepCopy(obj[keys[key]])
+            let copy = this.deepCopy(obj[keys[key]]);
+            
+            if (copy)
+                result[keys[key]] = copy;
         }
 
         return result;
@@ -328,10 +328,19 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
 
         } else {
             let codex = codeExec();
-            self.postMessage({
-                cmd: CodeExecutorCommands.setVar,
-                params: [varname, codex.deepCopy(object), varsource]
-            });
+            // if we can't serialize using default one, recurse to deepcopy
+            try {
+                self.postMessage({
+                    cmd: CodeExecutorCommands.setVar,
+                    params: [varname, object, varsource]
+                });
+            }
+            catch {
+                self.postMessage({
+                    cmd: CodeExecutorCommands.setVar,
+                    params: [varname, codex.deepCopy(object), varsource]
+                });
+            }
         }
     }
 
