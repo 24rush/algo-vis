@@ -37,7 +37,7 @@
   "scripts": {
     "test": "nyc ./node_modules/.bin/_mocha 'test/**/*.test.ts' --timeout 10000",
     "build": "webpack",
-    "serve": "npx webpack serve --live-reload --static assets --static wordpress/assets",
+    "dev": "npx webpack serve --live-reload --static assets --static wordpress/assets",
     "gen-snippets": "python scripts/snippets_generator.py -i wordpress\\snippets",
     "gen-quizzes": "python scripts/snippets_generator.py -i wordpress\\quizzes",
     "gen-exercises": "python scripts/snippets_generator.py -i wordpress\\exercises",

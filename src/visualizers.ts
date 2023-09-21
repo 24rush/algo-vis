@@ -395,7 +395,6 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
     private drawArray(observable: ObservableJSVariable) {
         let arrayData = observable.getValue() as any[];
         let rows: any = [];
-        let nr_cols: number;
 
         let funcMapCols = (arrayData: any[]) => {
             if (!arrayData) {
@@ -430,20 +429,37 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             });
         }
 
-        let rendered = MustacheIt.render(this.templateArray, { rows: rows });
-        nr_cols = rows[0].cols.length;
-
-        let indexedTemplate = DOMmanipulator.addIndexesToIds(rendered);
-        let valuesHtmlElement = DOMmanipulator.fromTemplate(indexedTemplate);
+        let rendered = MustacheIt.render(this.templateArray, { rows: rows });        
+        let valuesHtmlElement = DOMmanipulator.fromTemplate(DOMmanipulator.addIndexesToIds(rendered));
 
         this.htmlElement.append(valuesHtmlElement);
 
         this.indextValueElements = this.indextValueElements.concat(DOMmanipulator.elementsStartsWithId<HTMLElement>(valuesHtmlElement, 'var-value'));
-        for (let [index, textElement] of this.indextValueElements.entries()) { //TODO handle jagged arrays
-            let value = this.clientViewModel.isMultiArray ? observable.getAtIndex(Math.floor(index / nr_cols), Math.floor(index % nr_cols)) :
-                (this.clientViewModel.isNotStack ? observable.getAtIndex(index) : observable.getAtIndex(nr_cols - index - 1));
+        let row = 0, processed_in_row = 0;
+        let cols = rows[row].cols.length;
+
+        for (let [index, textElement] of this.indextValueElements.entries()) {
+            if (processed_in_row >= cols) {
+                processed_in_row = 0;
+                row++;
+                cols = rows[row].cols.length;
+            }
+
+            let index_r, index_c;
+
+            if (this.clientViewModel.isMultiArray) {
+                index_r = row;
+                index_c = processed_in_row;
+            } else {
+                index_r = (this.clientViewModel.isNotStack ? index : (cols - index - 1));
+            }
+
+            let value = observable.getAtIndex(index_r, index_c);
+
             value = this.clientViewModel.isBorderless ? [] : value;
             this.fitText(textElement, value, this.width, this.height, this.clientViewModel.isBorderless);
+
+            processed_in_row++;
         }
 
         this.varValueDrawn = true;
@@ -768,11 +784,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
 
                     if (hittinNodes.length > 1) {
                         let h1 = hittinNodes[0].parent, h2 = hittinNodes[1].parent;
-            
-                        while (h1 != h2) {
-                            //h1.offsetX += h1.isLeftChild() ? -SPACING : SPACING;
-                            //h2.offsetX += h2.isLeftChild() ? -SPACING : SPACING;
 
+                        while (h1 != h2) {
                             h1 = h1.parent; h2 = h2.parent;
                         }
 
@@ -780,10 +793,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
                         if (h1.right) h1.right.offsetX += SPACING;
 
                         while (h1 != binTreeRoot) {
-                            //h1.offsetX += h1.isLeftChild() ? -SPACING : SPACING;
                             h1 = h1.parent;
                         }
-
                     }
                 }
             }
