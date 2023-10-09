@@ -1,55 +1,47 @@
-§0
+§id: 0
 §    statement: Ce afirmații sunt adevărate despre obiecte:
 §    correct: [0, 1, 2, 3, 4]
 §    answers: [
-§        id: 0
 §        answer: Folosite ca parametri ai funcțiilor, ne permit să le modificăm valorile și să transmitem aceste modificări inapoi clienților funcției
-§        id: 1
+§        correct: true
 §        answer: Sunt colecții de proprietăți de tip șir de caracter
-§        id: 2
+§        correct: true
 §        answer: Se definesc prin utilizarea acoladelor
-§        id: 3
+§        correct: true
 §        answer: Sunt colecții de proprietăți ale căror valori pot fi de orice tip
-§        id: 4
+§        correct: true
 §        answer: Se pot crea folosind funcții constructor
+§        correct: true
 §    answers: ]
 §    explanation: Obiectele sunt variabile ce pot stoca colecții de proprietăți și valorile asociate lor. Proprietățile pot fi doar de tip șir de caractere pe când valorile aferente lor, de orice tip. Aceste obiecte se crează folosind acoladele sau funcțiile constructor. Atunci când obiectele sunt trimise că parametri funcțiilor, în corpul funcției se pot modifica valorile proprietăților și astfel transmite aceste modificări înapoi către clienții funcției.
-§1
+§id: 1
 §    statement: Accesarea proprietății ```prop``` a unei variabile ```obj``` de tip obiect se face folosind sintaxa:
-§    correct: [2,3]
 §    answers: [
-§        id: 0
 §        answer: <pre><code>obj(prop)</pre></code>
-§        id: 1
 §        answer: <pre><code>obj[prop]</pre></code>
-§        id: 2
 §        answer: <pre><code>obj.prop</pre></code>
-§        id: 3
+§        correct: true
 §        answer: <pre><code>obj['prop']</pre></code>
+§        correct: true
 §    answers: ]
 §    explanation: Proprietățile unui obiect sunt doar de tip șir de caractere de aceea trebuie să le specificăm folosind apostrof ('). Cealaltă sintaxa validă este **obj.prop**.
-§2
+§id: 2
 §    statement: Copierea unui obiect în alt obiect duce la:
-§    correct: [1]
 §    answers: [
-§        id: 0
 §        answer: Duplicarea proprietăților obiectului sursă în cel destinație
-§        id: 1
 §        answer: Crearea unei referințe de la obiectul destinație la cel sursă
-§        id: 2
+§        correct: true
 §        answer: Copierea tuturor proprietăților obiectului sursă în cel destinație și golirea celui din urmă
 §    answers: ]
 §    explanation: Operația de atribuire a unui obiect altui obiect va duce la creare unei referințe adică a unei variabile cu nume nou dar care referă obiectul sursă ce i-a fost atribuit.
-§3
+§id: 3
 §    statement: Care din operațiile de mai jos efectuate în corpul unei funcții pe un parametru de tip obiect sunt adevărate:
-§    correct: [0,1,2]
 §    answers: [
-§        id: 0
 §        answer: Orice modificare adusă unei proprietăți a obiectului este transmisă înapoi către clienți
-§        id: 1
+§        correct: true
 §        answer: I se pot adaugă/șterge proprietăți
-§        id: 2
+§        correct: true
 §        answer: Se poate crea un obiect nou
-§        id: 3
+§        correct: true
 §        answer: Se poate folosi ca parametru de ieșire
 §    answers: ]

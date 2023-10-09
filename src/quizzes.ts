@@ -42,6 +42,11 @@ class QuizUI {
     }
 
     onNewQuiz(quiz: any) {
+        let id = 0;
+        for (let answer of quiz.answers) {
+            answer.id = id++;
+        }
+
         QuizUI.quizBodyFront.replaceChild(DOMmanipulator.fromTemplate(MustacheIt.render(quizTemplateFront, quiz)), QuizUI.quizBodyFront.firstChild);
 
         if ('explanation' in quiz) {
@@ -54,7 +59,7 @@ class QuizUI {
     onHighlightAnswers(quiz: any) {
         this.retrieveAnswers().forEach(answer => {
             let currAnswId = answer.getAttribute('av-id');
-            let isCorrectAnswer = 'correct' in quiz && (quiz.correct.find((answ: any) => answ == currAnswId) != undefined);
+            let isCorrectAnswer = quiz.answers.find((answ: any) => answ.correct && answ.id == currAnswId) != undefined;
 
             if (isCorrectAnswer) {
                 answer.classList.add("btn-success");
@@ -256,6 +261,9 @@ class QuizViewModel {
     }
 
     onSelectedAnswer(event: any): any {
+        if (this.quizViewModel.isQuizVerified)
+            return;
+
         let hitHtmlElement = (event.target as HTMLElement);
         // Bubble up the hierarchy until we find the button just in case the 
         // triggering element is something not a button
@@ -309,7 +317,7 @@ class QuizViewModel {
         this.quizViewModel.hasMoreQuizzes = this.currQuizIdx < (this.quizzes.length - 1);
         this.quizViewModel.hasExplanation = 'explanation' in this.getCurrentQuizData();
         this.quizViewModel.quizProgress = 100 * (this.quizzes.length ? (1 + this.currQuizIdx) / this.quizzes.length : 0) + "%";
-        this.quizViewModel.isMultipleChoiceQuiz = 'correct' in quiz && quiz.correct.length > 1;
+        this.quizViewModel.isMultipleChoiceQuiz = quiz.answers.filter((answ: any) => answ.correct).length > 1;
         this.quizViewModel.isQuizVerified = false;        
         this.quizViewModel.hasSelectedAnswers = false;
 

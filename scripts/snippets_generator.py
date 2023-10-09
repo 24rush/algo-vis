@@ -25,6 +25,10 @@ def processKeyValue(key, value):
             value = markdown.markdown(value)
 
         value = value.replace('<p>', '').replace('</p>', '')
+    elif (value == 'true' or key == 'false'):
+        value = bool(value)
+    elif (isinstance(value, (str)) and value.isnumeric()):
+        value = int(value)
 
     return value
 
