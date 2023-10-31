@@ -1,4 +1,4 @@
-import { ObservableGraph } from "./av-types-interfaces";
+import { BaseObservableType, ObservableGraph } from "./graph-base";
 
 type DictionaryKeyType = string | number | symbol;
 export type ObservableType = ObservableJSVariable | ObservableGraph;
@@ -20,26 +20,6 @@ export class JSVariableChangeCbk {
     onGetEvent(observable: ObservableJSVariable, value: any) { /*console.log("Method not implemented.");*/ }
     onGetArrayAtIndexEvent(observable: ObservableJSVariable, value: any, index_r: number, index_c?: number) { /*console.log("Method not implemented.");*/ };
     onGetObjectPropertyEvent(observable: ObservableJSVariable, value: any, key: DictionaryKeyType) { /*console.log("Method not implemented.");*/ };
-}
-
-export class BaseObservableType<NotifyCbkType>
-{
-    protected observers: NotifyCbkType[] = [];
-
-    public name: string;
-
-    registerObserver(notifyCbk: NotifyCbkType) {
-        if (!this.observers.find((notif) => notif == notifyCbk))
-            this.observers.push(notifyCbk);
-    }
-
-    unregisterObserver(notifyCbk: NotifyCbkType) {
-        this.observers = this.observers.filter((elem) => elem != notifyCbk);
-    }
-
-    getName(): string {
-        return this.name.toString();
-    }
 }
 
 export enum VariableType {

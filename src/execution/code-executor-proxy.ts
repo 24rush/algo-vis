@@ -1,11 +1,11 @@
-import { NodeAccessType } from "./av-types-interfaces";
+import { NodeAccessType } from "./../types/graph-base";
 import { CodeExecutorCommands, CodeExecutorMessages, CodeExecutorSlots, UserInteractionType } from "./code-executor";
-import { NotificationEmitter, NotificationTypes } from "./notification-emitter";
+import { NotificationBus, NotificationTypes } from "./../types/notification-bus";
 
 export interface UserInteractionEvents {
-    funcWrap(func: any) : any;
+    funcWrap(func: any): any;
     promptWrap(title?: string, defValue?: string): string;
-    alertWrap(title?: string) : void;
+    alertWrap(title?: string): void;
     confirmWrap(title?: string): boolean;
 }
 
@@ -28,27 +28,23 @@ export interface CodeExecutorEvents extends MarkerFunctionEvents, UserInteractio
     onTraceMessage(message: string): void;
     onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void;
 
-    onAccessNode(observable: any, node: any, accessType: NodeAccessType) : void;
+    onAccessNode(observable: any, node: any, accessType: NodeAccessType): void;
     onAddEdge(observable: any, source: any, destination: any): void;
     onAddNode(observable: any, vertex: any, parentValue: any, side: any): void;
     onRemoveNode(observable: any, vertex: any): void;
     onRemoveEdge(observable: any, source: any, destination: any): void;
 }
 
-export class CodeExecutorProxy {
-    // MESSAGES from OPERATION RECORDER
+// MESSAGES from CODE DEBUGGER (user)
+export class CodeExecutorProxy {    
     sendSharedMem(sharedMem: SharedArrayBuffer) {
-        return this.promiseWrapperDirectPassParams<void>(CodeExecutorCommands.sharedMem, sharedMem);
+        return this.sendWorkerMessage(CodeExecutorCommands.sharedMem, sharedMem);        
     }
-    isWaiting(): Promise<boolean> {
-        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.isWaiting);
-    }
+
     advanceOneCodeLine() {
         if (this.executionHalted)
             return;
 
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.NoOp);
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
         Atomics.notify(this.advanceFlag, CodeExecutorSlots.Main);
     }
 
@@ -57,14 +53,14 @@ export class CodeExecutorProxy {
             return;
 
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.Stop);
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
         Atomics.notify(this.advanceFlag, 0);
     }
-    execute(): Promise<boolean> {
-        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.execute);
+    execute() {
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.NoOp);
+        this.sendWorkerMessage(CodeExecutorCommands.execute);
     }
-    setSourceCode(...args: any[]): Promise<boolean> {
-        return this.promiseWrapperCopyParams<boolean>(CodeExecutorCommands.setSourceCode, ...args);
+    setSourceCode(code: string) {
+        this.sendWorkerMessage(CodeExecutorCommands.setSourceCode, code);
     }
     userInteractionResponse(interactionType: UserInteractionType, value?: string | boolean) {
         let valueAsInt = 0;
@@ -92,52 +88,26 @@ export class CodeExecutorProxy {
         }
 
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.UserInteractionResponse);
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Proceed);
         Atomics.notify(this.advanceFlag, 0);
 
         this.executionHalted = false;
     }
 
-    private promiseWrapperDirectPassParams<T>(cmd: CodeExecutorCommands, sharedMem: SharedArrayBuffer): Promise<T> {
-        return new Promise((result, reject) => {
-            const channel = new MessageChannel();
-
-            channel.port1.onmessage = ({ data }) => {
-                channel.port1.close();
-                data.error ? reject(data.error) : result(data.result);
-            };
-
-            this.codexWorker.postMessage({
-                cmd: cmd,
-                params: sharedMem
-            }, [channel.port2]);
-        });
-    }
-
-    private promiseWrapperCopyParams<T>(cmd: CodeExecutorCommands, ...args: any[]): Promise<T> {
-        return new Promise((result, reject) => {
-            const channel = new MessageChannel();
-
-            channel.port1.onmessage = ({ data }) => {
-                channel.port1.close();
-                data.error ? reject(data.error) : result(data.result);
-            };
-
-            this.codexWorker.postMessage({
-                cmd: cmd,
-                params: Array.from(args)
-            }, [channel.port2]);
+    private sendWorkerMessage(cmd: CodeExecutorCommands, ...args: any[]) {
+        this.codexWorker.postMessage({
+            cmd: cmd,
+            params: args
         });
     }
 
     //@ts-ignore
-    private codexWorker = new Worker(/* webpackChunkName: "av0-worker" */new URL('./code-executor.ts', import.meta.url));
-    private codeExecutorEventHandler: NotificationEmitter = new NotificationEmitter();
+    private codexWorker = new Worker(/* webpackChunkName: "av0-worker" */new URL('./code-executor.ts', import.meta.url));    
     private sharedMem = new SharedArrayBuffer(128 * Int16Array.BYTES_PER_ELEMENT);
     private advanceFlag = new Int32Array(this.sharedMem);
     private executionHalted = false; // for prompts
 
-    constructor() {
+    constructor(private notificationBus : NotificationBus) {
         Atomics.store(this.advanceFlag, 0, CodeExecutorMessages.Wait);
 
         // MESSAGES from CodeExecutor
@@ -146,56 +116,55 @@ export class CodeExecutorProxy {
 
             switch (event.data.cmd) {
                 case CodeExecutorCommands.setVar:
-                    this.codeExecutorEventHandler.setVar(params[0], params[1], params[2]);
+                    this.notificationBus.setVar(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.executionFinished:
-                    this.codeExecutorEventHandler.onExecutionFinished();
+                    this.notificationBus.onExecutionFinished();
                     break;
                 case CodeExecutorCommands.markcl:
-                    Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.markcl(params[0]);
+                    this.notificationBus.markcl(params[0]);
                     break;
                 case CodeExecutorCommands.userInteractionRequest:
                     this.executionHalted = true;
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.onUserInteractionRequest(params[0], params[1], params[2]);
+                    this.notificationBus.onUserInteractionRequest(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.forcemarkcl:
                     Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
-                    this.codeExecutorEventHandler.forcemarkcl(params[0])
+                    this.notificationBus.forcemarkcl(params[0])
                     break;
                 case CodeExecutorCommands.startScope:
-                    this.codeExecutorEventHandler.startScope(params[0]);
+                    this.notificationBus.startScope(params[0]);
                     break;
                 case CodeExecutorCommands.endScope:
-                    this.codeExecutorEventHandler.endScope(params[0]);
+                    this.notificationBus.endScope(params[0]);
                     break;
                 case CodeExecutorCommands.pushParams:
-                    this.codeExecutorEventHandler.pushParams(params[0]);
+                    this.notificationBus.pushParams(params[0]);
                     break;
                 case CodeExecutorCommands.popParams:
-                    this.codeExecutorEventHandler.popParams(params[0]);
+                    this.notificationBus.popParams(params[0]);
                     break;
                 case CodeExecutorCommands.onAddNode:
-                    this.codeExecutorEventHandler.onAddNode(params[0], params[1], params[2], params[3]);
+                    this.notificationBus.onAddNode(params[0], params[1], params[2], params[3]);
                     break;
                 case CodeExecutorCommands.onAddEdge:
-                    this.codeExecutorEventHandler.onAddEdge(params[0], params[1], params[2]);
+                    this.notificationBus.onAddEdge(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.onRemoveNode:
-                    this.codeExecutorEventHandler.onRemoveNode(params[0], params[1]);
+                    this.notificationBus.onRemoveNode(params[0], params[1]);
                     break;
                 case CodeExecutorCommands.onRemoveEdge:
-                    this.codeExecutorEventHandler.onRemoveEdge(params[0], params[1], params[2]);
+                    this.notificationBus.onRemoveEdge(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.onAccessNode:
-                    this.codeExecutorEventHandler.onAccessNode(params[0], params[1], params[2]);
+                    this.notificationBus.onAccessNode(params[0], params[1], params[2]);
                     break;
                 case CodeExecutorCommands.onExceptionRaised:
-                    this.codeExecutorEventHandler.onExceptionMessage(params[0], params[1]);
+                    this.notificationBus.onExceptionMessage(params[0], params[1]);
                     break;
                 case CodeExecutorCommands.onConsoleLog:
-                    this.codeExecutorEventHandler.onTraceMessage(params[0]);
+                    this.notificationBus.onTraceMessage(params[0]);
                     break;
                 default:
                     throw 'Cant handle ' + event.data.cmd;
@@ -203,13 +172,9 @@ export class CodeExecutorProxy {
         };
     }
 
-    public registerNotificationObserver(notifier: NotificationTypes) {
-        this.codeExecutorEventHandler.registerNotificationObserver(notifier);
-    }
-
     public init() {
         Atomics.store(this.advanceFlag, CodeExecutorSlots.Aux, CodeExecutorMessages.Stop);
-        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wakeup);
+        Atomics.store(this.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Proceed);
 
         return this.sendSharedMem(this.sharedMem);
     }

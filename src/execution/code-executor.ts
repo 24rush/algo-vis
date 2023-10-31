@@ -1,5 +1,5 @@
-import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphType, ChildSide, ObservableGraph, GraphVariableChangeCbk, NodeAccessType } from './av-types-interfaces'
+import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./../types/graph";
+import { NodeBase, GraphType, ChildSide, ObservableGraph, GraphVariableChangeCbk, NodeAccessType } from './../types/graph-base'
 import { MarkerFunctionEvents, UserInteractionEvents } from "./code-executor-proxy";
 
 export enum UserInteractionType {
@@ -11,7 +11,7 @@ export enum UserInteractionType {
 export enum CodeExecutorMessages {
     NoOp = 0,
     Wait,
-    Wakeup,
+    Proceed,
     Stop,
 
     UserInteractionResponse
@@ -30,7 +30,6 @@ export enum CodeExecutorCommands {
     setSourceCode,
     execute,
     executionFinished,
-    isWaiting,
 
     userInteractionRequest,
     userInteractionResponse,
@@ -57,49 +56,35 @@ export enum CodeExecutorCommands {
 }
 
 let codeExec = (): CodeExecutor => {
-    let oprec = (self as any).this;
+    let codeEx = (self as any).this;
 
-    if (!oprec)
+    if (!codeEx)
         (self as any).this = new CodeExecutor();
 
     return (self as any).this;
 }
 
+// MESSAGES from CodeExecutorProxy
 self.onmessage = (event) => {
     if (event.data.cmd === undefined)
         return;
 
-    let wrapMessageHandler = (event: MessageEvent<any>, handler: any) => {
-        try {
-            event.ports[0].postMessage({
-                cmd: event.data.cmd,
-                result: handler()
-            });
-        } catch (e) {
-            console.log(e);
-            event.ports[0].postMessage({ error: e });
-        }
-    };
+    let codex = codeExec();
 
-    wrapMessageHandler(event, () => {
-        let codex = codeExec();
-        // MESSAGES from CodeExecutorProxy
-        switch (event.data.cmd) {
-            case CodeExecutorCommands.sharedMem:
-                if (codex.advanceFlag == undefined)
-                    codex.advanceFlag = new Int32Array(event.data.params);
-                break;
-            case CodeExecutorCommands.setSourceCode:
-                codex.setSourceCode(event.data.params[0]);
-                break;
-            case CodeExecutorCommands.execute:
-                codex.execute();
-                break;
+    switch (event.data.cmd) {
+        case CodeExecutorCommands.sharedMem:
+            codex.setSharedMem(event.data.params[0]);
+            break;
+        case CodeExecutorCommands.setSourceCode:
+            codex.setSourceCode(event.data.params[0]);
+            break;
+        case CodeExecutorCommands.execute:
+            codex.execute();
+            break;
 
-            default:
-                throw 'Cant handle ' + event.data.cmd;
-        }
-    });
+        default:
+            throw 'Cant handle cmd code ' + event.data.cmd;
+    }
 };
 
 export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvents, UserInteractionEvents {
@@ -156,6 +141,11 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
     private lastLineNo: number = -1;
     public advanceFlag: Int32Array = undefined;
 
+    public setSharedMem(sharedMem: SharedArrayBuffer) {
+        if (this.advanceFlag == undefined)
+            this.advanceFlag = new Int32Array(sharedMem);
+    }
+
     public setSourceCode(code: string) {
         this.lastLineNo = -1;
         this.code = code;
@@ -200,7 +190,7 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
         let codex = codeExec();
 
         //if (codex.lastLineNo == lineNumber)
-          //  return;
+        //  return;
 
         if (!codex.advanceFlag) {
             throw 'AdvanceFlag not received';
@@ -237,25 +227,30 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
             throw 'AdvanceFlag not received';
         }
 
+        // Send message back to UI to signal what the current line is
         self.postMessage({
             cmd: CodeExecutorCommands.markcl,
-            params: Array.from(arguments)
+            params: Array.from([lineNumber])
         });
 
-        while (true) {
-            let status = Atomics.wait(codex.advanceFlag, CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
+        // Block myself and wait for Proceed signal from user
+        Atomics.store(codex.advanceFlag,
+            CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
 
-            if (status != 'not-equal') {
-                let auxFlag: number = Atomics.load(codex.advanceFlag as Int32Array, CodeExecutorSlots.Aux);
+        // Sleeps as long as position CodeExecutorSlots.Main (0) of SharedArrayBuffer is = Wait
+        let status = Atomics.wait(codex.advanceFlag,
+            CodeExecutorSlots.Main, CodeExecutorMessages.Wait);
 
-                if (auxFlag == CodeExecutorMessages.Stop) {
-                    throw "__STOP__";
-                }
+        // When wake up is received verify value if it's restart signal (Stop)
+        if (status == 'ok') {
+            let auxFlag: number = Atomics.load(codex.advanceFlag, CodeExecutorSlots.Aux);
 
-                break;
+            if (auxFlag == CodeExecutorMessages.Stop) {
+                throw "__STOP__";
             }
         }
 
+        // if slot value is Proceed then allow execution to move forward
         codex.lastLineNo = lineNumber;
     }
 
@@ -308,7 +303,7 @@ export class CodeExecutor implements GraphVariableChangeCbk, MarkerFunctionEvent
 
         for (let key in keys) {
             let copy = this.deepCopy(obj[keys[key]]);
-            
+
             if (copy)
                 result[keys[key]] = copy;
         }

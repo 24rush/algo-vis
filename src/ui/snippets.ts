@@ -1,15 +1,14 @@
 import { Popover } from "bootstrap";
-import { FullScreeNotification } from ".";
-import { DOMmanipulator } from "./dom-manipulator";
-import { Localize } from "./localization";
-import { Scene } from "./scene";
+import { DOMmanipulator } from "./../util/dom-manipulator";
+import { Localize } from "./../util/localization";
+import { AlgoVisWidget } from "./widget";
 
 var MustacheIt = require('mustache')
 var Split = require('split.js').default
 var bootstrap = require('bootstrap')
 
-const appTemplate = require('../assets/main.html').default;
-const fullScreenModalTemplate = require('../assets/fullscreen.html').default;
+const appTemplate = require('../../assets/main.html').default;
+const fullScreenModalTemplate = require('../../assets/fullscreen.html').default;
 
 export class Snippet {
     public id: number = -1;
@@ -290,7 +289,7 @@ export class Snippets {
             widget.removeAttribute(attr.name);
         }
 
-        new Scene(childWidget as HTMLElement, snippets, Snippets.snippetsUI);
+        new AlgoVisWidget(childWidget as HTMLElement, snippets, Snippets.snippetsUI);
 
         // Don't create the Splitter if we have explicit verticalView or we are in portrait
         let splitWidget: any = undefined;

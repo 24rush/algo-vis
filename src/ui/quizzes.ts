@@ -1,13 +1,14 @@
-import { FullScreeNotification } from ".";
-import { DOMmanipulator } from "./dom-manipulator";
-import { Localize } from "./localization";
-import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
+import { DOMmanipulator } from "./../util/dom-manipulator";
+import { Localize } from "./../util/localization";
+import { clientViewModel, ObservableViewModel, UIBinder } from "./../util/ui-framework";
 
 var bootstrap = require('bootstrap')
 var MustacheIt = require('mustache')
 
-const quizTemplateFront = require('../assets/quizTemplateFront.html').default;
-const quizTemplateBack = require('../assets/quizTemplateBack.html').default;
+const quizTemplateFront = require('../../assets/quizTemplateFront.html').default;
+const quizTemplateBack = require('../../assets/quizTemplateBack.html').default;
+
+type FullScreeNotification = (isFullScreen: boolean) => void;
 
 class QuizUI {
     private static fullscreenModal: bootstrap.Modal;
@@ -21,7 +22,7 @@ class QuizUI {
     private uiBinder: UIBinder = undefined;
 
     static {
-        const fullScreenModalTemplate = require('../assets/quizModal.html').default;
+        const fullScreenModalTemplate = require('../../assets/quizModal.html').default;
         document.body.append(DOMmanipulator.fromTemplate(fullScreenModalTemplate));
 
         QuizUI.quizModalHTML = document.getElementById('quizModal');

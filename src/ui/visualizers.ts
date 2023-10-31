@@ -1,4 +1,4 @@
-import { DOMmanipulator } from "./dom-manipulator";
+import { DOMmanipulator } from "./../util/dom-manipulator";
 
 var MustacheIt = require('mustache');
 var Cytoscape = require('cytoscape');
@@ -6,11 +6,11 @@ var Cytoscape = require('cytoscape');
 var dagre = require('cytoscape-dagre');
 Cytoscape.use(dagre);
 
-import { ObservableJSVariable, JSVariableChangeCbk, ObservableType } from "./observable-type"
-import { GraphVariableChangeCbk, NodeAccessType, NodeBase, ObservableGraph } from "./av-types-interfaces";
-import { BinaryTree, BinaryTreeNode, Graph } from "./av-types";
-import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework";
-import { Localize } from "./localization";
+import { ObservableJSVariable, JSVariableChangeCbk, ObservableType } from "./../types/observable-type"
+import { GraphVariableChangeCbk, NodeAccessType, NodeBase, ObservableGraph } from "./../types/graph-base";
+import { BinaryTree, BinaryTreeNode, Graph } from "./../types/graph";
+import { clientViewModel, ObservableViewModel, UIBinder } from "./../util/ui-framework";
+import { Localize } from "./../util/localization";
 
 enum DrawnElement {
     undefined,
@@ -35,7 +35,7 @@ class VisualizerViewModel {
         var value = observable.getValue();
         var varname = observable.getName();
 
-        this.isBorderless = value == null || value == undefined || value.length == 0 || (value[0] != undefined && value[0].length == 0) || typeof value == 'string';
+        this.isBorderless = value == null || value == undefined || value.length == 0 || /*(value[0] != undefined && value[0].length == 0) ||*/ typeof value == 'string';
         this.isString = (typeof value == 'string') || (value && value[0] != undefined && typeof value[0] == 'string');
 
         if (value instanceof ObservableGraph)
@@ -85,9 +85,9 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         </div>';
 
     protected readonly templatePrimitive: string =
-        '<div class="var-value" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; min-width: {{width}}px;" \
+        '<div class="var-value" style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; min-width: {{width}}px; text-align: left; word-wrap: break-word; white-space: normal;" \
                 av-bind-style-border="{isBorderless:none}" av-bind-style-font-style="{isBorderless:italic}"> \
-                <span id="var-value"></span>\
+                <span id="var-value" style="max-width: 100%;"></span>\
      </div>';
 
     protected readonly templateArray = '<span style=""> \
@@ -396,7 +396,7 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         let arrayData = observable.getValue() as any[];
         let rows: any = [];
 
-        let funcMapCols = (arrayData: any[]) => {
+        let funcMapCols = (arrayData: any[]): any => {
             if (!arrayData) {
                 return {
                     width: this.width, height: this.height,
@@ -423,13 +423,19 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
         }
 
         for (let index_r in arrayData) {
+            let cols = funcMapCols(arrayData[index_r]);
+            if (!cols.length) cols = [{
+                width: this.width, height: this.height,
+                index_c: 0,
+            }];
+
             rows.push({
                 index_r: index_r,
-                cols: funcMapCols(arrayData[index_r])
+                cols: cols
             });
         }
 
-        let rendered = MustacheIt.render(this.templateArray, { rows: rows });        
+        let rendered = MustacheIt.render(this.templateArray, { rows: rows });
         let valuesHtmlElement = DOMmanipulator.fromTemplate(DOMmanipulator.addIndexesToIds(rendered));
 
         this.htmlElement.append(valuesHtmlElement);
@@ -455,8 +461,8 @@ export class VariableVisualizer implements JSVariableChangeCbk, GraphVariableCha
             }
 
             let value = observable.getAtIndex(index_r, index_c);
-
-            value = this.clientViewModel.isBorderless ? [] : value;
+            
+            value = this.clientViewModel.isBorderless || (this.clientViewModel.isMultiArray && value == undefined) ? [] : value;
             this.fitText(textElement, value, this.width, this.height, this.clientViewModel.isBorderless);
 
             processed_in_row++;

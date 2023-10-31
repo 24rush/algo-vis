@@ -1,11 +1,11 @@
-import { ObservableJSVariable } from "./observable-type"
-import { Layout } from "./layout";
-import { OperationRecorder } from "./operation-recorder";
-import { CodeRenderer } from "./code-renderer";
-import { clientViewModel, ObservableViewModel, UIBinder } from "./ui-framework"
-import { Localize } from "./localization";
+import { ObservableJSVariable } from "../types/observable-type"
+import { Scopes } from "./scopes";
+import { CodeDebugger } from "../execution/code-debugger";
+import { CodeRenderer } from "./ace-editor-wrapper";
+import { clientViewModel, ObservableViewModel, UIBinder } from "../util/ui-framework"
+import { Localize } from "../util/localization";
 import { Snippet, SnippetEvents } from "./snippets";
-import { UserInteractionType } from "./code-executor";
+import { UserInteractionType } from "../execution/code-executor";
 
 var bootstrap = require('bootstrap')
 
@@ -94,7 +94,7 @@ class AVViewModel {
     }
 }
 
-export class Scene {
+export class AlgoVisWidget {
     private codeRenderer: CodeRenderer;
     private commentsPopoverHandle: any = undefined;
 
@@ -113,7 +113,7 @@ export class Scene {
 
     private viewModel: AVViewModel = new AVViewModel();
 
-    private operationRecorder: OperationRecorder;
+    private codeDebugger: CodeDebugger;
     private lineNoToBeExecuted = -1;
     private userCodeBeforeShowSolution: string = "";
 
@@ -153,9 +153,9 @@ export class Scene {
         //    isAutoPlay = false;
         //}
 
-        this.operationRecorder = new OperationRecorder(!isVisualisationDisabled);
+        this.codeDebugger = new CodeDebugger(!isVisualisationDisabled);
         this.codeRenderer = new CodeRenderer(codeEditor, !isWriteable, isAutocomplete);
-        let layout = new Layout(variablesPanel);
+        let scopes = new Scopes(variablesPanel);
 
         let viewModelObs = new ObservableViewModel(this.viewModel);
         let avViewModel = clientViewModel<typeof this.viewModel>(viewModelObs);
@@ -230,8 +230,8 @@ export class Scene {
                 this.viewModel.onRestart();
             }
 
-            if (this.operationRecorder.isNotStarted())
-                this.operationRecorder.startReplay();
+            if (this.codeDebugger.isNotStarted())
+                this.codeDebugger.startReplay();
 
             avViewModel.isPaused = !avViewModel.isPaused;
 
@@ -247,7 +247,7 @@ export class Scene {
                         clearInterval(this.autoplayTimer);
                     }
                     else {
-                        if (!this.operationRecorder.isWaiting())
+                        if (!this.codeDebugger.isWaiting())
                             advance();
                         else {
                             setTimeout(advance, 20);
@@ -258,19 +258,19 @@ export class Scene {
         }
 
         this.viewModel.onAdvance = () => {
-            if (this.operationRecorder.isNotStarted())
-                this.operationRecorder.startReplay();
+            if (this.codeDebugger.isNotStarted())
+                this.codeDebugger.startReplay();
 
             if (avViewModel.isPaused)
                 advance();
         }
 
         let advance = () => {
-            if (this.operationRecorder.isWaiting()) {
+            if (this.codeDebugger.isWaiting()) {
                 return;
             }
 
-            this.operationRecorder.advanceOneCodeLine();
+            this.codeDebugger.advanceOneCodeLine();
         };
 
         this.viewModel.onRestart = () => {
@@ -280,9 +280,9 @@ export class Scene {
 
             clearInterval(this.autoplayTimer);
             this.autoplayTimer = undefined;
-            layout.clearAll();
+            scopes.clearAll();
 
-            this.operationRecorder.startReplay();
+            this.codeDebugger.startReplay();
         }
 
         this.viewModel.onPlaybackSpeedChangedSSlow = () => {
@@ -321,12 +321,12 @@ export class Scene {
             let value = (this.promptWidget.querySelector('[class=form-control]') as HTMLInputElement).value;
             this.userInteractionMsgBox.hide();
 
-            this.operationRecorder.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Ok, value));
+            this.codeDebugger.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Ok, value));
             avViewModel.isFunctionalityDisabled = false;
         }
 
         this.viewModel.onPromptCancel = () => {
-            this.operationRecorder.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Cancel, null));
+            this.codeDebugger.onUserInteractionResponse(avViewModel.userInteraction, retValueOnButton(avViewModel.userInteraction, OkCancel.Cancel, null));
             avViewModel.isFunctionalityDisabled = false;
         }
 
@@ -395,18 +395,18 @@ export class Scene {
 
         // ---------------------------------------
 
-        this.operationRecorder.registerNotificationObserver({
+        this.codeDebugger.registerNotificationObserver({
             onEnterScopeVariable: (scopeName: string, observable: ObservableJSVariable) => {
-                layout.add(scopeName, observable);
+                scopes.add(scopeName, observable);
             },
             onExitScopeVariable: (scopeName: string, observable: ObservableJSVariable) => {
-                layout.remove(scopeName, observable, (status): void => {
-                    self.operationRecorder.setWaiting(status);
+                scopes.remove(scopeName, observable, (status): void => {
+                    self.codeDebugger.setWaiting(status);
                 });
             }
         });
 
-        this.operationRecorder.registerNotificationObserver({
+        this.codeDebugger.registerNotificationObserver({
             onExceptionMessage(status: boolean, message?: string): void {
                 avViewModel.exceptionMessage = message;
                 avViewModel.hasException = status;
@@ -441,14 +441,14 @@ export class Scene {
             }
         });
 
-        this.operationRecorder.registerNotificationObserver({
-            onLineExecuted(lineNo: number): void {
+        this.codeDebugger.registerNotificationObserver({
+            markcl(lineNo: number): void {
                 avViewModel.isExecutionCompleted = false;
                 self.lineNoToBeExecuted = lineNo;
                 highlightLine(lineNo);
             },
             onExecutionFinished(): void {
-                avViewModel.isExecutionCompleted = self.operationRecorder.isReplayFinished();
+                avViewModel.isExecutionCompleted = self.codeDebugger.isReplayFinished();
             }
         });
 
@@ -461,16 +461,16 @@ export class Scene {
             
             avViewModel.isFunctionalityDisabled = false;
             avViewModel.consoleOutput = "";
-            layout.clearAll();
+            scopes.clearAll();
 
             var doc = new DOMParser().parseFromString(newCode, "text/html");
             newCode = doc.documentElement.textContent;
 
-            self.operationRecorder.setSourceCode(newCode);
+            self.codeDebugger.setSourceCode(newCode);
 
             // For pre-filled code in readonly editors, already start the execution
-            if (!isWriteable && !isVisualisationDisabled && this.operationRecorder.isNotStarted()) {
-                this.operationRecorder.startReplay();
+            if (!isWriteable && !isVisualisationDisabled && this.codeDebugger.isNotStarted()) {
+                this.codeDebugger.startReplay();
             }
 
             if (isAutoPlay) 

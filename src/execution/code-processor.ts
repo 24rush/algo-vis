@@ -175,12 +175,12 @@ export class CodeProcessor {
                 case 'FunctionDeclaration':
                     {
                         var funcName = item.id.name;
+                        
+                        if (!(funcName in this.funcDefs)) {
+                            this.funcDefs[funcName] = [];
+                        }
 
-                        for (let param of item.params) {
-                            if (!(funcName in this.funcDefs)) {
-                                this.funcDefs[funcName] = [];
-                            }
-
+                        for (let param of item.params) {                            
                             this.funcDefs[funcName].push(param.name);
                             this.createVariable(scopeName + '.' + RuntimeScopeMonitor.scopeNameToFunctionScope(funcName), param.name, VarType.let, item.body.range[0] + 1);
                         }
@@ -597,6 +597,7 @@ export class CodeProcessor {
         this.markLineOverrides = [];
 
         // Move global VariableDeclarations on top of all functions
+        // Skipped variable declarations that are inited from function calls otherwise the funcWrap is not added
         if (syntax.body) {
             let lastVarDeclIdx = -1;
             let declIdx = 0;
@@ -607,6 +608,13 @@ export class CodeProcessor {
                     continue;
                 }
 
+                let declaration = syntax.body[declIdx];
+                if (declaration.declarations && declaration.declarations.length) {
+                    if (declaration.declarations[0].init.type == "CallExpression") {
+                        declIdx++;
+                        continue;
+                    }
+                }
                 if (lastVarDeclIdx != declIdx) {
                     // Move VariableDeclaration on top
                     syntax.body.splice(lastVarDeclIdx + 1, 0, syntax.body[declIdx]);

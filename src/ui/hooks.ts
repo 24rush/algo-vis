@@ -1,7 +1,7 @@
-import { DOMmanipulator } from "./dom-manipulator";
+import { DOMmanipulator } from "./../util/dom-manipulator";
 
-const inlineEditorTemplate = require('../assets/inline-editor.html').default;
-const boxTemplate = require('../assets/boxTemplates.html').default;
+const inlineEditorTemplate = require('../../assets/inline-editor.html').default;
+const boxTemplate = require('../../assets/boxTemplates.html').default;
 
 var MustacheIt = require('mustache');
 var bootstrap = require('bootstrap')

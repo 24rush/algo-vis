@@ -16,7 +16,7 @@ var en_langMap : Record<number, string> = {
     8: "Console output",
     9: "reference to ",
     10: "function ",
-    11: "local scope in",
+    11: "local scope in ",
     12: "local scope",
     13: "Playback speed",
     14: "Sloow",

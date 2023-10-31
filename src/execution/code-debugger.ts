@@ -1,11 +1,12 @@
-import { ObservableJSVariable, JSVariableChangeCbk } from "./observable-type";
-import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./av-types";
-import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ChildSide, GraphNodePayloadType, GraphType, NodeAccessType } from './av-types-interfaces'
+import { NodeBase, GraphVariableChangeCbk, ObservableGraph, ChildSide, GraphNodePayloadType, GraphType, NodeAccessType } from './../types/graph-base'
+import { Graph, BinaryTree, BinarySearchTree, BinaryTreeNode } from "./../types/graph";
+import { ObservableJSVariable, JSVariableChangeCbk } from "./../types/observable-type";
+
 import { CodeExecutorProxy } from "./code-executor-proxy";
 import { UserInteractionType } from "./code-executor";
-import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
 import { CodeProcessor, VarType, VariableDeclaration } from "./code-processor";
-import { ExecutionStatus, MessageNotification, NotificationEmitter, VariableScopingNotification } from "./notification-emitter";
+import { RuntimeScopeMonitor } from "./runtime-scope-monitor";
+import { ExecutionStatus, MarkerNotification, MessageNotification, NotificationBus, VariableScopingNotification } from "./../types/notification-bus";
 
 enum OperationType {
     MARK_LINE,
@@ -116,7 +117,7 @@ enum OperationRecorderStatus {
     Waiting
 }
 
-export class OperationRecorder implements MessageNotification, JSVariableChangeCbk, GraphVariableChangeCbk {
+export class CodeDebugger extends MarkerNotification implements JSVariableChangeCbk, GraphVariableChangeCbk {
     onSetArrayValueEvent(observable: ObservableJSVariable, value: any, newValue: any): void {
         RWPrimitiveOperationPayload.execute(OperationType.WRITE, observable, JSON.parse(JSON.stringify(value)), JSON.parse(JSON.stringify(newValue)));
     }
@@ -182,12 +183,14 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
 
     private status: OperationRecorderStatus = OperationRecorderStatus.Idle;
 
-    private notificationEmitter: NotificationEmitter = new NotificationEmitter();
-    private codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy();
+    private notificationBus: NotificationBus = new NotificationBus();
+    private codeExecProxy: CodeExecutorProxy = new CodeExecutorProxy(this.notificationBus);
     private codeProcessor: CodeProcessor = new CodeProcessor();
 
     constructor(private injectMarkers: boolean = true) {
-        this.codeExecProxy.registerNotificationObserver(this);
+        super();
+        
+        this.notificationBus.registerNotificationObserver(this);
     }
 
     isNotStarted(): boolean { return this.status == OperationRecorderStatus.Idle; }
@@ -201,45 +204,29 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     setSourceCode(code: string): boolean {
         this.resetExecutionState();
 
-        this.notificationEmitter.onCompilationError(false);
-        this.notificationEmitter.onExceptionMessage(false);
+        this.notificationBus.onCompilationError(false);
+        this.notificationBus.onExceptionMessage(false);
 
         let [success, errMsg] = this.codeProcessor.setCode(code, this.injectMarkers);
 
         if (!success) {
-            this.notificationEmitter.onCompilationError(success, errMsg);
+            this.notificationBus.onCompilationError(success, errMsg);
         }
 
         return success;
     }
 
     registerNotificationObserver(notifier: MessageNotification | VariableScopingNotification | ExecutionStatus) {
-        this.notificationEmitter.registerNotificationObserver(notifier);
+        this.notificationBus.registerNotificationObserver(notifier);
     }
 
     // NotificationEmitter handlers
-    onTraceMessage(message: string): void {
-        this.notificationEmitter.onTraceMessage(message);
-    }
-    onExceptionMessage(status: boolean, message: string): void {
-        this.notificationEmitter.onExceptionMessage(status, message);
-    }
-    onUserInteractionRequest(userInteraction: UserInteractionType, title?: string, defValue?: string): void {
-        this.notificationEmitter.onUserInteractionRequest(userInteraction, title, defValue);
-    }
-    onCompilationError(status: boolean, message?: string) {
-        this.notificationEmitter.onCompilationError(status, message);
-    }
     forcemarkcl(lineNumber: number) {
-        this.notificationEmitter.onLineExecuted(lineNumber);
-    }
-    markcl(lineNumber: number) {
-        this.notificationEmitter.onLineExecuted(lineNumber);
+        this.notificationBus.markcl(lineNumber);
     }
 
     onExecutionFinished(): void {
         this.status = OperationRecorderStatus.ReplayEnded;
-        this.notificationEmitter.onExecutionFinished();
     }
 
     startScope(scopeName: string) {
@@ -360,13 +347,13 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
 
         this.codeProcessor.dumpDebugInfo();
 
-        this.notificationEmitter.onCompilationError(false);
-        this.notificationEmitter.onExceptionMessage(false);
+        this.notificationBus.onCompilationError(false);
+        this.notificationBus.onExceptionMessage(false);
 
         try {
-            await this.codeExecProxy.init();
-            await this.codeExecProxy.setSourceCode(this.codeProcessor.getCode());
-            await this.codeExecProxy.execute();
+            this.codeExecProxy.init();
+            this.codeExecProxy.setSourceCode(this.codeProcessor.getCode());
+            this.codeExecProxy.execute();
 
         } catch (e) {
             this.status = OperationRecorderStatus.Idle;
@@ -374,8 +361,8 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
             console.log(e);
 
             let message = (typeof e == 'object' && 'message' in e) ? e.message : e;
-            this.notificationEmitter.onExceptionMessage(true, message);
-            this.notificationEmitter.onExecutionFinished();
+            this.notificationBus.onExceptionMessage(true, message);
+            this.notificationBus.onExecutionFinished();
 
             return false;
         }
@@ -413,9 +400,9 @@ export class OperationRecorder implements MessageNotification, JSVariableChangeC
     private executeRuntimeObservableVarLifetime(operationType: OperationType, runtimeObservables: any[]) {
         let notifyScopeUpdate = (scopeOperationType: OperationType, runtimeObservable: any) => {
             if (scopeOperationType == OperationType.SCOPE_END)
-                this.notificationEmitter.onExitScopeVariable(this.rsMonitor.getCurrentScope(), runtimeObservable);
+                this.notificationBus.onExitScopeVariable(this.rsMonitor.getCurrentScope(), runtimeObservable);
             else
-                this.notificationEmitter.onEnterScopeVariable(this.rsMonitor.getCurrentScope(), runtimeObservable)
+                this.notificationBus.onEnterScopeVariable(this.rsMonitor.getCurrentScope(), runtimeObservable)
         }
 
         if ((!runtimeObservables || !runtimeObservables.length)) {

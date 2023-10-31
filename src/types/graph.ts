@@ -1,4 +1,4 @@
-import { AdjacencyList, GraphNodePayloadType, GraphType, NodeAccessType, NodeBase, ObservableGraph, ParentRefNode, ChildSide } from "./av-types-interfaces";
+import { AdjacencyList, GraphNodePayloadType, GraphType, NodeAccessType, NodeBase, ObservableGraph, ParentRefNode, ChildSide } from "./graph-base";
 
 class BinaryTreeNodeProxy {
     constructor(protected target: any) {

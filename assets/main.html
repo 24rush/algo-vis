@@ -63,19 +63,19 @@
                 <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton-{{codeEditorId}}">
                     <li class="dropdown-item">
                         <div class="form-check form-switch">
-                            <label class="form-check-label" style="font-size: 0.875rem !important"
+                            <label class="form-check-label"
                                 for="showCommentsCheck-{{codeEditorId}}" av-bind-text="LangStrId.3">
                                 Show comments
                             </label>
-                            <input class="form-check-input radiusOverwrite" style="border-width: 0.5px;" type="checkbox"
+                            <input class="form-check-input radiusOverwrite" style="border-width: 0.5px; background-size: inherit!important;" type="checkbox"
                                 role="switch" checked av-bind-onclick="onShowComments"
                                 id="showCommentsCheck-{{codeEditorId}}">
                         </div>
                     </li>
-                    <li>
+                    <li style="margin-top: 0px;margin-bottom: 0px;">
                         <span class="dropdown-header" av-bind-text="LangStrId.13">Playback speed</span>
                     </li>
-                    <li><a class="dropdown-item">
+                    <li class="dropdown-item"><a >
                             <div class="btn-group btn-group-sm" role="group">
                                 <input type="radio" class="btn-check" checked name="btnradio-{{codeEditorId}}"
                                     id="btnradio1-{{codeEditorId}}" autocomplete="off"

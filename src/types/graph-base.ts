@@ -1,6 +1,4 @@
 
-import { BaseObservableType } from "./observable-type";
-
 export type GraphNodePayloadType = string | number;
 export type AdjacencyList = Map<GraphNodePayloadType, GraphNodePayloadType[]>;
 
@@ -19,6 +17,26 @@ export enum ChildSide {
 export enum NodeAccessType {
     Access,
     Mark
+}
+
+export class BaseObservableType<NotifyCbkType>
+{
+    protected observers: NotifyCbkType[] = [];
+
+    public name: string;
+
+    registerObserver(notifyCbk: NotifyCbkType) {
+        if (!this.observers.find((notif) => notif == notifyCbk))
+            this.observers.push(notifyCbk);
+    }
+
+    unregisterObserver(notifyCbk: NotifyCbkType) {
+        this.observers = this.observers.filter((elem) => elem != notifyCbk);
+    }
+
+    getName(): string {
+        return this.name.toString();
+    }
 }
 
 export class NodeBase {

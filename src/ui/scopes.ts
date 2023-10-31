@@ -1,6 +1,6 @@
-import { DOMmanipulator } from "./dom-manipulator";
-import { Localize } from "./localization";
-import { ObservableType } from "./observable-type";
+import { DOMmanipulator } from "./../util/dom-manipulator";
+import { Localize } from "./../util/localization";
+import { ObservableType } from "./../types/observable-type";
 import { VariableVisualizer } from "./visualizers";
 
 var MustacheIt = require('mustache');
@@ -20,7 +20,7 @@ class ScopeTemplateElements {
     }
 }
 
-export class Layout {
+export class Scopes {
     protected readonly accordionScope = '\
     <div class="accordion accordion-flush" id="accordionPanelsStayOpenExample" av-scope="{{scope}}"> \
         <div class="accordion-item"> \
@@ -92,7 +92,7 @@ export class Layout {
     }
 
     private createHtmlElementForScope(scopeName: string): HTMLElement {
-        let rendered = MustacheIt.render(this.accordionScope, { scopeName: this.codeScopeToUiScope(scopeName), scope: scopeName, scope_idx: Layout.scope_idx++ });
+        let rendered = MustacheIt.render(this.accordionScope, { scopeName: this.codeScopeToUiScope(scopeName), scope: scopeName, scope_idx: Scopes.scope_idx++ });
         let scopeHtmlElement = DOMmanipulator.fromTemplate(rendered);
 
         return scopeHtmlElement;

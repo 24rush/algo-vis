@@ -1,17 +1,14 @@
-import { UIHooks } from "./ui-hooks";
-import { LangEnum, Localize } from "./localization";
-import { Quizzes } from "./quizzes";
-import { Snippets } from "./snippets";
+import { UIHooks } from "./ui/hooks";
+import { Quizzes } from "./ui/quizzes";
+import { Snippets } from "./ui/snippets";
+
+import { LangEnum, Localize } from "./util/localization";
+Localize.setLang(LangEnum.En);
 
 require('@popperjs/core')
 
-Localize.setLang(LangEnum.Ro);
-
-export type FullScreeNotification = (isFullScreen: boolean) => void;
-
-new UIHooks(() => {
-    let snippets = new Snippets();
-    new Quizzes(snippets.onFullScreenEvent);
+new UIHooks(() => {    
+    new Quizzes(new Snippets().onFullScreenEvent);
 });
 
 let addCss = (fileName: string) => {
@@ -23,6 +20,6 @@ let addCss = (fileName: string) => {
     document.head.appendChild(link);
 }
 
-addCss('https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css');
+//addCss('https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css');
 addCss('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css');
 addCss('https://fonts.googleapis.com/css?family=Source+Sans+Pro');
